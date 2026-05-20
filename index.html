@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspectFlow CRM - Sistema Completo de Vendas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d12; --bg2: #13131c; --bg3: #1a1a26; --bg4: #222230; --bg5: #2a2a3c;
+  --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+  --text: #eeeef5; --text2: #8888aa; --text3: #55556a;
+  --accent: #7b68f0; --accent2: #a395ff; --green: #34d073; --yellow: #f0b429;
+  --red: #e05555; --orange: #e8823a; --blue: #4d9eff; --teal: #26c6b0;
+  --r: 8px; --r2: 12px; --r3: 16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);height:52px;padding:0 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:300}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700}
+.logo-icon{width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;display:flex;gap:0;overflow-x:auto}
+.tab{padding:10px 11px;font-size:11.5px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent2);border-bottom-color:var(--accent)}
+.main{flex:1;padding:22px 24px;max-width:1600px;margin:0 auto}
+.page{display:none}
+.page.on{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:12px}
+.met{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px}
+.met-lbl{font-size:10.5px;font-weight:600;color:var(--text2);text-transform:uppercase;margin-bottom:6px}
+.met-val{font-size:26px;font-weight:700}
+.btn{padding:7px 14px;border-radius:var(--r);border:none;cursor:pointer;font-size:12.5px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--bg4);color:var(--text)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.tg{background:var(--green-dim);color:var(--green)}
+.tb2{background:rgba(77,158,255,0.13);color:var(--blue)}
+.tp{background:rgba(123,104,240,.15);color:var(--accent2)}
+.ty{background:rgba(240,180,41,0.13);color:var(--yellow)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10.5px;font-weight:600;color:var(--text2);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:9px 12px;border-bottom:1px solid var(--border)}
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r3);width:100%;max-width:700px;max-height:92vh;overflow-y:auto}
+.mhd{padding:18px 20px 0;display:flex;justify-content:space-between}
+.mbody{padding:0 20px 4px}
+.mfoot{padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
+.fg input,.fg select,.fg textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:12.5px}
+.fr{display:grid;gap:10px}
+.fr2{grid-template-columns:1fr 1fr}
+.dz{border:2px dashed var(--border2);border-radius:var(--r2);padding:40px 24px;text-align:center;cursor:pointer}
+.dz:hover{border-color:var(--accent);background:rgba(123,104,240,.05)}
+.toast-wrap{position:fixed;top:62px;right:18px;z-index:999;display:flex;flex-direction:column;gap:7px}
+.toast{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;font-size:12.5px}
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.auth-screen.hidden{display:none}
+.auth-box{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:420px;padding:36px 32px}
+.chart-box{height:200px;position:relative}
+.qr-code{background:white;padding:10px;border-radius:8px;display:inline-block}
+.prog{background:var(--bg5);border-radius:4px;overflow:hidden}
+.prog-f{border-radius:4px;transition:width .5s}
+.campanha-card{border-left:3px solid var(--accent);margin-bottom:12px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-box">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:42px;background:var(--accent);width:60px;height:60px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">🎯</div>
+      <div style="font-size:20px;font-weight:800;margin-top:12px">ProspectFlow CRM</div>
+    </div>
+    <div class="auth-err" id="auth-err" style="display:none"></div>
+    <div class="fg"><label>Usuário</label><input id="auth-user" placeholder="Seu login"></div>
+    <div class="fg"><label>Senha</label><input id="auth-pass" type="password"></div>
+    <button class="btn btn-primary" style="width:100%;padding:10px" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app-main" style="display:none">
+<div class="topbar">
+  <div class="logo"><div class="logo-icon">🎯</div>ProspectFlow CRM</div>
+  <span id="tb-total">0 leads</span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="exportAll()">⬇ Exportar</button>
+    <button class="btn btn-primary btn-sm" onclick="openM('mLead')">+ Lead</button>
+    <div class="tb-user" style="display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:8px;border:1px solid var(--border2)">
+      <div id="tb-av" style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px">?</div>
+      <span id="tb-uname">—</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">⏻</button>
+  </div>
+</div>
+
+<nav class="nav">
+  <div class="tab" data-page="dash" onclick="go('dash')">📊 Dashboard</div>
+  <div class="tab" data-page="leads" onclick="go('leads')">🎯 Leads</div>
+  <div class="tab" data-page="pipe" onclick="go('pipe')">🔄 Pipeline</div>
+  <div class="tab" data-page="metas" onclick="go('metas')">🏆 Metas</div>
+  <div class="tab" data-page="campanhas" onclick="go('campanhas')">📣 Campanhas</div>
+  <div class="tab" data-page="import" onclick="go('import')">📂 Importar</div>
+  <div class="tab" data-page="rel" onclick="go('rel')">📈 Relatórios</div>
+  <div class="tab" data-page="usuarios" onclick="go('usuarios')">👥 Usuários</div>
+</nav>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="page" id="page-dash">
+  <div class="ph"><div class="ph-title">Dashboard Analítico</div><div class="ph-sub" id="d-date"></div></div>
+  
+  <!-- KPIs principais -->
+  <div class="g4" style="margin-bottom:12px">
+    <div class="met met-blue"><div class="met-lbl">Total Leads</div><div class="met-val" id="dk-tot">0</div></div>
+    <div class="met met-green"><div class="met-lbl">Fechamentos</div><div class="met-val" id="dk-fech">0</div></div>
+    <div class="met met-purple"><div class="met-lbl">Receita Total</div><div class="met-val" id="dk-rec">R$ 0</div></div>
+    <div class="met met-teal"><div class="met-lbl">Taxa Conversão</div><div class="met-val" id="dk-taxa">0%</div></div>
+  </div>
+
+  <!-- Produtos e Share de Mercado -->
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">🏆 Produtos - Mais e Menos Vendidos</div></div>
+      <div class="stats-grid">
+        <div class="met" style="padding:12px"><div class="met-lbl">⭐ Mais Vendido</div><div class="met-val" style="font-size:18px" id="prod-mais">—</div><div class="met-sub" id="prod-mais-qtd">0 vendas</div></div>
+        <div class="met" style="padding:12px"><div class="met-lbl">📉 Menos Vendido</div><div class="met-val" style="font-size:18px" id="prod-menos">—</div><div class="met-sub" id="prod-menos-qtd">0 vendas</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">📍 Share de Mercado por Região</div></div>
+      <div class="g2" style="gap:8px">
+        <div><div class="met-lbl">Por Estado</div><div id="share-estados" style="font-size:12px"></div></div>
+        <div><div class="met-lbl">Por Cidade</div><div id="share-cidades" style="font-size:12px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segmentos e Receita Semanal/Mensal -->
+  <div class="g2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">📊 Segmentos mais Captados</div></div>
+      <div class="chart-box"><canvas id="chart-segmentos"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title">💰 Receita de Implantação</div></div>
+      <div class="stats-grid">
+        <div><div class="met-lbl">Esta Semana</div><div class="met-val" style="font-size:20px" id="rec-semana">R$ 0</div></div>
+        <div><div class="met-lbl">Este Mês</div><div class="met-val" style="font-size:20px" id="rec-mes">R$ 0</div></div>
+      </div>
+      <div class="chart-box" style="height:120px"><canvas id="chart-receita"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Meta Global -->
+  <div class="card"><div class="card-title">🎯 Meta Global</div><div id="d-meta"></div></div>
+</div>
+
+<!-- LEADS -->
+<div class="page" id="page-leads">
+  <div class="ph"><div class="ph-title">Leads</div><div><input class="search" placeholder="Buscar..." style="width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px" oninput="renderLeads()"></div></div>
+  <div class="card" style="padding:0"><div class="tw"><table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></table></div></div>
+</div>
+
+<!-- PIPELINE -->
+<div class="page" id="page-pipe"><div class="board" id="board" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div></div>
+
+<!-- METAS -->
+<div class="page" id="page-metas">
+  <div class="ph"><div class="ph-title">Metas</div><div><button class="btn btn-ghost btn-sm" onclick="openM('mMetaG')">⚙ Meta Global</button><button class="btn btn-primary btn-sm" onclick="openM('mVenda')">+ Venda</button></div></div>
+  <div class="g2"><div class="card" id="meta-g-body"></div><div class="card"><div class="card-title">Últimas Vendas</div><div id="vendas-tl"></div></div></div>
+</div>
+
+<!-- CAMPANHAS -->
+<div class="page" id="page-campanhas">
+  <div class="ph"><div class="ph-title">Campanhas</div><div><button class="btn btn-primary btn-sm" onclick="openCampanha()">+ Nova Campanha</button></div></div>
+  <div id="campanhas-list"></div>
+</div>
+
+<!-- IMPORTAR -->
+<div class="page" id="page-import">
+  <div class="ph"><div class="ph-title">Importar Listas</div><div><button class="btn btn-primary btn-sm" onclick="downloadModelo()">📥 Baixar Modelo</button></div></div>
+  <div class="g2">
+    <div class="card"><div class="dz" onclick="document.getElementById('fi').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)"><div>📂 Arraste ou clique para importar Excel/CSV</div></div><input type="file" id="fi" style="display:none" onchange="handleImport(event)"><div id="import-preview"></div></div>
+    <div class="card"><div class="card-title">📋 Colunas do Modelo</div><div class="tw"><table><thead><tr><th>Coluna</th><th>Descrição</th></tr></thead><tbody><tr><td>empresa</td><td>Nome da empresa *</td></tr><tr><td>contato</td><td>Nome do responsável</td></tr><tr><td>email</td><td>E-mail</td></tr><tr><td>telefone</td><td>Telefone</td></tr><tr><td>cidade</td><td>Cidade</td></tr><tr><td>uf</td><td>Estado</td></tr><tr><td>segmento</td><td>Segmento/CNAE</td></tr><tr><td>responsavel</td><td>Consultor responsável</td></tr></tbody></table></div></div>
+  </div>
+</div>
+
+<!-- RELATÓRIOS -->
+<div class="page" id="page-rel">
+  <div class="ph"><div class="ph-title">Relatórios</div><div><button class="btn btn-ghost btn-sm" onclick="exportForecast()">📊 Forecast</button></div></div>
+  <div class="card"><div class="card-title">📈 Forecast - Pipeline</div><div class="tw"><table id="forecast-table"><thead><tr><th>Consultor</th><th>Cliente</th><th>Segmento</th><th>Cidade/UF</th><th>Valor</th><th>Etapa</th><th>Probabilidade</th></tr></thead><tbody id="forecast-tbody"></tbody></table></div></div>
+  <div class="card"><div class="card-title">📊 Produtividade por Consultor</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="prod-tbody"></tbody></table></div></div>
+</div>
+
+<!-- USUÁRIOS -->
+<div class="page" id="page-usuarios">
+  <div class="ph"><div class="ph-title">Usuários</div><div><button class="btn btn-primary btn-sm" onclick="openM('mUser')">+ Usuário</button></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Nome</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-tb"></tbody></table></div></div>
+</div>
+
+</div></div>
+
+<!-- MODALS -->
+<div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento" placeholder="Ex: Tecnologia, Varejo, Indústria..."></div><div class="fg"><label>Responsável</label><select id="l-resp"></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
+
+<div class="moverlay" id="mVenda" style="display:none" onclick="if(event.target===this)closeM('mVenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Registrar Venda</div><button class="xbtn" onclick="closeM('mVenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="vd-lead"></select></div><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="vd-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="vd-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Produto</label><select id="vd-prod"><option>SCE</option><option>Easyren</option></select></div><div class="fg"><label>Data</label><input id="vd-data" type="date"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveVenda()">Confirmar</button></div></div></div>
+
+<div class="moverlay" id="mMetaG" style="display:none" onclick="if(event.target===this)closeM('mMetaG')"><div class="modal"><div class="mhd"><div class="mhd-title">Meta Global</div><button class="xbtn" onclick="closeM('mMetaG')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Meta Implantação (R$)</label><input id="mg-impl" type="number"></div><div class="fg"><label>Meta Mensalidade (R$)</label><input id="mg-mens" type="number"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveMetaG()">Salvar</button></div></div></div>
+
+<div class="moverlay" id="mCampanha" style="display:none" onclick="if(event.target===this)closeM('mCampanha')"><div class="modal" style="max-width:700px"><div class="mhd"><div class="mhd-title">Campanha</div><button class="xbtn" onclick="closeM('mCampanha')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome da Campanha</label><input id="camp-nome"></div><div class="fg"><label>Tipo</label><select id="camp-tipo"><option value="Feira/Exposição">🎪 Feira/Exposição</option><option value="Campanha Vendas">📢 Campanha de Vendas</option><option value="Evento Online">💻 Evento Online</option><option value="Workshop">📚 Workshop</option></select></div></div><div class="fr2"><div class="fg"><label>Data Início</label><input id="camp-ini" type="date"></div><div class="fg"><label>Data Fim</label><input id="camp-fim" type="date"></div></div><div class="fg"><label>Descrição</label><textarea id="camp-desc" rows="2"></textarea></div><div class="fr2"><div class="fg"><label>URL Landing Page</label><input id="camp-lp" placeholder="https://..."></div><div class="fg"><label>Meta de Leads</label><input id="camp-meta" type="number"></div></div><div class="fg"><label>Campos do Formulário (separados por vírgula)</label><input id="camp-campos" value="nome,email,telefone,empresa" placeholder="nome,email,telefone,empresa,segmento"></div><div id="camp-qr" style="margin-top:10px;text-align:center"></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+
+<div class="moverlay" id="mUser" style="display:none" onclick="if(event.target===this)closeM('mUser')"><div class="modal"><div class="mhd"><div class="mhd-title">Usuário</div><button class="xbtn" onclick="closeM('mUser')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="u-nome"></div><div class="fg"><label>Login</label><input id="u-login"></div></div><div class="fr2"><div class="fg"><label>Senha</label><input id="u-pass" type="password"></div><div class="fg"><label>Perfil</label><select id="u-role"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+
+<div class="toast-wrap" id="tw"></div>
+
+<script>
+// STATE
+let currentUser = null;
+let S = { leads: [], vendas: [], metaG: null, usuarios: [], campanhas: [] };
+let charts = {};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 4); }
+function toast(msg, type='ok') { let w=document.getElementById('tw'); let e=document.createElement('div'); e.className='toast'; e.innerHTML=msg; w.appendChild(e); setTimeout(()=>e.remove(),3000); }
+
+function saveData() { localStorage.setItem('pf_data', JSON.stringify({ leads: S.leads, vendas: S.vendas, metaG: S.metaG, campanhas: S.campanhas })); }
+function loadData() { let d=localStorage.getItem('pf_data'); if(d){let p=JSON.parse(d); S.leads=p.leads||[]; S.vendas=p.vendas||[]; S.metaG=p.metaG||null; S.campanhas=p.campanhas||[];} if(!S.metaG) S.metaG={impl:50000,mens:10000}; }
+
+function saveUsers() { localStorage.setItem('pf_users', JSON.stringify(S.usuarios)); }
+function loadUsers() { let d=localStorage.getItem('pf_users'); if(d) S.usuarios=JSON.parse(d); else S.usuarios=[{id:'u1',nome:'Admin',login:'admin',senha:'1234',role:'Diretor'}]; }
+
+// AUTH
+function doLogin() {
+  let u = document.getElementById('auth-user').value.trim();
+  let p = document.getElementById('auth-pass').value.trim();
+  let user = S.usuarios.find(u2=>u2.login===u && u2.senha===p);
+  if(!user){document.getElementById('auth-err').innerHTML='Credenciais inválidas';document.getElementById('auth-err').style.display='block';return;}
+  currentUser=user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-main').style.display='block';
+  document.getElementById('tb-uname').innerText=user.nome.split(' ')[0];
+  document.getElementById('tb-av').innerText=user.nome.charAt(0).toUpperCase();
+  renderAll();
+}
+function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-main').style.display='none'; }
+
+function go(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById(`page-${page}`).classList.add('on');
+  if(page==='dash') renderDashboard();
+  if(page==='leads') renderLeads();
+  if(page==='pipe') renderPipeline();
+  if(page==='metas') renderMetas();
+  if(page==='campanhas') renderCampanhas();
+  if(page==='rel') renderRelatorios();
+  if(page==='usuarios') renderUsuarios();
+}
+
+// LEADS
+function renderLeads() {
+  let leads = currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let tb = document.getElementById('leads-tb');
+  tb.innerHTML = leads.map(l => `
+    <tr>
+      <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
+      <td>${l.segmento ? `<span class="tag tp">${l.segmento}</span>` : '—'}</td>
+      <td>${l.produto?`<span class="tag tb2">${l.produto}</span>`:'—'}</td>
+      <td>${statusTag(l.status)}</td>
+      <td>${l.responsavel||'—'}</td>
+      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" class="te">Nenhum lead</td></tr>';
+}
+
+function statusTag(s) { let m={Oportunidade:'tb2',Prospect:'tp',Captado:'tg'}; return `<span class="tag ${m[s]||'tn'}">${s||'Oportunidade'}</span>`; }
+
+function saveLead() {
+  let lead = {
+    id: uid(), empresa: document.getElementById('l-emp').value.trim(),
+    contato: document.getElementById('l-cont').value.trim(), email: document.getElementById('l-email').value.trim(),
+    telefone: document.getElementById('l-tel').value.trim(), cidade: document.getElementById('l-city').value.trim(),
+    uf: document.getElementById('l-state').value.trim(), segmento: document.getElementById('l-segmento').value.trim(),
+    responsavel: document.getElementById('l-resp').value, status: 'Oportunidade', pipeline: '',
+    produto: '', implantacao: 0, mensalidade: 0, createdAt: new Date().toISOString()
+  };
+  if(!lead.empresa){toast('Informe a empresa','err');return;}
+  S.leads.push(lead); saveData(); closeM('mLead'); renderLeads(); renderDashboard(); toast('Lead criado');
+}
+
+function evoluirLead(id) {
+  let l = S.leads.find(l=>l.id===id);
+  if(!l) return;
+  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead → Prospect'); }
+  else if(l.pipeline==='Agendamento') { l.pipeline='Apresentação'; toast('Em apresentação'); }
+  else if(l.pipeline==='Apresentação') { l.pipeline='Negociação'; toast('Em negociação'); }
+  else if(l.pipeline==='Negociação') { abrirVenda(id); return; }
+  saveData(); renderLeads(); renderPipeline();
+}
+
+function abrirVenda(id) {
+  let l = S.leads.find(l=>l.id===id);
+  if(!l) return;
+  document.getElementById('vd-lead').innerHTML = `<option value="${l.id}">${l.empresa}</option>`;
+  document.getElementById('vd-impl').value = l.implantacao||0;
+  document.getElementById('vd-mens').value = l.mensalidade||0;
+  document.getElementById('vd-data').value = new Date().toISOString().split('T')[0];
+  openM('mVenda');
+}
+
+function saveVenda() {
+  let leadId = document.getElementById('vd-lead').value;
+  let lead = S.leads.find(l=>l.id===leadId);
+  if(!lead) return;
+  let venda = {
+    id: uid(), leadId: lead.id, empresa: lead.empresa, consultor: lead.responsavel || currentUser.nome,
+    produto: document.getElementById('vd-prod').value, implantacao: parseFloat(document.getElementById('vd-impl').value)||0,
+    mensalidade: parseFloat(document.getElementById('vd-mens').value)||0, data: document.getElementById('vd-data').value
+  };
+  lead.status = 'Captado'; lead.pipeline = 'Fechamento'; lead.produto = venda.produto;
+  lead.implantacao = venda.implantacao; lead.mensalidade = venda.mensalidade;
+  S.vendas.push(venda); saveData(); closeM('mVenda');
+  renderLeads(); renderMetas(); renderDashboard(); toast('Venda registrada!');
+}
+
+function renderPipeline() {
+  let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Captado');
+  if(currentUser.role==='Consultor') leads = leads.filter(l=>l.responsavel===currentUser.nome);
+  let stages = ['Agendamento','Apresentação','Negociação','Fechamento'];
+  let board = document.getElementById('board');
+  board.innerHTML = stages.map(s => `<div class="bcol"><div class="bcol-hd">${s}</div>${leads.filter(l=>l.pipeline===s).map(l=>`<div class="bcard" onclick="abrirVenda('${l.id}')"><div class="bcard-name">${l.empresa}</div></div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--text3)">Vazio</div>'}</div>`).join('');
+}
+
+// DASHBOARD
+function renderDashboard() {
+  let leads = S.leads;
+  let vendas = S.vendas;
+  let fechamentos = vendas.length;
+  let receitaTotal = vendas.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
+  let taxa = leads.length>0 ? Math.round(fechamentos/leads.length*100) : 0;
+  document.getElementById('dk-tot').innerText = leads.length;
+  document.getElementById('dk-fech').innerText = fechamentos;
+  document.getElementById('dk-rec').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
+  document.getElementById('dk-taxa').innerText = `${taxa}%`;
+
+  // Produtos mais/menos vendidos
+  let prodCount = {}; vendas.forEach(v=>{ prodCount[v.produto] = (prodCount[v.produto]||0)+1; });
+  let prods = Object.entries(prodCount);
+  if(prods.length){
+    let mais = prods.reduce((a,b)=>a[1]>b[1]?a:b);
+    let menos = prods.reduce((a,b)=>a[1]<b[1]?a:b);
+    document.getElementById('prod-mais').innerText = mais[0];
+    document.getElementById('prod-mais-qtd').innerText = `${mais[1]} vendas`;
+    document.getElementById('prod-menos').innerText = menos[0];
+    document.getElementById('prod-menos-qtd').innerText = `${menos[1]} vendas`;
+  }
+
+  // Share por Estado e Cidade
+  let leadsByUF = {}; let leadsByCity = {};
+  leads.forEach(l=>{ if(l.uf){leadsByUF[l.uf]=(leadsByUF[l.uf]||0)+1;} if(l.cidade){leadsByCity[l.cidade]=(leadsByCity[l.cidade]||0)+1;}});
+  document.getElementById('share-estados').innerHTML = Object.entries(leadsByUF).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`<div>${k}: ${v} leads</div>`).join('')||'Sem dados';
+  document.getElementById('share-cidades').innerHTML = Object.entries(leadsByCity).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`<div>${k}: ${v} leads</div>`).join('')||'Sem dados';
+
+  // Segmentos - gráfico
+  let segCount = {}; leads.forEach(l=>{ if(l.segmento){ segCount[l.segmento] = (segCount[l.segmento]||0)+1; } });
+  let segLabels = Object.keys(segCount).slice(0,5);
+  let segData = segLabels.map(k=>segCount[k]);
+  if(charts['chart-segmentos']) charts['chart-segmentos'].destroy();
+  let ctx = document.getElementById('chart-segmentos')?.getContext('2d');
+  if(ctx) charts['chart-segmentos'] = new Chart(ctx, { type:'bar', data:{ labels:segLabels, datasets:[{ data:segData, backgroundColor:'#7b68f0' }] }, options:{ responsive:true, maintainAspectRatio:true } });
+
+  // Receita semana/mês
+  let now = new Date();
+  let semanaInicio = new Date(now); semanaInicio.setDate(now.getDate()-now.getDay());
+  let mesInicio = new Date(now.getFullYear(), now.getMonth(), 1);
+  let recSemana = vendas.filter(v=>new Date(v.data)>=semanaInicio).reduce((s,v)=>s+v.implantacao,0);
+  let recMes = vendas.filter(v=>new Date(v.data)>=mesInicio).reduce((s,v)=>s+v.implantacao,0);
+  document.getElementById('rec-semana').innerText = `R$ ${recSemana.toLocaleString('pt-BR')}`;
+  document.getElementById('rec-mes').innerText = `R$ ${recMes.toLocaleString('pt-BR')}`;
+
+  // Meta
+  let mg = S.metaG;
+  let metaBody = document.getElementById('d-meta');
+  if(mg){
+    let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
+    let pct = mg.impl>0 ? Math.round(realImpl/mg.impl*100) : 0;
+    metaBody.innerHTML = `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${mg.impl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>`;
+  } else metaBody.innerHTML = '<div>Configure meta global</div>';
+}
+
+// METAS
+function renderMetas() {
+  let vendas = S.vendas;
+  let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
+  let mg = S.metaG;
+  document.getElementById('meta-g-body').innerHTML = mg ? `<div>🎯 Meta: R$ ${mg.impl.toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
+  document.getElementById('vendas-tl').innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${(v.implantacao+v.mensalidade).toLocaleString('pt-BR')}</div>`).join('') || 'Nenhuma venda';
+}
+function saveMetaG() { S.metaG = { impl: parseFloat(document.getElementById('mg-impl').value)||0, mens: parseFloat(document.getElementById('mg-mens').value)||0 }; saveData(); closeM('mMetaG'); renderMetas(); renderDashboard(); toast('Meta salva'); }
+
+// CAMPANHAS
+function renderCampanhas() {
+  let list = document.getElementById('campanhas-list');
+  list.innerHTML = S.campanhas.map(c => `
+    <div class="card campanha-card">
+      <div class="fr2" style="align-items:center">
+        <div><div class="card-title">📣 ${c.nome}</div><div class="met-sub">${c.tipo} | ${c.ini||''} a ${c.fim||''}</div><div class="met-sub">${c.desc||''}</div></div>
+        <div style="text-align:right"><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR Code</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Formulário</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div>
+      </div>
+      <div class="stats-grid">
+        <div class="met" style="padding:8px"><div class="met-lbl">Leads Gerados</div><div class="met-val" style="font-size:20px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div>
+        <div class="met" style="padding:8px"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:20px">${c.meta||0}</div></div>
+        <div class="met" style="padding:8px"><div class="met-lbl">Conversão</div><div class="met-val" style="font-size:20px">${c.meta>0?Math.round(S.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div></div>
+      </div>
+      ${c.lp ? `<div style="margin-top:8px;font-size:11px;color:var(--text2)">🌐 Landing Page: <a href="${c.lp}" target="_blank" style="color:var(--accent2)">${c.lp}</a></div>` : ''}
+      <div id="qr-${c.id}" style="display:none;margin-top:10px;text-align:center"></div>
+    </div>
+  `).join('') || '<div class="card"><div class="te">Nenhuma campanha criada</div></div>';
+}
+
+function openCampanha(id) {
+  let c = id ? S.campanhas.find(x=>x.id===id) : null;
+  document.getElementById('camp-nome').value = c?.nome||'';
+  document.getElementById('camp-tipo').value = c?.tipo||'Feira/Exposição';
+  document.getElementById('camp-ini').value = c?.ini||'';
+  document.getElementById('camp-fim').value = c?.fim||'';
+  document.getElementById('camp-desc').value = c?.desc||'';
+  document.getElementById('camp-lp').value = c?.lp||'';
+  document.getElementById('camp-meta').value = c?.meta||'';
+  document.getElementById('camp-campos').value = c?.campos||'nome,email,telefone,empresa';
+  document.getElementById('camp-qr').innerHTML = '';
+  document.getElementById('mCampanha').dataset.editId = id||'';
+  openM('mCampanha');
+}
+
+function saveCampanha() {
+  let id = document.getElementById('mCampanha').dataset.editId;
+  let camp = {
+    id: id || uid(), nome: document.getElementById('camp-nome').value.trim(),
+    tipo: document.getElementById('camp-tipo').value, ini: document.getElementById('camp-ini').value,
+    fim: document.getElementById('camp-fim').value, desc: document.getElementById('camp-desc').value,
+    lp: document.getElementById('camp-lp').value, meta: parseInt(document.getElementById('camp-meta').value)||0,
+    campos: document.getElementById('camp-campos').value, createdAt: new Date().toISOString()
+  };
+  if(!camp.nome){toast('Informe o nome','err');return;}
+  if(id) { let idx=S.campanhas.findIndex(x=>x.id===id); if(idx!==-1) S.campanhas[idx]=camp; }
+  else S.campanhas.push(camp);
+  saveData(); closeM('mCampanha'); renderCampanhas(); toast('Campanha salva');
+}
+
+function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); saveData(); renderCampanhas(); toast('Campanha removida'); }
+
+function gerarQR(id) {
+  let camp = S.campanhas.find(c=>c.id===id);
+  if(!camp || !camp.lp){toast('Configure a URL da Landing Page primeiro','err');return;}
+  let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(camp.lp)}`;
+  let div = document.getElementById(`qr-${id}`);
+  div.innerHTML = `<div class="qr-code"><img src="${qrUrl}" style="width:120px"><br><small>${camp.lp}</small><br><button class="btn btn-ghost btn-xs" onclick="this.parentElement.parentElement.style.display='none'">Fechar</button></div>`;
+  div.style.display = 'block';
+}
+
+function gerarForm(id) {
+  let camp = S.campanhas.find(c=>c.id===id);
+  if(!camp) return;
+  let campos = camp.campos.split(',').map(c=>c.trim());
+  let formHtml = `<div style="background:var(--bg3);border-radius:var(--r);padding:20px"><h3>${camp.nome}</h3><form id="form-${camp.id}">`;
+  campos.forEach(campo => { formHtml += `<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; });
+  formHtml += `<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`;
+  let win = window.open('', '_blank', 'width=500,height=600');
+  win.document.write(`
+    <html><head><title>Formulário - ${camp.nome}</title>
+    <style>body{font-family:Arial;padding:20px;background:#1a1a26;color:#fff}input{background:#222230;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}button{background:#7b68f0;border:none;padding:10px;color:#fff;cursor:pointer}</style>
+    </head><body>${formHtml}<script>
+    document.getElementById('form-${camp.id}').addEventListener('submit', function(e){
+      e.preventDefault(); let formData=new FormData(this); let data={};
+      for(let [k,v] of formData.entries()) data[k]=v;
+      data.campanhaId='${camp.id}';
+      localStorage.setItem('lead_'+Date.now(), JSON.stringify(data));
+      document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado! Entraremos em contato.</div>';
+      this.reset();
+    });
+    <\/script></body></html>
+  `);
+}
+
+// IMPORTAR
+function downloadModelo() {
+  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','']]);
+  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx');
+}
+
+function handleImport(e) {
+  let f = e.target.files[0];
+  if(!f) return;
+  let r = new FileReader();
+  r.onload = function(ev) {
+    let wb = XLSX.read(ev.target.result, {type:'binary'});
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(ws);
+    let imported=0;
+    rows.forEach(row => {
+      let empresa = row.empresa || row.Empresa;
+      if(empresa && !S.leads.find(l=>l.empresa===empresa)) {
+        S.leads.push({ id: uid(), empresa, contato: row.contato||'', email: row.email||'', telefone: row.telefone||'',
+          cidade: row.cidade||'', uf: row.uf||'', segmento: row.segmento||'', responsavel: row.responsavel||currentUser.nome,
+          status:'Oportunidade', pipeline:'', produto:'', implantacao:0, mensalidade:0, createdAt: new Date().toISOString() });
+        imported++;
+      }
+    });
+    saveData(); renderLeads(); renderDashboard();
+    document.getElementById('import-preview').innerHTML = `<div class="tag tg">✅ ${imported} leads importados</div>`;
+    toast(`${imported} leads importados`);
+  };
+  r.readAsBinaryString(f);
+}
+
+// RELATÓRIOS
+function renderRelatorios() {
+  let leads = currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let vendas = S.vendas;
+  let pipeline = leads.filter(l=>l.status==='Prospect' && l.pipeline);
+  let probMap = {Agendamento:20, Apresentação:40, Negociação:70, Fechamento:90};
+  document.getElementById('forecast-tbody').innerHTML = pipeline.map(l=>`<tr><td>${l.responsavel||'—'}</td><td>${l.empresa}</td><td>${l.segmento||'—'}</td><td>${l.cidade||''} ${l.uf||''}</td><td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td><td><span class="tag tp">${l.pipeline}</span></td><td>${probMap[l.pipeline]||0}%</td></tr>`).join('') || '<tr><td colspan="7" class="te">Sem leads em pipeline</td></tr>';
+  
+  let consultores = [...new Set([...leads.map(l=>l.responsavel), ...vendas.map(v=>v.consultor)].filter(Boolean))];
+  document.getElementById('prod-tbody').innerHTML = consultores.map(c => {
+    let leadsC = leads.filter(l=>l.responsavel===c);
+    let vendasC = vendas.filter(v=>v.consultor===c);
+    let receita = vendasC.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
+    let taxa = leadsC.length>0 ? Math.round(vendasC.length/leadsC.length*100) : 0;
+    return `<tr><td>${c}</td><td>${leadsC.length}</td><td>${vendasC.length}</td><td>R$ ${receita.toLocaleString('pt-BR')}</td><td>${taxa}%</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="te">Sem dados</td></tr>';
+}
+
+function exportForecast() {
+  let leads = S.leads.filter(l=>l.status==='Prospect' && l.pipeline);
+  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline }));
+  let ws = XLSX.utils.json_to_sheet(data);
+  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
+  toast('Forecast exportado');
+}
+
+function exportAll() { let wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.leads), 'Leads'); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas), 'Vendas'); XLSX.writeFile(wb, `crm_${new Date().toISOString().split('T')[0]}.xlsx`); toast('Exportado'); }
+
+// USUÁRIOS
+function renderUsuarios() {
+  document.getElementById('users-tb').innerHTML = S.usuarios.map(u => `<tr><td><strong>${u.nome}</strong><br><small>${u.login}</small></td><td><span class="tag tp">${u.role}</span></td><td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑</button>`:''}</td></tr>`).join('');
+}
+function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){document.getElementById('u-nome').value=u.nome; document.getElementById('u-login').value=u.login; document.getElementById('u-role').value=u.role; document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
+function saveUser() {
+  let id = document.getElementById('mUser').dataset.editId;
+  let nome = document.getElementById('u-nome').value.trim(), login = document.getElementById('u-login').value.trim(), role = document.getElementById('u-role').value, senha = document.getElementById('u-pass').value;
+  if(!nome||!login){toast('Preencha nome e login','err');return;}
+  if(id) { let idx=S.usuarios.findIndex(u=>u.id===id); if(idx!==-1){S.usuarios[idx].nome=nome; S.usuarios[idx].login=login; S.usuarios[idx].role=role; if(senha) S.usuarios[idx].senha=senha;} }
+  else { if(!senha){toast('Senha obrigatória','err');return;} S.usuarios.push({id:uid(),nome,login,senha,role}); }
+  saveUsers(); closeM('mUser'); renderUsuarios(); toast('Usuário salvo');
+}
+function deleteUser(id) { S.usuarios = S.usuarios.filter(u=>u.id!==id); saveUsers(); renderUsuarios(); toast('Usuário removido'); }
+
+function openM(id) { document.getElementById(id).style.display='flex'; }
+function closeM(id) { document.getElementById(id).style.display='none'; }
+
+function dzOver(e) { e.preventDefault(); }
+function dzLeave(e) { }
+function dzDrop(e) { e.preventDefault(); let f=e.dataTransfer.files[0]; if(f) handleImport({target:{files:[f]}}); }
+
+function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderMetas(); renderCampanhas(); renderRelatorios(); renderUsuarios(); document.getElementById('d-date').innerHTML=new Date().toLocaleDateString('pt-BR'); let sel=document.getElementById('l-resp'); if(sel) sel.innerHTML='<option value="">Selecione</option>'+S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join(''); }
+
+loadUsers(); loadData(); renderAll();
+</script>
+</body>
+</html>
