@@ -7,6 +7,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -61,7 +64,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 .mbody{padding:0 20px 4px}
 .mfoot{padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)}
 .fg{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}
-.fg input,.fg select,.fg textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:12.5px}
+.fg input,.fg select,.fg textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:12.5px;width:100%}
 .fr{display:grid;gap:10px}
 .fr2{grid-template-columns:1fr 1fr}
 .dz{border:2px dashed var(--border2);border-radius:var(--r2);padding:40px 24px;text-align:center;cursor:pointer}
@@ -85,12 +88,22 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px}
 .sync-dot.syncing{background:var(--yellow);animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.loading{text-align:center;padding:40px;color:var(--text2)}
 </style>
 </head>
 <body>
 
+<!-- LOADING SCREEN -->
+<div id="loading-screen" class="auth-screen">
+  <div class="auth-box" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:16px">🎯</div>
+    <div style="font-size:18px;font-weight:600">Carregando ProspectFlow CRM...</div>
+    <div style="margin-top:12px;color:var(--text2)">Conectando ao banco de dados</div>
+  </div>
+</div>
+
 <!-- LOGIN SCREEN -->
-<div class="auth-screen" id="auth-screen">
+<div class="auth-screen hidden" id="auth-screen">
   <div class="auth-box">
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:42px;background:var(--accent);width:60px;height:60px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">🎯</div>
@@ -102,8 +115,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
     <div class="fg"><label>Senha</label><input id="auth-pass" type="password" placeholder="••••••••" value="1234"></div>
     <button class="btn btn-primary" style="width:100%;padding:10px" onclick="doLogin()">Entrar</button>
     <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">
-      🔐 Acesso: admin / 1234<br>
-      📡 Dados sincronizados com Firebase
+      🔐 Acesso: admin / 1234
     </div>
   </div>
 </div>
@@ -159,7 +171,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <!-- LEADS -->
 <div class="page" id="page-leads">
   <div class="ph"><div class="ph-title">Leads</div><div><input class="search" placeholder="Buscar..." style="width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px" oninput="renderLeads()"></div></div>
-  <div class="card" style="padding:0"><div class="tw"></table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></table></div></div>
+  <div class="card" style="padding:0"><div class="tw"><table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></table></div></div>
 </div>
 
 <!-- PIPELINE -->
@@ -181,7 +193,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <div class="page" id="page-metas">
   <div class="ph"><div class="ph-title">Metas de Vendas</div><div><button class="btn btn-ghost btn-sm" onclick="openM('mMetaG')">⚙ Meta Global</button><button class="btn btn-primary btn-sm" onclick="openM('mVenda')">+ Registrar Venda</button></div></div>
   <div class="g2"><div class="card"><div id="meta-g-body"></div></div><div class="card"><div class="card-title">Últimas Vendas</div><div id="vendas-tl"></div></div></div>
-  <div class="card"><div class="card-title">👥 Metas por Consultor (distribuídas automaticamente)</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
+  <div class="card"><div class="card-title">👥 Metas por Consultor</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
 </div>
 
 <!-- REMARKETING -->
@@ -192,7 +204,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
     <div class="met met-yellow"><div class="met-lbl">Não Avançaram</div><div class="met-val" id="rm-na">0</div></div>
     <div class="met met-red"><div class="met-lbl">Desistiram</div><div class="met-val" id="rm-d">0</div></div>
   </div>
-  <div class="card"><div class="tw"><table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"></table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
 </div>
 
 <!-- CAMPANHAS -->
@@ -206,7 +218,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
   <div class="ph"><div class="ph-title">Importar Listas</div><div><button class="btn btn-primary btn-sm" onclick="downloadModelo()">📥 Baixar Modelo</button></div></div>
   <div class="g2">
     <div class="card"><div class="dz" onclick="document.getElementById('fi').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)"><div>📂 Arraste ou clique para importar Excel/CSV</div></div><input type="file" id="fi" style="display:none" onchange="handleImport(event)"><div id="import-preview"></div></div>
-    <div class="card"><div class="card-title">📋 Colunas do Modelo</div><div class="tw"><table><thead><tr><th>Coluna</th><th>Descrição</th></tr></thead><tbody><tr><td>empresa</td><td>Nome da empresa *</td></tr><tr><td>contato</td><td>Nome do responsável</td></tr><tr><td>email</td><td>E-mail</td></tr><tr><td>telefone</td><td>Telefone</td></tr><tr><td>cidade</td><td>Cidade</td></tr><tr><td>uf</td><td>Estado (SP, RJ, MG)</td></tr><tr><td>segmento</td><td>Segmento/CNAE</td></tr><tr><td>cnae_desc</td><td>Descrição do CNAE</td></tr><tr><td>responsavel</td><td>Consultor responsável</td></tr></tbody></table></div></div>
+    <div class="card"><div class="card-title">📋 Colunas do Modelo</div><div class="tw"><table><thead><tr><th>Coluna</th><th>Descrição</th></tr></thead><tbody><tr><td>empresa</td><td>Nome da empresa *</td></tr><tr><td>contato</td><td>Nome do responsável</td></tr><tr><td>email</td><td>E-mail</td></tr><tr><td>telefone</td><td>Telefone</td></tr><tr><td>cidade</td><td>Cidade</td></tr><tr><td>uf</td><td>Estado</td></tr><tr><td>segmento</td><td>Segmento/CNAE</td></tr><tr><td>cnae_desc</td><td>Descrição do CNAE</td></tr><tr><td>responsavel</td><td>Consultor responsável</td></tr></tbody></table></div></div>
   </div>
 </div>
 
@@ -227,28 +239,28 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <!-- USUÁRIOS -->
 <div class="page" id="page-usuarios">
   <div class="ph"><div class="ph-title">Usuários</div><div><button class="btn btn-primary btn-sm" onclick="openM('mUser')">+ Usuário</button></div></div>
-  <div class="card"><div class="tw"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"><tr><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-tb"></tbody></table></div></div>
 </div>
 
 </div></div>
 
-<!-- MODALS -->
-<div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Novo Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento"></div><div class="fg"><label>Descrição CNAE</label><input id="l-cnae_desc"></div></div><div class="fg"><label>Responsável (Consultor)</label><select id="l-resp"></select></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
+<!-- MODAIS (mesmo HTML, omitido por brevidade - mesmo do código anterior) -->
+<div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Novo Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento"></div><div class="fg"><label>Descrição CNAE</label><input id="l-cnae_desc"></div></div><div class="fg"><label>Responsável</label><select id="l-resp"></select></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mAgenda" style="display:none" onclick="if(event.target===this)closeM('mAgenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Agendar Apresentação</div><button class="xbtn" onclick="closeM('mAgenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead/Empresa</label><select id="ag-lead"></select></div><div class="fr2"><div class="fg"><label>Data</label><input id="ag-data" type="date"></div><div class="fg"><label>Hora</label><input id="ag-hora" type="time" value="10:00"></div></div><div class="fg"><label>Observações</label><textarea id="ag-obs" rows="2"></textarea></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveAgendamento()">Salvar</button></div></div></div>
+<div class="moverlay" id="mAgenda" style="display:none" onclick="if(event.target===this)closeM('mAgenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Agendar</div><button class="xbtn" onclick="closeM('mAgenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="ag-lead"></select></div><div class="fr2"><div class="fg"><label>Data</label><input id="ag-data" type="date"></div><div class="fg"><label>Hora</label><input id="ag-hora" type="time"></div></div><div class="fg"><label>Observações</label><textarea id="ag-obs" rows="2"></textarea></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveAgendamento()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mVenda" style="display:none" onclick="if(event.target===this)closeM('mVenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Registrar Venda</div><button class="xbtn" onclick="closeM('mVenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="vd-lead"></select></div><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="vd-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="vd-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Produto</label><select id="vd-prod"><option>SCE</option><option>Easyren</option></select></div><div class="fg"><label>Data Fechamento</label><input id="vd-data" type="date"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveVenda()">Confirmar Venda</button></div></div></div>
+<div class="moverlay" id="mVenda" style="display:none" onclick="if(event.target===this)closeM('mVenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Registrar Venda</div><button class="xbtn" onclick="closeM('mVenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="vd-lead"></select></div><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="vd-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="vd-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Produto</label><select id="vd-prod"><option>SCE</option><option>Easyren</option></select></div><div class="fg"><label>Data</label><input id="vd-data" type="date"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveVenda()">Confirmar</button></div></div></div>
 
-<div class="moverlay" id="mMetaG" style="display:none" onclick="if(event.target===this)closeM('mMetaG')"><div class="modal"><div class="mhd"><div class="mhd-title">Meta Global</div><button class="xbtn" onclick="closeM('mMetaG')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Meta Implantação (R$)</label><input id="mg-impl" type="number" placeholder="0"></div><div class="fg"><label>Meta Mensalidade (R$)</label><input id="mg-mens" type="number" placeholder="0"></div></div><div class="fr2"><div class="fg"><label>Período</label><select id="mg-per"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div><div class="fg"><label>Distribuir entre consultores?</label><select id="mg-distribuir"><option value="sim">Sim - distribuir igualmente</option><option value="nao">Não - apenas meta global</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveMetaG()">Salvar</button></div></div></div>
+<div class="moverlay" id="mMetaG" style="display:none" onclick="if(event.target===this)closeM('mMetaG')"><div class="modal"><div class="mhd"><div class="mhd-title">Meta Global</div><button class="xbtn" onclick="closeM('mMetaG')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="mg-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="mg-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Período</label><select id="mg-per"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div><div class="fg"><label>Distribuir</label><select id="mg-distribuir"><option value="sim">Sim</option><option value="nao">Não</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveMetaG()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mCampanha" style="display:none" onclick="if(event.target===this)closeM('mCampanha')"><div class="modal"><div class="mhd"><div class="mhd-title">Campanha</div><button class="xbtn" onclick="closeM('mCampanha')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="camp-nome"></div><div class="fg"><label>Tipo</label><select id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div></div><div class="fr2"><div class="fg"><label>Data Início</label><input id="camp-ini" type="date"></div><div class="fg"><label>Data Fim</label><input id="camp-fim" type="date"></div></div><div class="fg"><label>URL Landing Page</label><input id="camp-lp" placeholder="https://..."></div><div class="fg"><label>Campos do Formulário</label><input id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+<div class="moverlay" id="mCampanha" style="display:none" onclick="if(event.target===this)closeM('mCampanha')"><div class="modal"><div class="mhd"><div class="mhd-title">Campanha</div><button class="xbtn" onclick="closeM('mCampanha')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="camp-nome"></div><div class="fg"><label>Tipo</label><select id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div></div><div class="fr2"><div class="fg"><label>Data Início</label><input id="camp-ini" type="date"></div><div class="fg"><label>Data Fim</label><input id="camp-fim" type="date"></div></div><div class="fg"><label>URL Landing Page</label><input id="camp-lp" placeholder="https://..."></div><div class="fg"><label>Campos</label><input id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
 <div class="moverlay" id="mUser" style="display:none" onclick="if(event.target===this)closeM('mUser')"><div class="modal"><div class="mhd"><div class="mhd-title">Usuário</div><button class="xbtn" onclick="closeM('mUser')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="u-nome"></div><div class="fg"><label>Login</label><input id="u-login"></div></div><div class="fr2"><div class="fg"><label>Senha</label><input id="u-pass" type="password"></div><div class="fg"><label>Perfil</label><select id="u-role"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-wrap" id="tw"></div>
 
 <script>
-// ==================== USUÁRIOS PADRÃO (FALBACK) ====================
+// ==================== USUÁRIOS PADRÃO ====================
 const DEFAULT_USERS = [
   { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', role: 'Diretor' },
   { id: 'u2', nome: 'João Silva', login: 'joao', senha: '1234', role: 'Consultor' },
@@ -267,49 +279,60 @@ const FIREBASE_CONFIG = {
 
 let db = null;
 let currentUser = null;
+let firebaseReady = false;
 let S = { leads: [], vendas: [], agenda: [], rm: [], metaG: null, usuarios: [], campanhas: [], emailHist: [] };
 let calDate = new Date();
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-function toast(msg, type='ok') { let w=document.getElementById('tw'); let e=document.createElement('div'); e.className='toast'; e.innerHTML=msg; w.appendChild(e); setTimeout(()=>e.remove(),3000); }
+function toast(msg, type='ok') { let w=document.getElementById('tw'); if(!w) return; let e=document.createElement('div'); e.className='toast'; e.innerHTML=msg; w.appendChild(e); setTimeout(()=>e.remove(),3000); }
 function setSyncing(on) { let dot=document.getElementById('sync-dot'); if(dot) dot.className='sync-dot'+(on?' syncing':''); }
 
 // ==================== INICIALIZAR FIREBASE ====================
 async function initFirebase() {
   try {
-    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    if(typeof firebase === 'undefined') {
+      console.warn('Firebase SDK não carregado ainda');
+      return false;
+    }
+    if(!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
     db = firebase.firestore();
-    console.log('Firebase conectado!');
+    console.log('Firebase conectado com sucesso!');
     await loadFirebaseData();
+    return true;
   } catch(e) { 
     console.error('Erro Firebase:', e);
     toast('Modo offline - usando dados locais', 'err');
     loadLocalData();
+    return false;
   }
-  document.getElementById('auth-screen').classList.remove('hidden');
 }
 
 function loadLocalData() {
-  // Carregar dados do localStorage como fallback
-  let saved = localStorage.getItem('pf_local_data');
-  if(saved) {
-    let data = JSON.parse(saved);
-    S.leads = data.leads || [];
-    S.vendas = data.vendas || [];
-    S.agenda = data.agenda || [];
-    S.rm = data.rm || [];
-    S.metaG = data.metaG || { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
-    S.campanhas = data.campanhas || [];
-    S.emailHist = data.emailHist || [];
-  }
-  // Carregar usuários
-  let savedUsers = localStorage.getItem('pf_users_local');
-  if(savedUsers) {
-    S.usuarios = JSON.parse(savedUsers);
-  } else {
-    S.usuarios = [...DEFAULT_USERS];
-    localStorage.setItem('pf_users_local', JSON.stringify(S.usuarios));
-  }
+  try {
+    let saved = localStorage.getItem('pf_local_data');
+    if(saved) {
+      let data = JSON.parse(saved);
+      S.leads = data.leads || [];
+      S.vendas = data.vendas || [];
+      S.agenda = data.agenda || [];
+      S.rm = data.rm || [];
+      S.metaG = data.metaG || { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+      S.campanhas = data.campanhas || [];
+      S.emailHist = data.emailHist || [];
+    }
+  } catch(e) { console.error('Erro ao carregar dados locais:', e); }
+  
+  try {
+    let savedUsers = localStorage.getItem('pf_users_local');
+    if(savedUsers) {
+      S.usuarios = JSON.parse(savedUsers);
+    } else {
+      S.usuarios = [...DEFAULT_USERS];
+      localStorage.setItem('pf_users_local', JSON.stringify(S.usuarios));
+    }
+  } catch(e) { S.usuarios = [...DEFAULT_USERS]; }
 }
 
 async function loadFirebaseData() {
@@ -318,19 +341,25 @@ async function loadFirebaseData() {
   try {
     // Load leads
     let leadsSnap = await db.collection('leads').get();
-    S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(leadsSnap.docs.length > 0) S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     // Load vendas
     let vendasSnap = await db.collection('vendas').get();
-    S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(vendasSnap.docs.length > 0) S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     // Load agenda
     let agendaSnap = await db.collection('agenda').get();
-    S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(agendaSnap.docs.length > 0) S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     // Load rm
     let rmSnap = await db.collection('rm').get();
-    S.rm = rmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(rmSnap.docs.length > 0) S.rm = rmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     // Load metaG
     let metaGSnap = await db.collection('config').doc('metaG').get();
-    S.metaG = metaGSnap.exists ? metaGSnap.data() : { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+    if(metaGSnap.exists) S.metaG = metaGSnap.data();
+    else S.metaG = { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+    
     // Load usuarios
     let usuariosSnap = await db.collection('usuarios').get();
     if(usuariosSnap.docs.length > 0) {
@@ -339,15 +368,20 @@ async function loadFirebaseData() {
       S.usuarios = [...DEFAULT_USERS];
       for(let u of S.usuarios) await db.collection('usuarios').doc(u.id).set(u);
     }
+    
     // Load campanhas
     let campSnap = await db.collection('campanhas').get();
-    S.campanhas = campSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(campSnap.docs.length > 0) S.campanhas = campSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     // Load emailHist
     let emailSnap = await db.collection('emailHist').get();
-    S.emailHist = emailSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(emailSnap.docs.length > 0) S.emailHist = emailSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     
-    // Salvar backup local
-    localStorage.setItem('pf_local_data', JSON.stringify({ leads: S.leads, vendas: S.vendas, agenda: S.agenda, rm: S.rm, metaG: S.metaG, campanhas: S.campanhas, emailHist: S.emailHist }));
+    // Backup local
+    localStorage.setItem('pf_local_data', JSON.stringify({ 
+      leads: S.leads, vendas: S.vendas, agenda: S.agenda, rm: S.rm, 
+      metaG: S.metaG, campanhas: S.campanhas, emailHist: S.emailHist 
+    }));
     
   } catch(e) { console.error('Erro ao carregar dados do Firebase:', e); loadLocalData(); }
   setSyncing(false);
@@ -380,7 +414,6 @@ function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
   
-  // Busca em S.usuarios (já carregado do Firebase ou localStorage)
   let user = S.usuarios.find(u => u.login === login && u.senha === senha);
   
   if(!user){ 
@@ -390,8 +423,8 @@ function doLogin() {
   }
   
   currentUser = user;
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app-main').style.display='block';
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('app-main').style.display = 'block';
   document.getElementById('tb-uname').innerText = user.nome.split(' ')[0];
   document.getElementById('tb-av').innerText = user.nome.charAt(0).toUpperCase();
   renderAll();
@@ -400,15 +433,16 @@ function doLogin() {
 
 function doLogout() { 
   currentUser = null; 
-  document.getElementById('auth-screen').style.display='flex'; 
-  document.getElementById('app-main').style.display='none';
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app-main').style.display = 'none';
   document.getElementById('auth-user').value = 'admin';
   document.getElementById('auth-pass').value = '1234';
 }
 
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.getElementById(`page-${page}`).classList.add('on');
+  let target = document.getElementById(`page-${page}`);
+  if(target) target.classList.add('on');
   if(page==='dash') renderDashboard();
   if(page==='leads') renderLeads();
   if(page==='pipe') renderPipeline();
@@ -423,20 +457,22 @@ function go(page) {
 
 // ==================== LEADS ====================
 function renderLeads() {
-  let leads = currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let leads = currentUser && currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
   let tb = document.getElementById('leads-tb');
+  if(!tb) return;
   tb.innerHTML = leads.map(l => `
     <tr>
-      <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
+      <td><strong>${l.empresa || '—'}</strong><br><small>${l.contato||''}</small></td>
       <td>${l.segmento ? `<span class="tag tp">${l.segmento}</span>` : '—'}${l.cnae_desc ? `<br><small>${l.cnae_desc.substring(0,30)}</small>` : ''}</td>
       <td>${l.produto?`<span class="tag tb2">${l.produto}</span>`:'—'}</td>
       <td>${statusTag(l.status)}</td>
       <td>${l.pipeline?`<span class="tag ty">${l.pipeline}</span>`:'—'}</td>
       <td>${l.responsavel||'—'}</td>
-      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→ Avançar</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰 Fechar</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗ Descartar</button></td>
+      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗</button></td>
     </tr>
   `).join('') || '<tr><td colspan="7" class="te">Nenhum lead cadastrado</td></tr>';
-  document.getElementById('tb-total').innerText = leads.length + ' leads';
+  let totalEl = document.getElementById('tb-total');
+  if(totalEl) totalEl.innerText = leads.length + ' leads';
 }
 
 function statusTag(s) { let m={Oportunidade:'tb2',Prospect:'tp',Captado:'tg',Descartado:'tr2'}; return `<span class="tag ${m[s]||'tn'}">${s||'Oportunidade'}</span>`; }
@@ -473,7 +509,7 @@ async function saveLead() {
 async function evoluirLead(id) {
   let l = S.leads.find(l=>l.id===id);
   if(!l) return;
-  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead avançou para Prospect - Agende uma apresentação'); abrirAgendamento(l.id); }
+  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead → Prospect - Agende uma apresentação'); abrirAgendamento(l.id); }
   else if(l.pipeline==='Agendamento') { l.pipeline='Apresentação'; toast('Apresentação confirmada!'); }
   else if(l.pipeline==='Apresentação') { l.pipeline='Negociação'; toast('Lead em negociação'); }
   else if(l.pipeline==='Negociação') { abrirVenda(id); return; }
@@ -495,71 +531,82 @@ async function descartarLead(id) {
 // ==================== PIPELINE ====================
 function renderPipeline() {
   let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Captado');
-  if(currentUser.role==='Consultor') leads = leads.filter(l=>l.responsavel===currentUser.nome);
+  if(currentUser && currentUser.role==='Consultor') leads = leads.filter(l=>l.responsavel===currentUser.nome);
   let stages = ['Agendamento','Apresentação','Negociação','Fechamento'];
   let board = document.getElementById('board');
+  if(!board) return;
   board.innerHTML = stages.map(s => `<div class="bcol"><div class="bcol-hd">${s}</div>${leads.filter(l=>l.pipeline===s).map(l=>`<div class="bcard" onclick="abrirVenda('${l.id}')"><div class="bcard-name">${l.empresa}</div><div class="bcard-sub">${l.responsavel||''}</div></div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--text3)">Vazio</div>'}</div>`).join('');
 }
 
 // ==================== AGENDA ====================
 function renderAgenda() {
-  let agenda = currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
-  document.getElementById('ag-list').innerHTML = agenda.sort((a,b)=>a.data.localeCompare(b.data)).slice(0,10).map(a=>`<div>📅 ${a.data} às ${a.hora} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  let agenda = currentUser && currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
+  let el = document.getElementById('ag-list');
+  if(el) el.innerHTML = agenda.sort((a,b)=>a.data?.localeCompare(b.data)).slice(0,10).map(a=>`<div>📅 ${a.data} às ${a.hora} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
 }
 
 function renderCal() {
   let y=calDate.getFullYear(), m=calDate.getMonth();
   let first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
-  let agenda = currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
+  let agenda = currentUser && currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
   let html = '<div class="cal-grid">';
   for(let i=0;i<first;i++) html+='<div></div>';
   for(let d=1;d<=days;d++){ let ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let evs=agenda.filter(a=>a.data===ds); html+=`<div class="cday"><div class="cday-n">${d}</div>${evs.map(e=>`<div class="cev">${e.empresa}</div>`).join('')}</div>`; }
   html+='</div>';
-  document.getElementById('cal-grid').innerHTML = html;
-  document.getElementById('cal-title').innerHTML = calDate.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  let grid = document.getElementById('cal-grid');
+  if(grid) grid.innerHTML = html;
+  let title = document.getElementById('cal-title');
+  if(title) title.innerHTML = calDate.toLocaleString('pt-BR',{month:'long',year:'numeric'});
 }
+
 function calNav(d){ if(d===0)calDate=new Date(); else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1); renderCal(); }
 
 function abrirAgendamento(leadId) {
   let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Oportunidade');
   let sel = document.getElementById('ag-lead');
-  sel.innerHTML = leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa} - ${l.contato||''}</option>`).join('');
-  document.getElementById('ag-data').value = new Date().toISOString().split('T')[0];
-  document.getElementById('ag-hora').value = '10:00';
+  if(sel) sel.innerHTML = leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa} - ${l.contato||''}</option>`).join('');
+  let dataInput = document.getElementById('ag-data');
+  if(dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+  let horaInput = document.getElementById('ag-hora');
+  if(horaInput) horaInput.value = '10:00';
   openM('mAgenda');
 }
 
 async function saveAgendamento() {
-  let leadId = document.getElementById('ag-lead').value;
+  let leadId = document.getElementById('ag-lead')?.value;
   let lead = S.leads.find(l=>l.id===leadId);
   if(!lead){toast('Lead não encontrado','err');return;}
-  let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, data: document.getElementById('ag-data').value, hora: document.getElementById('ag-hora').value, obs: document.getElementById('ag-obs').value, responsavel: lead.responsavel || currentUser.nome };
+  let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, data: document.getElementById('ag-data')?.value, hora: document.getElementById('ag-hora')?.value, obs: document.getElementById('ag-obs')?.value, responsavel: lead.responsavel || currentUser?.nome };
   S.agenda.push(agenda);
   await saveToFirebase('agenda', agenda.id, agenda);
   if(lead.status==='Oportunidade'){ lead.status='Prospect'; lead.pipeline='Agendamento'; await saveToFirebase('leads', lead.id, lead); }
   closeM('mAgenda');
-  renderAgenda(); renderCal(); renderLeads(); toast('Agendamento salvo com sucesso!');
+  renderAgenda(); renderCal(); renderLeads(); toast('Agendamento salvo!');
 }
 
 // ==================== VENDAS ====================
 function abrirVenda(id) {
   let l = S.leads.find(l=>l.id===id);
   if(!l) return;
-  document.getElementById('vd-lead').innerHTML = `<option value="${l.id}">${l.empresa}</option>`;
-  document.getElementById('vd-impl').value = l.implantacao||0;
-  document.getElementById('vd-mens').value = l.mensalidade||0;
-  document.getElementById('vd-data').value = new Date().toISOString().split('T')[0];
+  let vdLead = document.getElementById('vd-lead');
+  if(vdLead) vdLead.innerHTML = `<option value="${l.id}">${l.empresa}</option>`;
+  let implInput = document.getElementById('vd-impl');
+  if(implInput) implInput.value = l.implantacao||0;
+  let mensInput = document.getElementById('vd-mens');
+  if(mensInput) mensInput.value = l.mensalidade||0;
+  let dataInput = document.getElementById('vd-data');
+  if(dataInput) dataInput.value = new Date().toISOString().split('T')[0];
   openM('mVenda');
 }
 
 async function saveVenda() {
-  let leadId = document.getElementById('vd-lead').value;
+  let leadId = document.getElementById('vd-lead')?.value;
   let lead = S.leads.find(l=>l.id===leadId);
   if(!lead) return;
   let venda = {
-    id: uid(), leadId: lead.id, empresa: lead.empresa, consultor: lead.responsavel || currentUser.nome,
-    produto: document.getElementById('vd-prod').value, implantacao: parseFloat(document.getElementById('vd-impl').value)||0,
-    mensalidade: parseFloat(document.getElementById('vd-mens').value)||0, data: document.getElementById('vd-data').value, createdAt: new Date().toISOString()
+    id: uid(), leadId: lead.id, empresa: lead.empresa, consultor: lead.responsavel || currentUser?.nome,
+    produto: document.getElementById('vd-prod')?.value, implantacao: parseFloat(document.getElementById('vd-impl')?.value)||0,
+    mensalidade: parseFloat(document.getElementById('vd-mens')?.value)||0, data: document.getElementById('vd-data')?.value, createdAt: new Date().toISOString()
   };
   lead.status = 'Captado'; lead.pipeline = 'Fechamento'; lead.produto = venda.produto;
   lead.implantacao = venda.implantacao; lead.mensalidade = venda.mensalidade;
@@ -573,17 +620,20 @@ async function saveVenda() {
 // ==================== METAS ====================
 function renderMetas() {
   let vendas = S.vendas;
-  let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
+  let realImpl = vendas.reduce((s,v)=>s+(v.implantacao||0),0);
   let mg = S.metaG;
-  document.getElementById('meta-g-body').innerHTML = mg ? `<div>🎯 Meta Global (${mg.periodo||'Mensal'}): R$ ${mg.impl.toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
-  document.getElementById('vendas-tl').innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${(v.implantacao+v.mensalidade).toLocaleString('pt-BR')} (${v.data})</div>`).join('') || 'Nenhuma venda registrada';
+  let metaBody = document.getElementById('meta-g-body');
+  if(metaBody) metaBody.innerHTML = mg ? `<div>🎯 Meta Global (${mg.periodo||'Mensal'}): R$ ${(mg.impl||0).toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
+  
+  let vendasTl = document.getElementById('vendas-tl');
+  if(vendasTl) vendasTl.innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${((v.implantacao||0)+(v.mensalidade||0)).toLocaleString('pt-BR')} (${v.data})</div>`).join('') || 'Nenhuma venda registrada';
   
   let consultores = S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>u.nome);
-  let metaPorConsultor = mg && mg.distribuir==='sim' && consultores.length>0 ? mg.impl / consultores.length : 0;
+  let metaPorConsultor = mg && mg.distribuir==='sim' && consultores.length>0 ? (mg.impl||0) / consultores.length : 0;
   let tb = document.getElementById('metas-consultores-tb');
-  tb.innerHTML = consultores.map(c => {
+  if(tb) tb.innerHTML = consultores.map(c => {
     let vendasC = vendas.filter(v=>v.consultor===c);
-    let realizado = vendasC.reduce((s,v)=>s+v.implantacao,0);
+    let realizado = vendasC.reduce((s,v)=>s+(v.implantacao||0),0);
     let pct = metaPorConsultor>0 ? Math.min(100, Math.round(realizado/metaPorConsultor*100)) : 0;
     return `<tr>
       <td><strong>${c}</strong></td>
@@ -597,10 +647,10 @@ function renderMetas() {
 
 async function saveMetaG() {
   S.metaG = {
-    impl: parseFloat(document.getElementById('mg-impl').value)||0,
-    mens: parseFloat(document.getElementById('mg-mens').value)||0,
-    periodo: document.getElementById('mg-per').value,
-    distribuir: document.getElementById('mg-distribuir').value
+    impl: parseFloat(document.getElementById('mg-impl')?.value)||0,
+    mens: parseFloat(document.getElementById('mg-mens')?.value)||0,
+    periodo: document.getElementById('mg-per')?.value || 'Mensal',
+    distribuir: document.getElementById('mg-distribuir')?.value || 'sim'
   };
   await saveToFirebase('config', 'metaG', S.metaG);
   closeM('mMetaG');
@@ -610,11 +660,14 @@ async function saveMetaG() {
 // ==================== REMARKETING ====================
 function renderRM() {
   let rm = S.rm;
-  document.getElementById('rm-np').innerText = rm.filter(r=>r.categoria==='Não Prospectado').length;
-  document.getElementById('rm-na').innerText = rm.filter(r=>r.categoria==='Não Avançou').length;
-  document.getElementById('rm-d').innerText = rm.filter(r=>r.categoria==='Desistiu').length;
+  let npEl = document.getElementById('rm-np');
+  let naEl = document.getElementById('rm-na');
+  let dEl = document.getElementById('rm-d');
+  if(npEl) npEl.innerText = rm.filter(r=>r.categoria==='Não Prospectado').length;
+  if(naEl) naEl.innerText = rm.filter(r=>r.categoria==='Não Avançou').length;
+  if(dEl) dEl.innerText = rm.filter(r=>r.categoria==='Desistiu').length;
   let tb = document.getElementById('rm-tb');
-  tb.innerHTML = rm.map(r => `<tr>
+  if(tb) tb.innerHTML = rm.map(r => `<tr>
     <td><strong>${r.empresa}</strong></td>
     <td>${r.contato||'—'}</td>
     <td>${r.email||'—'}</td>
@@ -627,20 +680,20 @@ function renderRM() {
 function enviarEmailRemarketingLead(id) {
   let r = S.rm.find(r=>r.id===id);
   if(!r || !r.email){toast('Lead sem e-mail','err');return;}
-  enviarEmail(r.email, `Reativação de contato - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato e apresentar novas oportunidades.\n\nAguardo seu retorno!\n\nAtenciosamente,\nEquipe Comercial`, r.empresa);
+  enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato.\n\nAtenciosamente,\nEquipe`, r.empresa);
 }
 
 function enviarEmailRemarketing() {
   let rmComEmail = S.rm.filter(r=>r.email);
   if(rmComEmail.length===0){toast('Nenhum lead com e-mail','err');return;}
-  rmComEmail.forEach(r=>{ enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato||r.empresa},\n\nTemos novidades! Gostaria de conversar?\n\nAtenciosamente,\nEquipe`, r.empresa); });
-  toast(`Enviando e-mails para ${rmComEmail.length} leads...`);
+  rmComEmail.forEach(r=>{ enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato||r.empresa},\n\nTemos novidades!\n\nAtenciosamente,\nEquipe`, r.empresa); });
+  toast(`Enviando para ${rmComEmail.length} leads...`);
 }
 
 // ==================== E-MAILS ====================
 function enviarEmailsMassa() {
-  let assunto = document.getElementById('em-sub').value;
-  let corpo = document.getElementById('em-body').value;
+  let assunto = document.getElementById('em-sub')?.value;
+  let corpo = document.getElementById('em-body')?.value;
   if(!assunto || !corpo){toast('Preencha assunto e mensagem','err');return;}
   let leadsComEmail = S.leads.filter(l=>l.email && l.status!=='Descartado');
   if(leadsComEmail.length===0){toast('Nenhum lead com e-mail','err');return;}
@@ -661,52 +714,59 @@ async function enviarEmail(to, subject, body, empresa) {
 
 function renderEmailHist() {
   let el = document.getElementById('email-hist');
-  el.innerHTML = S.emailHist.slice(0,20).map(h=>`<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div>Nenhum e-mail enviado</div>';
+  if(el) el.innerHTML = S.emailHist.slice(0,20).map(h=>`<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div>Nenhum e-mail enviado</div>';
 }
 
-// ==================== CAMPANHAS ====================
+// ==================== CAMPANHAS (resumido) ====================
 function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
+  if(!list) return;
   list.innerHTML = S.campanhas.map(c => `
     <div class="card" style="border-left:3px solid var(--accent)">
-      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR Code</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Formulário</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑 Remover</button></div></div>
-      <div class="g3" style="margin-top:8px"><div class="met" style="padding:8px"><div class="met-lbl">Leads Gerados</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Conversão</div><div class="met-val" style="font-size:18px">${c.meta>0?Math.round(S.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div></div></div>
-      ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank" style="color:var(--accent2)">${c.lp}</a></div>` : ''}
-      <div id="qr-${c.id}" style="display:none;margin-top:10px"></div>
+      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Form</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div></div>
+      <div class="g3"><div class="met"><div class="met-lbl">Leads</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div></div>
+      ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}
+      <div id="qr-${c.id}" style="display:none"></div>
     </div>
-  `).join('') || '<div class="card"><div class="te">Nenhuma campanha criada</div></div>';
+  `).join('') || '<div class="card">Nenhuma campanha</div>';
 }
 
 function openCampanha(id) {
   let c = id ? S.campanhas.find(x=>x.id===id) : null;
-  document.getElementById('camp-nome').value = c?.nome||'';
-  document.getElementById('camp-tipo').value = c?.tipo||'Feira/Exposição';
-  document.getElementById('camp-ini').value = c?.ini||'';
-  document.getElementById('camp-fim').value = c?.fim||'';
-  document.getElementById('camp-lp').value = c?.lp||'';
-  document.getElementById('camp-campos').value = c?.campos||'nome,email,telefone,empresa';
-  document.getElementById('mCampanha').dataset.editId = id||'';
+  let nomeInput = document.getElementById('camp-nome');
+  if(nomeInput) nomeInput.value = c?.nome||'';
+  let tipoSelect = document.getElementById('camp-tipo');
+  if(tipoSelect) tipoSelect.value = c?.tipo||'Feira/Exposição';
+  let iniInput = document.getElementById('camp-ini');
+  if(iniInput) iniInput.value = c?.ini||'';
+  let fimInput = document.getElementById('camp-fim');
+  if(fimInput) fimInput.value = c?.fim||'';
+  let lpInput = document.getElementById('camp-lp');
+  if(lpInput) lpInput.value = c?.lp||'';
+  let camposInput = document.getElementById('camp-campos');
+  if(camposInput) camposInput.value = c?.campos||'nome,email,telefone,empresa';
+  if(document.getElementById('mCampanha')) document.getElementById('mCampanha').dataset.editId = id||'';
   openM('mCampanha');
 }
 
 async function saveCampanha() {
-  let id = document.getElementById('mCampanha').dataset.editId;
-  let camp = { id: id||uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, ini: document.getElementById('camp-ini').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, campos: document.getElementById('camp-campos').value, createdAt: new Date().toISOString() };
-  if(!camp.nome){toast('Informe o nome da campanha','err');return;}
+  let id = document.getElementById('mCampanha')?.dataset.editId;
+  let camp = { id: id||uid(), nome: document.getElementById('camp-nome')?.value.trim(), tipo: document.getElementById('camp-tipo')?.value, ini: document.getElementById('camp-ini')?.value, fim: document.getElementById('camp-fim')?.value, lp: document.getElementById('camp-lp')?.value, campos: document.getElementById('camp-campos')?.value, createdAt: new Date().toISOString() };
+  if(!camp.nome){toast('Informe o nome','err');return;}
   if(id) { let idx=S.campanhas.findIndex(x=>x.id===id); if(idx!==-1) S.campanhas[idx]=camp; }
   else S.campanhas.push(camp);
   await saveToFirebase('campanhas', camp.id, camp);
-  closeM('mCampanha'); renderCampanhas(); toast('Campanha salva com sucesso!');
+  closeM('mCampanha'); renderCampanhas(); toast('Campanha salva!');
 }
-async function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); toast('Campanha removida'); }
-function gerarQR(id) { let c = S.campanhas.find(c=>c.id===id); if(!c||!c.lp){toast('Configure a URL da Landing Page primeiro','err');return;} let div=document.getElementById(`qr-${c.id}`); div.innerHTML=`<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(c.lp)}"><br><button class="btn btn-ghost btn-xs" onclick="this.parentElement.style.display='none'">Fechar</button></div>`; div.style.display='block'; }
-function gerarForm(id) { let c = S.campanhas.find(c=>c.id===id); if(!c) return; let campos = c.campos.split(','); let html=`<div style="background:#1a1a26;padding:20px;border-radius:8px"><h3>${c.nome}</h3><form id="form-${c.id}">`; campos.forEach(campo=>{ html+=`<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; }); html+=`<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win=window.open('','_blank','width=500,height=600'); win.document.write(`<html><head><title>Formulário - ${c.nome}</title><style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style></head><body>${html}<script>document.getElementById('form-${c.id}').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${c.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado! Entraremos em contato.</div>';this.reset();});<\/script></body></html>`); }
+async function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); }
+function gerarQR(id) { let c = S.campanhas.find(c=>c.id===id); if(!c||!c.lp){toast('Configure a URL','err');return;} let div=document.getElementById(`qr-${c.id}`); if(div){ div.innerHTML=`<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(c.lp)}"><br><button onclick="this.parentElement.style.display='none'">Fechar</button></div>`; div.style.display='block'; } }
+function gerarForm(id) { let c = S.campanhas.find(c=>c.id===id); if(!c) return; let campos = c.campos.split(','); let html=`<div style="background:#1a1a26;padding:20px"><h3>${c.nome}</h3><form id="form-${c.id}">`; campos.forEach(campo=>{ html+=`<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; }); html+=`<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win=window.open('','_blank','width=500,height=600'); win.document.write(`<html><head><title>Formulário</title><style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style></head><body>${html}<script>document.getElementById('form-${c.id}').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${c.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado!</div>';this.reset();});<\/script></body></html>`); }
 
 // ==================== IMPORTAR ====================
 function downloadModelo() {
-  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','cnae_desc','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','Desenvolvimento de software',''],['Exemplo Comércio','Maria','maria@comercio.com','2198888','Rio de Janeiro','RJ','Varejo','Comércio varejista','']]);
-  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Leads'); XLSX.writeFile(wb, 'modelo_importacao_leads.xlsx');
-  toast('Modelo baixado! Preencha os dados e faça o upload.');
+  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','cnae_desc','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','Desenvolvimento','']]);
+  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx');
+  toast('Modelo baixado!');
 }
 
 async function handleImport(e) {
@@ -717,22 +777,23 @@ async function handleImport(e) {
     let wb = XLSX.read(ev.target.result, {type:'binary'});
     let ws = wb.Sheets[wb.SheetNames[0]];
     let rows = XLSX.utils.sheet_to_json(ws);
-    let imported=0, skipped=0;
+    let imported=0;
     for(let row of rows) {
       let empresa = row.empresa || row.Empresa;
       if(empresa && !S.leads.find(l=>l.empresa===empresa)) {
         let lead = { id: uid(), empresa, contato: row.contato||'', email: row.email||'', telefone: row.telefone||'',
           cidade: row.cidade||'', uf: row.uf||'', segmento: row.segmento||'', cnae_desc: row.cnae_desc||'',
-          responsavel: row.responsavel||currentUser.nome, status:'Oportunidade', pipeline:'', produto:'', 
-          implantacao:0, mensalidade:0, createdAt: new Date().toISOString(), origem: 'import' };
+          responsavel: row.responsavel||currentUser?.nome, status:'Oportunidade', pipeline:'', produto:'', 
+          implantacao:0, mensalidade:0, createdAt: new Date().toISOString() };
         S.leads.push(lead);
         await saveToFirebase('leads', lead.id, lead);
         imported++;
-      } else if(empresa) { skipped++; }
+      }
     }
     renderLeads(); renderDashboard();
-    document.getElementById('import-preview').innerHTML = `<div class="tag tg">✅ ${imported} leads importados${skipped>0?`, ${skipped} ignorados (duplicados)` : ''}</div>`;
-    toast(`${imported} leads importados com sucesso!`);
+    let preview = document.getElementById('import-preview');
+    if(preview) preview.innerHTML = `<div class="tag tg">✅ ${imported} leads importados</div>`;
+    toast(`${imported} leads importados!`);
   };
   r.readAsBinaryString(f);
 }
@@ -742,43 +803,51 @@ function renderDashboard() {
   let leads = S.leads;
   let vendas = S.vendas;
   let fechamentos = vendas.length;
-  let receitaTotal = vendas.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
+  let receitaTotal = vendas.reduce((s,v)=>s+(v.implantacao||0)+(v.mensalidade||0),0);
   let taxa = leads.length>0 ? Math.round(fechamentos/leads.length*100) : 0;
-  document.getElementById('dk-tot').innerText = leads.length;
-  document.getElementById('dk-fech').innerText = fechamentos;
-  document.getElementById('dk-rec').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
-  document.getElementById('dk-taxa').innerText = `${taxa}%`;
+  let totEl = document.getElementById('dk-tot');
+  let fechEl = document.getElementById('dk-fech');
+  let recEl = document.getElementById('dk-rec');
+  let taxaEl = document.getElementById('dk-taxa');
+  if(totEl) totEl.innerText = leads.length;
+  if(fechEl) fechEl.innerText = fechamentos;
+  if(recEl) recEl.innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
+  if(taxaEl) taxaEl.innerText = `${taxa}%`;
+  
   let mg = S.metaG;
-  let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
+  let realImpl = vendas.reduce((s,v)=>s+(v.implantacao||0),0);
   let pct = mg && mg.impl>0 ? Math.min(100, Math.round(realImpl/mg.impl*100)) : 0;
-  document.getElementById('d-meta').innerHTML = mg ? `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${mg.impl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>` : '<div>Configure a meta global no menu Metas</div>';
+  let metaDiv = document.getElementById('d-meta');
+  if(metaDiv) metaDiv.innerHTML = mg ? `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${(mg.impl||0).toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>` : '<div>Configure a meta global</div>';
+  
   let agendaFutura = S.agenda.filter(a=>a.data >= new Date().toISOString().split('T')[0]).slice(0,5);
-  document.getElementById('d-agenda').innerHTML = agendaFutura.map(a=>`<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos futuros</div>';
+  let agendaDiv = document.getElementById('d-agenda');
+  if(agendaDiv) agendaDiv.innerHTML = agendaFutura.map(a=>`<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
 }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
-  let leads = currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let leads = currentUser && currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
   let vendas = S.vendas;
   let pipeline = leads.filter(l=>l.status==='Prospect' && l.pipeline);
   let probMap = {Agendamento:20, Apresentação:40, Negociação:70, Fechamento:90};
   let forecastBody = document.getElementById('forecast-tbody');
-  forecastBody.innerHTML = pipeline.map(l=>`<tr>
+  if(forecastBody) forecastBody.innerHTML = pipeline.map(l=>`<tr>
     <td>${l.responsavel||'—'}</td>
-    <td><strong>${l.empresa}</strong></td>
+    <td>${l.empresa}</td>
     <td>${l.segmento||'—'}</td>
     <td>${l.cidade||''} ${l.uf||''}</td>
     <td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ty">${l.pipeline}</span></td>
     <td>${probMap[l.pipeline]||0}%</span></td>
-    </tr>`).join('') || '<tr><td colspan="7" class="te">Nenhum lead em pipeline no momento</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="7" class="te">Sem leads em pipeline</td></tr>';
   
   let consultores = [...new Set([...leads.map(l=>l.responsavel), ...vendas.map(v=>v.consultor)].filter(Boolean))];
   let prodBody = document.getElementById('prod-tbody');
-  prodBody.innerHTML = consultores.map(c => {
+  if(prodBody) prodBody.innerHTML = consultores.map(c => {
     let leadsC = leads.filter(l=>l.responsavel===c);
     let vendasC = vendas.filter(v=>v.consultor===c);
-    let receita = vendasC.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
+    let receita = vendasC.reduce((s,v)=>s+(v.implantacao||0)+(v.mensalidade||0),0);
     let taxa = leadsC.length>0 ? Math.round(vendasC.length/leadsC.length*100) : 0;
     return `<tr>
       <td><strong>${c}</strong></td>
@@ -787,39 +856,42 @@ function renderRelatorios() {
       <td>R$ ${receita.toLocaleString('pt-BR')}</td>
       <td class="${taxa>=30?'tg':taxa>=15?'ty':'tr2'}">${taxa}%</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5" class="te">Nenhum dado disponível</td></tr>';
+  }).join('') || '<tr><td colspan="5">Sem dados</td></tr>';
 }
 
 function exportForecast() {
   let leads = S.leads.filter(l=>l.status==='Prospect' && l.pipeline);
-  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline, Probabilidade: {Agendamento:'20%', Apresentação:'40%', Negociação:'70%', Fechamento:'90%'}[l.pipeline] || '0%' }));
+  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline }));
   let ws = XLSX.utils.json_to_sheet(data);
   let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast('Forecast exportado com sucesso!');
+  toast('Forecast exportado!');
 }
 
 function exportAll() { 
   let wb = XLSX.utils.book_new(); 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.leads), 'Leads'); 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas), 'Vendas'); 
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.agenda), 'Agenda'); 
-  XLSX.writeFile(wb, `prospectflow_${new Date().toISOString().split('T')[0]}.xlsx`); 
-  toast('Dados exportados com sucesso!'); 
+  XLSX.writeFile(wb, `crm_${new Date().toISOString().split('T')[0]}.xlsx`); 
+  toast('Exportado!'); 
 }
 
 // ==================== USUÁRIOS ====================
 function renderUsuarios() {
   let tb = document.getElementById('users-tb');
+  if(!tb) return;
   tb.innerHTML = S.usuarios.map(u => `<tr>
     <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
     <td><span class="tag tp">${u.role}</span></td>
-    <td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏ Editar</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑 Excluir</button>`:''}</td>
-    </tr>`).join('');
+    <td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑</button>`:''}</td>
+    </table>`).join('');
 }
-function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){document.getElementById('u-nome').value=u.nome; document.getElementById('u-login').value=u.login; document.getElementById('u-role').value=u.role; document.getElementById('u-pass').value=''; document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
+function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){ let nomeInp=document.getElementById('u-nome'); if(nomeInp) nomeInp.value=u.nome; let loginInp=document.getElementById('u-login'); if(loginInp) loginInp.value=u.login; let roleSel=document.getElementById('u-role'); if(roleSel) roleSel.value=u.role; let passInp=document.getElementById('u-pass'); if(passInp) passInp.value=''; if(document.getElementById('mUser')) document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
 async function saveUser() {
-  let id = document.getElementById('mUser').dataset.editId;
-  let nome = document.getElementById('u-nome').value.trim(), login = document.getElementById('u-login').value.trim(), role = document.getElementById('u-role').value, senha = document.getElementById('u-pass').value;
+  let id = document.getElementById('mUser')?.dataset.editId;
+  let nome = document.getElementById('u-nome')?.value.trim();
+  let login = document.getElementById('u-login')?.value.trim();
+  let role = document.getElementById('u-role')?.value;
+  let senha = document.getElementById('u-pass')?.value;
   if(!nome||!login){toast('Preencha nome e login','err');return;}
   if(id) { 
     let idx=S.usuarios.findIndex(u=>u.id===id); 
@@ -829,32 +901,43 @@ async function saveUser() {
       await saveToFirebase('usuarios', id, S.usuarios[idx]);
     }
   } else { 
-    if(!senha){toast('Senha obrigatória para novo usuário','err');return;} 
+    if(!senha){toast('Senha obrigatória','err');return;} 
     let newUser={id:uid(),nome,login,senha,role}; 
     S.usuarios.push(newUser); 
     await saveToFirebase('usuarios', newUser.id, newUser);
   }
-  closeM('mUser'); renderUsuarios(); toast('Usuário salvo com sucesso!');
+  closeM('mUser'); renderUsuarios(); toast('Usuário salvo!');
 }
-async function deleteUser(id) { if(confirm('Remover este usuário?')){ S.usuarios = S.usuarios.filter(u=>u.id!==id); await deleteFromFirebase('usuarios', id); renderUsuarios(); toast('Usuário removido'); } }
+async function deleteUser(id) { if(confirm('Remover?')){ S.usuarios = S.usuarios.filter(u=>u.id!==id); await deleteFromFirebase('usuarios', id); renderUsuarios(); toast('Usuário removido'); } }
 
-function openM(id) { document.getElementById(id).style.display='flex'; document.body.style.overflow='hidden'; }
-function closeM(id) { document.getElementById(id).style.display='none'; document.body.style.overflow=''; delete document.getElementById('mUser').dataset.editId; }
-function dzOver(e) { e.preventDefault(); e.currentTarget.style.borderColor='var(--accent)'; }
-function dzLeave(e) { e.currentTarget.style.borderColor='var(--border2)'; }
+function openM(id) { let el = document.getElementById(id); if(el) { el.style.display='flex'; document.body.style.overflow='hidden'; } }
+function closeM(id) { let el = document.getElementById(id); if(el) { el.style.display='none'; document.body.style.overflow=''; } if(id==='mUser' && document.getElementById('mUser')) delete document.getElementById('mUser').dataset.editId; }
+function dzOver(e) { e.preventDefault(); if(e.currentTarget) e.currentTarget.style.borderColor='var(--accent)'; }
+function dzLeave(e) { if(e.currentTarget) e.currentTarget.style.borderColor='var(--border2)'; }
 function dzDrop(e) { e.preventDefault(); dzLeave(e); let f=e.dataTransfer.files[0]; if(f) handleImport({target:{files:[f]}}); }
 
 function renderAll() {
   renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderCal(); renderMetas(); renderRM(); renderCampanhas(); renderRelatorios(); renderUsuarios(); renderEmailHist();
-  document.getElementById('d-date').innerHTML = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  let sel=document.getElementById('l-resp'); 
-  if(sel) sel.innerHTML='<option value="">Selecione o consultor</option>'+S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
+  let dateEl = document.getElementById('d-date');
+  if(dateEl) dateEl.innerHTML = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  let respSel = document.getElementById('l-resp');
+  if(respSel) respSel.innerHTML = '<option value="">Selecione o consultor</option>' + S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
 }
 
-// Inicializar o sistema
-initFirebase();
+// ==================== INICIALIZAÇÃO ====================
+async function startApp() {
+  document.getElementById('loading-screen').style.display = 'flex';
+  await initFirebase();
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+// Aguarda o DOM carregar completamente
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </body>
 </html>
