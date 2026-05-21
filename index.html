@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProspectFlow CRM - Firebase</title>
+<title>ProspectFlow CRM - Sistema Completo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -89,40 +89,19 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 </head>
 <body>
 
-<!-- FIREBASE CONFIG SCREEN -->
-<div class="auth-screen" id="fb-screen" style="z-index:10000">
-  <div class="auth-box">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:42px;background:var(--accent);width:60px;height:60px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">🔥</div>
-      <div style="font-size:20px;font-weight:800;margin-top:12px">Conectar ao Firebase</div>
-    </div>
-    <div class="fg"><label>Configuração Firebase (cole o objeto firebaseConfig)</label>
-      <textarea id="fb-config" rows="8" style="font-family:monospace;font-size:11px" placeholder='{
-  apiKey: "AIzaSy...",
-  authDomain: "...",
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "..."
-}'></textarea>
-    </div>
-    <div class="auth-err" id="fb-err" style="display:none;margin-bottom:12px"></div>
-    <button class="btn btn-primary" style="width:100%;padding:10px" onclick="initFirebase()">Conectar ao Firebase</button>
-    <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">Os dados serão salvos no Firestore do seu projeto</div>
-  </div>
-</div>
-
 <!-- LOGIN SCREEN -->
-<div class="auth-screen" id="auth-screen" style="display:none">
+<div class="auth-screen" id="auth-screen">
   <div class="auth-box">
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:42px;background:var(--accent);width:60px;height:60px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center">🎯</div>
       <div style="font-size:20px;font-weight:800;margin-top:12px">ProspectFlow CRM</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">Sistema de Gestão de Vendas</div>
     </div>
-    <div class="auth-err" id="auth-err" style="display:none;margin-bottom:12px"></div>
-    <div class="fg"><label>Usuário</label><input id="auth-user" placeholder="Seu login"></div>
-    <div class="fg"><label>Senha</label><input id="auth-pass" type="password"></div>
+    <div class="auth-err" id="auth-err" style="display:none;background:var(--red-dim);padding:8px;border-radius:8px;margin-bottom:12px"></div>
+    <div class="fg"><label>Usuário</label><input id="auth-user" placeholder="Seu login" value="admin"></div>
+    <div class="fg"><label>Senha</label><input id="auth-pass" type="password" placeholder="••••••••" value="1234"></div>
     <button class="btn btn-primary" style="width:100%;padding:10px" onclick="doLogin()">Entrar</button>
+    <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">🔐 Dados salvos no Firebase Firestore</div>
   </div>
 </div>
 
@@ -177,7 +156,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <!-- LEADS -->
 <div class="page" id="page-leads">
   <div class="ph"><div class="ph-title">Leads</div><div><input class="search" placeholder="Buscar..." style="width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px" oninput="renderLeads()"></div></div>
-  <div class="card" style="padding:0"><div class="tw"><table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></table></div></div>
+  <div class="card" style="padding:0"><div class="tw"><table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></tr></div></div>
 </div>
 
 <!-- PIPELINE -->
@@ -185,29 +164,32 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 
 <!-- AGENDA -->
 <div class="page" id="page-agenda">
-  <div class="ph"><div class="ph-title">Agenda</div><div><button class="btn btn-primary btn-sm" onclick="abrirAgendamento()">+ Agendar</button></div></div>
+  <div class="ph"><div class="ph-title">Agenda de Apresentações</div><div><button class="btn btn-primary btn-sm" onclick="abrirAgendamento()">+ Agendar</button></div></div>
   <div class="g2">
-    <div class="card"><div class="card-hd"><div class="card-title" id="cal-title"></div><div><button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹</button><button class="btn btn-ghost btn-sm" onclick="calNav(0)">Hoje</button><button class="btn btn-ghost btn-sm" onclick="calNav(1)">›</button></div></div><div class="cal-grid" id="cal-grid"></div></div>
+    <div class="card">
+      <div class="card-hd"><div class="card-title" id="cal-title"></div><div><button class="btn btn-ghost btn-sm" onclick="calNav(-1)">‹</button><button class="btn btn-ghost btn-sm" onclick="calNav(0)">Hoje</button><button class="btn btn-ghost btn-sm" onclick="calNav(1)">›</button></div></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
     <div class="card"><div class="card-title">Próximos Compromissos</div><div id="ag-list"></div></div>
   </div>
 </div>
 
 <!-- METAS -->
 <div class="page" id="page-metas">
-  <div class="ph"><div class="ph-title">Metas</div><div><button class="btn btn-ghost btn-sm" onclick="openM('mMetaG')">⚙ Meta Global</button><button class="btn btn-primary btn-sm" onclick="openM('mVenda')">+ Registrar Venda</button></div></div>
+  <div class="ph"><div class="ph-title">Metas de Vendas</div><div><button class="btn btn-ghost btn-sm" onclick="openM('mMetaG')">⚙ Meta Global</button><button class="btn btn-primary btn-sm" onclick="openM('mVenda')">+ Registrar Venda</button></div></div>
   <div class="g2"><div class="card"><div id="meta-g-body"></div></div><div class="card"><div class="card-title">Últimas Vendas</div><div id="vendas-tl"></div></div></div>
-  <div class="card"><div class="card-title">👥 Metas por Consultor</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
+  <div class="card"><div class="card-title">👥 Metas por Consultor (distribuídas automaticamente)</div><div class="tw"><tr><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
 </div>
 
 <!-- REMARKETING -->
 <div class="page" id="page-rm">
-  <div class="ph"><div class="ph-title">Remarketing</div><div><button class="btn btn-ghost btn-sm" onclick="enviarEmailRemarketing()">✉️ Enviar E-mail para Todos</button></div></div>
+  <div class="ph"><div class="ph-title">Remarketing - Leads Perdidos</div><div><button class="btn btn-ghost btn-sm" onclick="enviarEmailRemarketing()">✉️ Enviar E-mail para Todos</button></div></div>
   <div class="g3" style="margin-bottom:12px">
     <div class="met met-blue"><div class="met-lbl">Não Prospectados</div><div class="met-val" id="rm-np">0</div></div>
     <div class="met met-yellow"><div class="met-lbl">Não Avançaram</div><div class="met-val" id="rm-na">0</div></div>
     <div class="met met-red"><div class="met-lbl">Desistiram</div><div class="met-val" id="rm-d">0</div></div>
   </div>
-  <div class="card"><div class="tw"><table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"><tr><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
 </div>
 
 <!-- CAMPANHAS -->
@@ -221,21 +203,21 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
   <div class="ph"><div class="ph-title">Importar Listas</div><div><button class="btn btn-primary btn-sm" onclick="downloadModelo()">📥 Baixar Modelo</button></div></div>
   <div class="g2">
     <div class="card"><div class="dz" onclick="document.getElementById('fi').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)"><div>📂 Arraste ou clique para importar Excel/CSV</div></div><input type="file" id="fi" style="display:none" onchange="handleImport(event)"><div id="import-preview"></div></div>
-    <div class="card"><div class="card-title">📋 Colunas do Modelo</div><div class="tw"><table><thead><tr><th>Coluna</th><th>Descrição</th></tr></thead><tbody><tr><td>empresa</td><td>Nome da empresa *</td></tr><tr><td>contato</td><td>Nome do responsável</td></tr><tr><td>email</td><td>E-mail</td></tr><tr><td>telefone</td><td>Telefone</td></tr><tr><td>cidade</td><td>Cidade</td></tr><tr><td>uf</td><td>Estado</td></tr><tr><td>segmento</td><td>Segmento/CNAE</td></tr><tr><td>cnae_desc</td><td>Descrição do CNAE</td></tr><tr><td>responsavel</td><td>Consultor</td></tr></tbody></table></div></div>
+    <div class="card"><div class="card-title">📋 Colunas do Modelo</div><div class="tw"><table><thead><tr><th>Coluna</th><th>Descrição</th></tr></thead><tbody><tr><td>empresa</td><td>Nome da empresa *</td></tr><tr><td>contato</td><td>Nome do responsável</td></tr><tr><td>email</td><td>E-mail</td></tr><tr><td>telefone</td><td>Telefone</td></tr><tr><td>cidade</td><td>Cidade</td></tr><tr><td>uf</td><td>Estado (SP, RJ, MG)</td></tr><tr><td>segmento</td><td>Segmento/CNAE</td></tr><tr><td>cnae_desc</td><td>Descrição do CNAE</td></tr><tr><td>responsavel</td><td>Consultor responsável</td></tr></tbody></table></div></div>
   </div>
 </div>
 
 <!-- E-MAILS -->
 <div class="page" id="page-email">
-  <div class="ph"><div class="ph-title">E-mails</div><div id="email-status" class="tag tn">📧 EmailJS pronto</div></div>
-  <div class="card"><div class="fg"><label>Assunto</label><input id="em-sub" placeholder="Assunto"></div><div class="fg"><label>Mensagem</label><textarea id="em-body" rows="5" placeholder="Use {empresa}, {contato}"></textarea></div><button class="btn btn-primary" onclick="enviarEmailsMassa()">✉️ Enviar para todos</button></div>
-  <div class="card"><div class="card-title">📬 Histórico</div><div id="email-hist"></div></div>
+  <div class="ph"><div class="ph-title">Envio de E-mails</div><div id="email-status" class="tag tn">📧 Sistema pronto</div></div>
+  <div class="card"><div class="fg"><label>Assunto</label><input id="em-sub" placeholder="Assunto do e-mail"></div><div class="fg"><label>Mensagem</label><textarea id="em-body" rows="5" placeholder="Digite sua mensagem... Use {empresa}, {contato} para personalizar"></textarea></div><button class="btn btn-primary" onclick="enviarEmailsMassa()">✉️ Enviar para todos os leads com e-mail</button></div>
+  <div class="card"><div class="card-title">📬 Histórico de Envios</div><div id="email-hist"></div></div>
 </div>
 
 <!-- RELATÓRIOS -->
 <div class="page" id="page-rel">
-  <div class="ph"><div class="ph-title">Relatórios</div><div><button class="btn btn-ghost btn-sm" onclick="exportForecast()">📊 Exportar Forecast</button></div></div>
-  <div class="card"><div class="card-title">📈 Forecast - Pipeline</div><div class="tw"><table id="forecast-table"><thead><tr><th>Consultor</th><th>Cliente</th><th>Segmento</th><th>Cidade/UF</th><th>Valor</th><th>Etapa</th><th>Probabilidade</th></tr></thead><tbody id="forecast-tbody"></tbody></table></div></div>
+  <div class="ph"><div class="ph-title">Relatórios e Forecast</div><div><button class="btn btn-ghost btn-sm" onclick="exportForecast()">📊 Exportar Forecast</button></div></div>
+  <div class="card"><div class="card-title">📈 Forecast - Pipeline de Vendas</div><div class="tw"><table id="forecast-table"><thead><tr><th>Consultor</th><th>Cliente</th><th>Segmento</th><th>Cidade/UF</th><th>Valor</th><th>Etapa</th><th>Probabilidade</th></tr></thead><tbody id="forecast-tbody"></tbody></table></div></div>
   <div class="card"><div class="card-title">📊 Produtividade por Consultor</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="prod-tbody"></tbody></table></div></div>
 </div>
 
@@ -248,22 +230,32 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 </div></div>
 
 <!-- MODALS -->
-<div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento"></div><div class="fg"><label>Descrição CNAE</label><input id="l-cnae_desc"></div></div><div class="fg"><label>Responsável</label><select id="l-resp"></select></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
+<div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Novo Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento"></div><div class="fg"><label>Descrição CNAE</label><input id="l-cnae_desc"></div></div><div class="fg"><label>Responsável (Consultor)</label><select id="l-resp"></select></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mAgenda" style="display:none" onclick="if(event.target===this)closeM('mAgenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Agendar</div><button class="xbtn" onclick="closeM('mAgenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="ag-lead"></select></div><div class="fr2"><div class="fg"><label>Data</label><input id="ag-data" type="date"></div><div class="fg"><label>Hora</label><input id="ag-hora" type="time"></div></div><div class="fg"><label>Observações</label><textarea id="ag-obs" rows="2"></textarea></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveAgendamento()">Salvar</button></div></div></div>
+<div class="moverlay" id="mAgenda" style="display:none" onclick="if(event.target===this)closeM('mAgenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Agendar Apresentação</div><button class="xbtn" onclick="closeM('mAgenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead/Empresa</label><select id="ag-lead"></select></div><div class="fr2"><div class="fg"><label>Data</label><input id="ag-data" type="date"></div><div class="fg"><label>Hora</label><input id="ag-hora" type="time" value="10:00"></div></div><div class="fg"><label>Observações</label><textarea id="ag-obs" rows="2"></textarea></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveAgendamento()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mVenda" style="display:none" onclick="if(event.target===this)closeM('mVenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Registrar Venda</div><button class="xbtn" onclick="closeM('mVenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="vd-lead"></select></div><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="vd-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="vd-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Produto</label><select id="vd-prod"><option>SCE</option><option>Easyren</option></select></div><div class="fg"><label>Data</label><input id="vd-data" type="date"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveVenda()">Confirmar</button></div></div></div>
+<div class="moverlay" id="mVenda" style="display:none" onclick="if(event.target===this)closeM('mVenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Registrar Venda</div><button class="xbtn" onclick="closeM('mVenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="vd-lead"></select></div><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="vd-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="vd-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Produto</label><select id="vd-prod"><option>SCE</option><option>Easyren</option></select></div><div class="fg"><label>Data Fechamento</label><input id="vd-data" type="date"></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveVenda()">Confirmar Venda</button></div></div></div>
 
-<div class="moverlay" id="mMetaG" style="display:none" onclick="if(event.target===this)closeM('mMetaG')"><div class="modal"><div class="mhd"><div class="mhd-title">Meta Global</div><button class="xbtn" onclick="closeM('mMetaG')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Implantação (R$)</label><input id="mg-impl" type="number"></div><div class="fg"><label>Mensalidade (R$)</label><input id="mg-mens" type="number"></div></div><div class="fr2"><div class="fg"><label>Período</label><select id="mg-per"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div><div class="fg"><label>Distribuir</label><select id="mg-distribuir"><option value="sim">Sim</option><option value="nao">Não</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveMetaG()">Salvar</button></div></div></div>
+<div class="moverlay" id="mMetaG" style="display:none" onclick="if(event.target===this)closeM('mMetaG')"><div class="modal"><div class="mhd"><div class="mhd-title">Meta Global</div><button class="xbtn" onclick="closeM('mMetaG')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Meta Implantação (R$)</label><input id="mg-impl" type="number" placeholder="0"></div><div class="fg"><label>Meta Mensalidade (R$)</label><input id="mg-mens" type="number" placeholder="0"></div></div><div class="fr2"><div class="fg"><label>Período</label><select id="mg-per"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div><div class="fg"><label>Distribuir entre consultores?</label><select id="mg-distribuir"><option value="sim">Sim - distribuir igualmente</option><option value="nao">Não - apenas meta global</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveMetaG()">Salvar</button></div></div></div>
 
-<div class="moverlay" id="mCampanha" style="display:none" onclick="if(event.target===this)closeM('mCampanha')"><div class="modal"><div class="mhd"><div class="mhd-title">Campanha</div><button class="xbtn" onclick="closeM('mCampanha')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="camp-nome"></div><div class="fg"><label>Tipo</label><select id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div></div><div class="fr2"><div class="fg"><label>Data Início</label><input id="camp-ini" type="date"></div><div class="fg"><label>Data Fim</label><input id="camp-fim" type="date"></div></div><div class="fg"><label>URL Landing Page</label><input id="camp-lp" placeholder="https://..."></div><div class="fg"><label>Campos</label><input id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+<div class="moverlay" id="mCampanha" style="display:none" onclick="if(event.target===this)closeM('mCampanha')"><div class="modal"><div class="mhd"><div class="mhd-title">Campanha</div><button class="xbtn" onclick="closeM('mCampanha')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="camp-nome"></div><div class="fg"><label>Tipo</label><select id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div></div><div class="fr2"><div class="fg"><label>Data Início</label><input id="camp-ini" type="date"></div><div class="fg"><label>Data Fim</label><input id="camp-fim" type="date"></div></div><div class="fg"><label>URL Landing Page</label><input id="camp-lp" placeholder="https://..."></div><div class="fg"><label>Campos do Formulário</label><input id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
 <div class="moverlay" id="mUser" style="display:none" onclick="if(event.target===this)closeM('mUser')"><div class="modal"><div class="mhd"><div class="mhd-title">Usuário</div><button class="xbtn" onclick="closeM('mUser')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Nome</label><input id="u-nome"></div><div class="fg"><label>Login</label><input id="u-login"></div></div><div class="fr2"><div class="fg"><label>Senha</label><input id="u-pass" type="password"></div><div class="fg"><label>Perfil</label><select id="u-role"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-wrap" id="tw"></div>
 
 <script>
-// ==================== FIREBASE ====================
+// ==================== FIREBASE CONFIGURAÇÃO FIXA ====================
+// Configuração do Firebase - já incluída no código, não precisa mais configurar
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
+  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
+  projectId: "prospectflow-crm-5775a",
+  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
+  messagingSenderId: "278911416959",
+  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
+};
+
 let db = null;
 let currentUser = null;
 let S = { leads: [], vendas: [], agenda: [], rm: [], metaG: null, usuarios: [], campanhas: [], emailHist: [] };
@@ -273,24 +265,20 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sub
 function toast(msg, type='ok') { let w=document.getElementById('tw'); let e=document.createElement('div'); e.className='toast'; e.innerHTML=msg; w.appendChild(e); setTimeout(()=>e.remove(),3000); }
 function setSyncing(on) { let dot=document.getElementById('sync-dot'); if(dot) dot.className='sync-dot'+(on?' syncing':''); }
 
+// ==================== INICIALIZAR FIREBASE ====================
 async function initFirebase() {
-  let configText = document.getElementById('fb-config').value.trim();
-  let config;
   try {
-    let cleaned = configText.replace(/^const\s+\w+\s*=\s*/, '').replace(/^var\s+\w+\s*=\s*/, '').replace(/;$/, '');
-    config = (new Function('return (' + cleaned + ')'))();
-  } catch(e) { document.getElementById('fb-err').innerHTML='Erro: '+e.message; document.getElementById('fb-err').style.display='block'; return; }
-  if(!config || !config.projectId){ document.getElementById('fb-err').innerHTML='Configuração inválida'; return; }
-  try {
-    if(!firebase.apps.length) firebase.initializeApp(config);
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    await db.collection('_test').doc('test').set({ ok: true });
-    localStorage.setItem('fb_config', JSON.stringify(config));
-    document.getElementById('fb-screen').style.display='none';
-    document.getElementById('auth-screen').style.display='flex';
-    loadFirebaseData();
-    toast('Firebase conectado!');
-  } catch(e) { document.getElementById('fb-err').innerHTML='Erro: '+e.message; document.getElementById('fb-err').style.display='block'; }
+    await db.collection('_test').doc('test').set({ ok: true }).catch(() => {});
+    console.log('Firebase conectado!');
+    await loadFirebaseData();
+    document.getElementById('auth-screen').classList.remove('hidden');
+  } catch(e) { 
+    console.error('Erro Firebase:', e);
+    toast('Erro ao conectar ao Firebase. Usando modo offline.', 'err');
+    document.getElementById('auth-screen').classList.remove('hidden');
+  }
 }
 
 async function loadFirebaseData() {
@@ -311,17 +299,22 @@ async function loadFirebaseData() {
     S.rm = rmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     // Load metaG
     let metaGSnap = await db.collection('config').doc('metaG').get();
-    S.metaG = metaGSnap.exists ? metaGSnap.data() : { impl: 0, mens: 0, periodo: 'Mensal', distribuir: 'sim' };
+    S.metaG = metaGSnap.exists ? metaGSnap.data() : { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
     // Load usuarios
     let usuariosSnap = await db.collection('usuarios').get();
-    if(usuariosSnap.docs.length > 0) S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    else { S.usuarios = [{ id: 'u1', nome: 'Admin', login: 'admin', senha: '1234', role: 'Diretor' }]; await saveUsuariosToFirebase(); }
+    if(usuariosSnap.docs.length > 0) {
+      S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      S.usuarios = [{ id: 'u1', nome: 'Admin', login: 'admin', senha: '1234', role: 'Diretor' }];
+      for(let u of S.usuarios) await db.collection('usuarios').doc(u.id).set(u);
+    }
     // Load campanhas
     let campSnap = await db.collection('campanhas').get();
     S.campanhas = campSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     // Load emailHist
     let emailSnap = await db.collection('emailHist').get();
     S.emailHist = emailSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
     renderAll();
   } catch(e) { console.error(e); toast('Erro ao carregar dados','err'); }
   setSyncing(false);
@@ -339,11 +332,6 @@ async function deleteFromFirebase(collection, id) {
   setSyncing(true);
   try { await db.collection(collection).doc(id).delete(); } catch(e){ console.error(e); }
   setSyncing(false);
-}
-
-async function saveUsuariosToFirebase() {
-  if(!db) return;
-  for(let u of S.usuarios) await db.collection('usuarios').doc(u.id).set(u);
 }
 
 // ==================== AUTH ====================
@@ -389,9 +377,9 @@ function renderLeads() {
       <td>${statusTag(l.status)}</td>
       <td>${l.pipeline?`<span class="tag ty">${l.pipeline}</span>`:'—'}</td>
       <td>${l.responsavel||'—'}</td>
-      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗</button></td>
+      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→ Avançar</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰 Fechar</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗ Descartar</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="7" class="te">Nenhum lead</td></tr>';
+  `).join('') || '<tr><td colspan="7" class="te">Nenhum lead cadastrado</td></tr>';
   document.getElementById('tb-total').innerText = leads.length + ' leads';
 }
 
@@ -423,15 +411,15 @@ async function saveLead() {
   closeM('mLead');
   renderLeads();
   renderDashboard();
-  toast('Lead criado!');
+  toast('Lead criado com sucesso!');
 }
 
 async function evoluirLead(id) {
   let l = S.leads.find(l=>l.id===id);
   if(!l) return;
-  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead → Prospect'); abrirAgendamento(l.id); }
-  else if(l.pipeline==='Agendamento') { l.pipeline='Apresentação'; toast('Apresentação confirmada'); }
-  else if(l.pipeline==='Apresentação') { l.pipeline='Negociação'; toast('Em negociação'); }
+  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead avançou para Prospect - Agende uma apresentação'); abrirAgendamento(l.id); }
+  else if(l.pipeline==='Agendamento') { l.pipeline='Apresentação'; toast('Apresentação confirmada!'); }
+  else if(l.pipeline==='Apresentação') { l.pipeline='Negociação'; toast('Lead em negociação'); }
   else if(l.pipeline==='Negociação') { abrirVenda(id); return; }
   await saveToFirebase('leads', id, l);
   renderLeads(); renderPipeline(); renderDashboard();
@@ -445,7 +433,7 @@ async function descartarLead(id) {
   if(!S.rm.find(r=>r.leadId===l.id)) { S.rm.push(rm); await saveToFirebase('rm', rm.id, rm); }
   l.status = 'Descartado'; l.pipeline = 'Descartado';
   await saveToFirebase('leads', id, l);
-  renderLeads(); renderRM(); renderDashboard(); toast('Lead descartado');
+  renderLeads(); renderRM(); renderDashboard(); toast('Lead descartado e enviado ao Remarketing');
 }
 
 // ==================== PIPELINE ====================
@@ -479,7 +467,7 @@ function calNav(d){ if(d===0)calDate=new Date(); else calDate=new Date(calDate.g
 function abrirAgendamento(leadId) {
   let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Oportunidade');
   let sel = document.getElementById('ag-lead');
-  sel.innerHTML = leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa}</option>`).join('');
+  sel.innerHTML = leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa} - ${l.contato||''}</option>`).join('');
   document.getElementById('ag-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('ag-hora').value = '10:00';
   openM('mAgenda');
@@ -494,7 +482,7 @@ async function saveAgendamento() {
   await saveToFirebase('agenda', agenda.id, agenda);
   if(lead.status==='Oportunidade'){ lead.status='Prospect'; lead.pipeline='Agendamento'; await saveToFirebase('leads', lead.id, lead); }
   closeM('mAgenda');
-  renderAgenda(); renderCal(); renderLeads(); toast('Agendamento salvo');
+  renderAgenda(); renderCal(); renderLeads(); toast('Agendamento salvo com sucesso!');
 }
 
 // ==================== VENDAS ====================
@@ -531,16 +519,24 @@ function renderMetas() {
   let vendas = S.vendas;
   let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
   let mg = S.metaG;
-  document.getElementById('meta-g-body').innerHTML = mg ? `<div>🎯 Meta: R$ ${mg.impl.toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
-  document.getElementById('vendas-tl').innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${(v.implantacao+v.mensalidade).toLocaleString('pt-BR')}</div>`).join('') || 'Nenhuma venda';
+  document.getElementById('meta-g-body').innerHTML = mg ? `<div>🎯 Meta Global (${mg.periodo||'Mensal'}): R$ ${mg.impl.toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
+  document.getElementById('vendas-tl').innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${(v.implantacao+v.mensalidade).toLocaleString('pt-BR')} (${v.data})</div>`).join('') || 'Nenhuma venda registrada';
+  
   let consultores = S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>u.nome);
   let metaPorConsultor = mg && mg.distribuir==='sim' && consultores.length>0 ? mg.impl / consultores.length : 0;
-  document.getElementById('metas-consultores-tb').innerHTML = consultores.map(c => {
+  let tb = document.getElementById('metas-consultores-tb');
+  tb.innerHTML = consultores.map(c => {
     let vendasC = vendas.filter(v=>v.consultor===c);
     let realizado = vendasC.reduce((s,v)=>s+v.implantacao,0);
     let pct = metaPorConsultor>0 ? Math.min(100, Math.round(realizado/metaPorConsultor*100)) : 0;
-    return `<tr><td>${c}</td><td>R$ ${metaPorConsultor.toLocaleString('pt-BR')}</td><td>R$ ${realizado.toLocaleString('pt-BR')}</td><td class="${pct>=100?'tg':pct>=50?'ty':'tr2'}">${pct}%</td><td><div class="prog" style="width:80px"><div class="prog-f" style="width:${pct}%;height:5px;background:var(--accent)"></div></div></td></tr>`;
-  }).join('') || '<tr><td colspan="5">Nenhum consultor</td></tr>';
+    return `<tr>
+      <td><strong>${c}</strong></td>
+      <td>R$ ${metaPorConsultor.toLocaleString('pt-BR')}</td>
+      <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
+      <td class="${pct>=100?'tg':pct>=50?'ty':'tr2'}" style="font-weight:700">${pct}%</td>
+      <td><div class="prog" style="width:100px"><div class="prog-f" style="width:${pct}%;height:5px;background:var(--accent)"></div></div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="te">Nenhum consultor cadastrado</td></tr>';
 }
 
 async function saveMetaG() {
@@ -552,7 +548,7 @@ async function saveMetaG() {
   };
   await saveToFirebase('config', 'metaG', S.metaG);
   closeM('mMetaG');
-  renderMetas(); renderDashboard(); toast('Meta salva');
+  renderMetas(); renderDashboard(); toast('Meta global salva e distribuída!');
 }
 
 // ==================== REMARKETING ====================
@@ -561,20 +557,28 @@ function renderRM() {
   document.getElementById('rm-np').innerText = rm.filter(r=>r.categoria==='Não Prospectado').length;
   document.getElementById('rm-na').innerText = rm.filter(r=>r.categoria==='Não Avançou').length;
   document.getElementById('rm-d').innerText = rm.filter(r=>r.categoria==='Desistiu').length;
-  document.getElementById('rm-tb').innerHTML = rm.map(r => `<tr><td><strong>${r.empresa}</strong></td><td>${r.contato||'—'}</td><td>${r.email||'—'}</td><td><span class="tag ${r.categoria==='Não Prospectado'?'tb2':r.categoria==='Não Avançou'?'ty':'tr2'}">${r.categoria}</span></td><td>${r.motivo||'—'}</td><td><button class="btn btn-primary btn-xs" onclick="enviarEmailRemarketingLead('${r.id}')">✉️</button></td></tr>`).join('') || '<tr><td colspan="6">Nenhum lead</td></tr>';
+  let tb = document.getElementById('rm-tb');
+  tb.innerHTML = rm.map(r => `<tr>
+    <td><strong>${r.empresa}</strong></td>
+    <td>${r.contato||'—'}</td>
+    <td>${r.email||'—'}</td>
+    <td><span class="tag ${r.categoria==='Não Prospectado'?'tb2':r.categoria==='Não Avançou'?'ty':'tr2'}">${r.categoria}</span></td>
+    <td>${r.motivo||'—'}</td>
+    <td><button class="btn btn-primary btn-xs" onclick="enviarEmailRemarketingLead('${r.id}')">✉️ E-mail</button></td>
+    </tr>`).join('') || '<tr><td colspan="6" class="te">Nenhum lead em remarketing</td></tr>';
 }
 
 function enviarEmailRemarketingLead(id) {
   let r = S.rm.find(r=>r.id===id);
-  if(!r || !r.email){toast('Sem e-mail','err');return;}
-  enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato.\n\nAtenciosamente,\nEquipe`, r.empresa);
+  if(!r || !r.email){toast('Lead sem e-mail','err');return;}
+  enviarEmail(r.email, `Reativação de contato - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato e apresentar novas oportunidades.\n\nAguardo seu retorno!\n\nAtenciosamente,\nEquipe Comercial`, r.empresa);
 }
 
 function enviarEmailRemarketing() {
   let rmComEmail = S.rm.filter(r=>r.email);
   if(rmComEmail.length===0){toast('Nenhum lead com e-mail','err');return;}
-  rmComEmail.forEach(r=> enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato||r.empresa},\n\nTemos novidades!\n\nAtenciosamente,\nEquipe`, r.empresa));
-  toast(`Enviando para ${rmComEmail.length} leads...`);
+  rmComEmail.forEach(r=>{ enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato||r.empresa},\n\nTemos novidades! Gostaria de conversar?\n\nAtenciosamente,\nEquipe`, r.empresa); });
+  toast(`Enviando e-mails para ${rmComEmail.length} leads...`);
 }
 
 // ==================== E-MAILS ====================
@@ -596,11 +600,12 @@ async function enviarEmail(to, subject, body, empresa) {
   S.emailHist.unshift(hist);
   await saveToFirebase('emailHist', hist.id, hist);
   renderEmailHist();
-  console.log(`Email enviado para ${to}`);
+  console.log(`Email enviado para ${to}: ${subject}`);
 }
 
 function renderEmailHist() {
-  document.getElementById('email-hist').innerHTML = S.emailHist.slice(0,20).map(h=>`<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div>Nenhum e-mail</div>';
+  let el = document.getElementById('email-hist');
+  el.innerHTML = S.emailHist.slice(0,20).map(h=>`<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div>Nenhum e-mail enviado</div>';
 }
 
 // ==================== CAMPANHAS ====================
@@ -608,12 +613,12 @@ function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   list.innerHTML = S.campanhas.map(c => `
     <div class="card" style="border-left:3px solid var(--accent)">
-      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Form</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div></div>
-      <div class="g3"><div class="met"><div class="met-lbl">Leads</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div></div>
-      ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}
-      <div id="qr-${c.id}" style="display:none"></div>
+      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR Code</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Formulário</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div></div>
+      <div class="g3" style="margin-top:8px"><div class="met" style="padding:8px"><div class="met-lbl">Leads Gerados</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Conversão</div><div class="met-val" style="font-size:18px">${c.meta>0?Math.round(S.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div></div></div>
+      ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank" style="color:var(--accent2)">${c.lp}</a></div>` : ''}
+      <div id="qr-${c.id}" style="display:none;margin-top:10px"></div>
     </div>
-  `).join('') || '<div class="card">Nenhuma campanha</div>';
+  `).join('') || '<div class="card"><div class="te">Nenhuma campanha criada</div></div>';
 }
 
 function openCampanha(id) {
@@ -631,20 +636,21 @@ function openCampanha(id) {
 async function saveCampanha() {
   let id = document.getElementById('mCampanha').dataset.editId;
   let camp = { id: id||uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, ini: document.getElementById('camp-ini').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, campos: document.getElementById('camp-campos').value, createdAt: new Date().toISOString() };
-  if(!camp.nome){toast('Informe o nome','err');return;}
+  if(!camp.nome){toast('Informe o nome da campanha','err');return;}
   if(id) { let idx=S.campanhas.findIndex(x=>x.id===id); if(idx!==-1) S.campanhas[idx]=camp; }
   else S.campanhas.push(camp);
   await saveToFirebase('campanhas', camp.id, camp);
-  closeM('mCampanha'); renderCampanhas(); toast('Campanha salva');
+  closeM('mCampanha'); renderCampanhas(); toast('Campanha salva com sucesso!');
 }
-async function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); }
-function gerarQR(id) { let c = S.campanhas.find(c=>c.id===id); if(!c||!c.lp){toast('Configure a URL','err');return;} let div=document.getElementById(`qr-${id}`); div.innerHTML=`<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(c.lp)}"><br><button onclick="this.parentElement.style.display='none'">Fechar</button></div>`; div.style.display='block'; }
-function gerarForm(id) { let c = S.campanhas.find(c=>c.id===id); if(!c) return; let campos = c.campos.split(','); let html=`<div style="background:#1a1a26;padding:20px"><h3>${c.nome}</h3><form id="form-${c.id}">`; campos.forEach(campo=>{ html+=`<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; }); html+=`<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win=window.open('','_blank','width=500,height=600'); win.document.write(`<html><head><title>Formulário</title><style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style></head><body>${html}<script>document.getElementById('form-${c.id}').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${c.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado!</div>';this.reset();});<\/script></body></html>`); }
+async function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); toast('Campanha removida'); }
+function gerarQR(id) { let c = S.campanhas.find(c=>c.id===id); if(!c||!c.lp){toast('Configure a URL da Landing Page primeiro','err');return;} let div=document.getElementById(`qr-${c.id}`); div.innerHTML=`<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(c.lp)}"><br><button class="btn btn-ghost btn-xs" onclick="this.parentElement.style.display='none'">Fechar</button></div>`; div.style.display='block'; }
+function gerarForm(id) { let c = S.campanhas.find(c=>c.id===id); if(!c) return; let campos = c.campos.split(','); let html=`<div style="background:#1a1a26;padding:20px;border-radius:8px"><h3>${c.nome}</h3><form id="form-${c.id}">`; campos.forEach(campo=>{ html+=`<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; }); html+=`<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win=window.open('','_blank','width=500,height=600'); win.document.write(`<html><head><title>Formulário - ${c.nome}</title><style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style></head><body>${html}<script>document.getElementById('form-${c.id}').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${c.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado! Entraremos em contato.</div>';this.reset();});<\/script></body></html>`); }
 
 // ==================== IMPORTAR ====================
 function downloadModelo() {
-  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','cnae_desc','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','Desenvolvimento de software','']]);
-  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx');
+  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','cnae_desc','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','Desenvolvimento de software',''],['Exemplo Comércio','Maria','maria@comercio.com','2198888','Rio de Janeiro','RJ','Varejo','Comércio varejista','']]);
+  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo_Leads'); XLSX.writeFile(wb, 'modelo_importacao_leads.xlsx');
+  toast('Modelo baixado! Preencha os dados e faça o upload.');
 }
 
 async function handleImport(e) {
@@ -655,21 +661,22 @@ async function handleImport(e) {
     let wb = XLSX.read(ev.target.result, {type:'binary'});
     let ws = wb.Sheets[wb.SheetNames[0]];
     let rows = XLSX.utils.sheet_to_json(ws);
-    let imported=0;
+    let imported=0, skipped=0;
     for(let row of rows) {
       let empresa = row.empresa || row.Empresa;
       if(empresa && !S.leads.find(l=>l.empresa===empresa)) {
         let lead = { id: uid(), empresa, contato: row.contato||'', email: row.email||'', telefone: row.telefone||'',
           cidade: row.cidade||'', uf: row.uf||'', segmento: row.segmento||'', cnae_desc: row.cnae_desc||'',
-          responsavel: row.responsavel||currentUser.nome, status:'Oportunidade', pipeline:'', produto:'', implantacao:0, mensalidade:0, createdAt: new Date().toISOString() };
+          responsavel: row.responsavel||currentUser.nome, status:'Oportunidade', pipeline:'', produto:'', 
+          implantacao:0, mensalidade:0, createdAt: new Date().toISOString(), origem: 'import' };
         S.leads.push(lead);
         await saveToFirebase('leads', lead.id, lead);
         imported++;
-      }
+      } else if(empresa) { skipped++; }
     }
     renderLeads(); renderDashboard();
-    document.getElementById('import-preview').innerHTML = `<div class="tag tg">✅ ${imported} leads importados</div>`;
-    toast(`${imported} leads importados`);
+    document.getElementById('import-preview').innerHTML = `<div class="tag tg">✅ ${imported} leads importados${skipped>0?`, ${skipped} ignorados (duplicados)` : ''}</div>`;
+    toast(`${imported} leads importados com sucesso!`);
   };
   r.readAsBinaryString(f);
 }
@@ -678,16 +685,19 @@ async function handleImport(e) {
 function renderDashboard() {
   let leads = S.leads;
   let vendas = S.vendas;
+  let fechamentos = vendas.length;
+  let receitaTotal = vendas.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
+  let taxa = leads.length>0 ? Math.round(fechamentos/leads.length*100) : 0;
   document.getElementById('dk-tot').innerText = leads.length;
-  document.getElementById('dk-fech').innerText = vendas.length;
-  document.getElementById('dk-rec').innerText = `R$ ${vendas.reduce((s,v)=>s+v.implantacao+v.mensalidade,0).toLocaleString('pt-BR')}`;
-  document.getElementById('dk-taxa').innerText = leads.length>0 ? Math.round(vendas.length/leads.length*100)+'%' : '0%';
+  document.getElementById('dk-fech').innerText = fechamentos;
+  document.getElementById('dk-rec').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
+  document.getElementById('dk-taxa').innerText = `${taxa}%`;
   let mg = S.metaG;
   let realImpl = vendas.reduce((s,v)=>s+v.implantacao,0);
   let pct = mg && mg.impl>0 ? Math.min(100, Math.round(realImpl/mg.impl*100)) : 0;
-  document.getElementById('d-meta').innerHTML = mg ? `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${mg.impl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>` : '<div>Configure meta global</div>';
+  document.getElementById('d-meta').innerHTML = mg ? `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${mg.impl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>` : '<div>Configure a meta global no menu Metas</div>';
   let agendaFutura = S.agenda.filter(a=>a.data >= new Date().toISOString().split('T')[0]).slice(0,5);
-  document.getElementById('d-agenda').innerHTML = agendaFutura.map(a=>`<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  document.getElementById('d-agenda').innerHTML = agendaFutura.map(a=>`<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos futuros</div>';
 }
 
 // ==================== RELATÓRIOS ====================
@@ -696,65 +706,97 @@ function renderRelatorios() {
   let vendas = S.vendas;
   let pipeline = leads.filter(l=>l.status==='Prospect' && l.pipeline);
   let probMap = {Agendamento:20, Apresentação:40, Negociação:70, Fechamento:90};
-  document.getElementById('forecast-tbody').innerHTML = pipeline.map(l=>`<tr><td>${l.responsavel||'—'}</td><td>${l.empresa}</td><td>${l.segmento||'—'}</td><td>${l.cidade||''} ${l.uf||''}</td><td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td><td><span class="tag ty">${l.pipeline}</span></td><td>${probMap[l.pipeline]||0}%</td></tr>`).join('') || '<tr><td colspan="7">Sem leads em pipeline</td></tr>';
+  let forecastBody = document.getElementById('forecast-tbody');
+  forecastBody.innerHTML = pipeline.map(l=>`<tr>
+    <td>${l.responsavel||'—'}</td>
+    <td><strong>${l.empresa}</strong></td>
+    <td>${l.segmento||'—'}</td>
+    <td>${l.cidade||''} ${l.uf||''}</td>
+    <td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td>
+    <td><span class="tag ty">${l.pipeline}</span></td>
+    <td>${probMap[l.pipeline]||0}%</td>
+   </tr>`).join('') || '<tr><td colspan="7" class="te">Nenhum lead em pipeline no momento</td></tr>';
+  
   let consultores = [...new Set([...leads.map(l=>l.responsavel), ...vendas.map(v=>v.consultor)].filter(Boolean))];
-  document.getElementById('prod-tbody').innerHTML = consultores.map(c => {
+  let prodBody = document.getElementById('prod-tbody');
+  prodBody.innerHTML = consultores.map(c => {
     let leadsC = leads.filter(l=>l.responsavel===c);
     let vendasC = vendas.filter(v=>v.consultor===c);
     let receita = vendasC.reduce((s,v)=>s+v.implantacao+v.mensalidade,0);
     let taxa = leadsC.length>0 ? Math.round(vendasC.length/leadsC.length*100) : 0;
-    return `<tr><td>${c}</td><td>${leadsC.length}</td><td>${vendasC.length}</td><td>R$ ${receita.toLocaleString('pt-BR')}</td><td class="${taxa>=30?'tg':taxa>=15?'ty':'tr2'}">${taxa}%</td></tr>`;
-  }).join('') || '<tr><td colspan="5">Sem dados</td></tr>';
+    return `<tr>
+      <td><strong>${c}</strong></td>
+      <td>${leadsC.length}</td>
+      <td>${vendasC.length}</td>
+      <td>R$ ${receita.toLocaleString('pt-BR')}</td>
+      <td class="${taxa>=30?'tg':taxa>=15?'ty':'tr2'}">${taxa}%</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="te">Nenhum dado disponível</td></tr>';
 }
 
 function exportForecast() {
   let leads = S.leads.filter(l=>l.status==='Prospect' && l.pipeline);
-  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline }));
+  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline, Probabilidade: {Agendamento:'20%', Apresentação:'40%', Negociação:'70%', Fechamento:'90%'}[l.pipeline] || '0%' }));
   let ws = XLSX.utils.json_to_sheet(data);
   let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
-  toast('Forecast exportado');
+  toast('Forecast exportado com sucesso!');
 }
-function exportAll() { let wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.leads), 'Leads'); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas), 'Vendas'); XLSX.writeFile(wb, `crm_${new Date().toISOString().split('T')[0]}.xlsx`); toast('Exportado'); }
+
+function exportAll() { 
+  let wb = XLSX.utils.book_new(); 
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.leads), 'Leads'); 
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas), 'Vendas'); 
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.agenda), 'Agenda'); 
+  XLSX.writeFile(wb, `prospectflow_${new Date().toISOString().split('T')[0]}.xlsx`); 
+  toast('Dados exportados com sucesso!'); 
+}
 
 // ==================== USUÁRIOS ====================
 function renderUsuarios() {
-  document.getElementById('users-tb').innerHTML = S.usuarios.map(u => `<tr><td><strong>${u.nome}</strong><br><small>${u.login}</small></td><td><span class="tag tp">${u.role}</span></td><td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑</button>`:''}</td></tr>`).join('');
+  let tb = document.getElementById('users-tb');
+  tb.innerHTML = S.usuarios.map(u => `<tr>
+    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
+    <td><span class="tag tp">${u.role}</span></td>
+    <td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏ Editar</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑 Excluir</button>`:''}</td>
+    </tr>`).join('');
 }
-function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){document.getElementById('u-nome').value=u.nome; document.getElementById('u-login').value=u.login; document.getElementById('u-role').value=u.role; document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
+function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){document.getElementById('u-nome').value=u.nome; document.getElementById('u-login').value=u.login; document.getElementById('u-role').value=u.role; document.getElementById('u-pass').value=''; document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
 async function saveUser() {
   let id = document.getElementById('mUser').dataset.editId;
   let nome = document.getElementById('u-nome').value.trim(), login = document.getElementById('u-login').value.trim(), role = document.getElementById('u-role').value, senha = document.getElementById('u-pass').value;
   if(!nome||!login){toast('Preencha nome e login','err');return;}
-  if(id) { let idx=S.usuarios.findIndex(u=>u.id===id); if(idx!==-1){S.usuarios[idx].nome=nome; S.usuarios[idx].login=login; S.usuarios[idx].role=role; if(senha) S.usuarios[idx].senha=senha;} await saveToFirebase('usuarios', id, S.usuarios[idx]); }
-  else { if(!senha){toast('Senha obrigatória','err');return;} let newUser={id:uid(),nome,login,senha,role}; S.usuarios.push(newUser); await saveToFirebase('usuarios', newUser.id, newUser); }
-  closeM('mUser'); renderUsuarios(); toast('Usuário salvo');
+  if(id) { 
+    let idx=S.usuarios.findIndex(u=>u.id===id); 
+    if(idx!==-1){
+      S.usuarios[idx].nome=nome; S.usuarios[idx].login=login; S.usuarios[idx].role=role; 
+      if(senha) S.usuarios[idx].senha=senha;
+      await saveToFirebase('usuarios', id, S.usuarios[idx]);
+    }
+  } else { 
+    if(!senha){toast('Senha obrigatória para novo usuário','err');return;} 
+    let newUser={id:uid(),nome,login,senha,role}; 
+    S.usuarios.push(newUser); 
+    await saveToFirebase('usuarios', newUser.id, newUser);
+  }
+  closeM('mUser'); renderUsuarios(); toast('Usuário salvo com sucesso!');
 }
-async function deleteUser(id) { S.usuarios = S.usuarios.filter(u=>u.id!==id); await deleteFromFirebase('usuarios', id); renderUsuarios(); toast('Usuário removido'); }
+async function deleteUser(id) { if(confirm('Remover este usuário?')){ S.usuarios = S.usuarios.filter(u=>u.id!==id); await deleteFromFirebase('usuarios', id); renderUsuarios(); toast('Usuário removido'); } }
 
-function openM(id) { document.getElementById(id).style.display='flex'; }
-function closeM(id) { document.getElementById(id).style.display='none'; }
-function dzOver(e) { e.preventDefault(); }
-function dzLeave(e) { }
-function dzDrop(e) { e.preventDefault(); let f=e.dataTransfer.files[0]; if(f) handleImport({target:{files:[f]}}); }
+function openM(id) { document.getElementById(id).style.display='flex'; document.body.style.overflow='hidden'; }
+function closeM(id) { document.getElementById(id).style.display='none'; document.body.style.overflow=''; delete document.getElementById('mUser').dataset.editId; }
+function dzOver(e) { e.preventDefault(); e.currentTarget.style.borderColor='var(--accent)'; }
+function dzLeave(e) { e.currentTarget.style.borderColor='var(--border2)'; }
+function dzDrop(e) { e.preventDefault(); dzLeave(e); let f=e.dataTransfer.files[0]; if(f) handleImport({target:{files:[f]}}); }
 
 function renderAll() {
   renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderCal(); renderMetas(); renderRM(); renderCampanhas(); renderRelatorios(); renderUsuarios(); renderEmailHist();
-  document.getElementById('d-date').innerHTML = new Date().toLocaleDateString('pt-BR');
-  let sel=document.getElementById('l-resp'); if(sel) sel.innerHTML='<option value="">Selecione</option>'+S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
+  document.getElementById('d-date').innerHTML = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  let sel=document.getElementById('l-resp'); 
+  if(sel) sel.innerHTML='<option value="">Selecione o consultor</option>'+S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
 }
 
-// Check for saved config
-let savedConfig = localStorage.getItem('fb_config');
-if(savedConfig) {
-  try {
-    let config = JSON.parse(savedConfig);
-    if(!firebase.apps.length) firebase.initializeApp(config);
-    db = firebase.firestore();
-    document.getElementById('fb-screen').style.display='none';
-    document.getElementById('auth-screen').style.display='flex';
-    loadFirebaseData();
-  } catch(e) { console.log('Erro ao carregar config salva'); }
-}
+// Inicializar o sistema
+initFirebase();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
