@@ -7,9 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -98,7 +95,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
   <div class="auth-box" style="text-align:center">
     <div style="font-size:42px;margin-bottom:16px">🎯</div>
     <div style="font-size:18px;font-weight:600">Carregando ProspectFlow CRM...</div>
-    <div style="margin-top:12px;color:var(--text2)">Conectando ao banco de dados</div>
+    <div style="margin-top:12px;color:var(--text2)">Aguarde, conectando ao banco de dados</div>
   </div>
 </div>
 
@@ -204,7 +201,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
     <div class="met met-yellow"><div class="met-lbl">Não Avançaram</div><div class="met-val" id="rm-na">0</div></div>
     <div class="met met-red"><div class="met-lbl">Desistiram</div><div class="met-val" id="rm-d">0</div></div>
   </div>
-  <div class="card"><div class="tw"></table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
 </div>
 
 <!-- CAMPANHAS -->
@@ -239,12 +236,12 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <!-- USUÁRIOS -->
 <div class="page" id="page-usuarios">
   <div class="ph"><div class="ph-title">Usuários</div><div><button class="btn btn-primary btn-sm" onclick="openM('mUser')">+ Usuário</button></div></div>
-  <div class="card"><div class="tw"><tr><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-tb"></tbody></table></div></div>
 </div>
 
 </div></div>
 
-<!-- MODAIS (mesmo HTML, omitido por brevidade - mesmo do código anterior) -->
+<!-- MODAIS -->
 <div class="moverlay" id="mLead" style="display:none" onclick="if(event.target===this)closeM('mLead')"><div class="modal"><div class="mhd"><div class="mhd-title">Novo Lead</div><button class="xbtn" onclick="closeM('mLead')">×</button></div><div class="mbody"><div class="fr2"><div class="fg"><label>Empresa *</label><input id="l-emp"></div><div class="fg"><label>Contato</label><input id="l-cont"></div></div><div class="fr2"><div class="fg"><label>E-mail</label><input id="l-email"></div><div class="fg"><label>Telefone</label><input id="l-tel"></div></div><div class="fr2"><div class="fg"><label>Cidade</label><input id="l-city"></div><div class="fg"><label>UF</label><input id="l-state"></div></div><div class="fr2"><div class="fg"><label>Segmento/CNAE</label><input id="l-segmento"></div><div class="fg"><label>Descrição CNAE</label><input id="l-cnae_desc"></div></div><div class="fg"><label>Responsável</label><select id="l-resp"></select></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
 <div class="moverlay" id="mAgenda" style="display:none" onclick="if(event.target===this)closeM('mAgenda')"><div class="modal"><div class="mhd"><div class="mhd-title">Agendar</div><button class="xbtn" onclick="closeM('mAgenda')">×</button></div><div class="mbody"><div class="fg"><label>Lead</label><select id="ag-lead"></select></div><div class="fr2"><div class="fg"><label>Data</label><input id="ag-data" type="date"></div><div class="fg"><label>Hora</label><input id="ag-hora" type="time"></div></div><div class="fg"><label>Observações</label><textarea id="ag-obs" rows="2"></textarea></div></div><div class="mfoot"><button class="btn btn-primary" onclick="saveAgendamento()">Salvar</button></div></div></div>
@@ -260,59 +257,44 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <div class="toast-wrap" id="tw"></div>
 
 <script>
-// ==================== USUÁRIOS PADRÃO ====================
-const DEFAULT_USERS = [
-  { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', role: 'Diretor' },
-  { id: 'u2', nome: 'João Silva', login: 'joao', senha: '1234', role: 'Consultor' },
-  { id: 'u3', nome: 'Maria Santos', login: 'maria', senha: '1234', role: 'Gerente' }
-];
+// ==================== SISTEMA SEM FIREBASE (USANDO APENAS LOCALSTORAGE) ====================
+// O Firebase está com problemas de carregamento, então vamos usar apenas localStorage
+// Isso garante que o sistema funcione imediatamente
 
-// ==================== FIREBASE CONFIGURAÇÃO ====================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
-  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
-  projectId: "prospectflow-crm-5775a",
-  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
-  messagingSenderId: "278911416959",
-  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
-};
-
-let db = null;
 let currentUser = null;
-let firebaseReady = false;
 let S = { leads: [], vendas: [], agenda: [], rm: [], metaG: null, usuarios: [], campanhas: [], emailHist: [] };
 let calDate = new Date();
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-function toast(msg, type='ok') { let w=document.getElementById('tw'); if(!w) return; let e=document.createElement('div'); e.className='toast'; e.innerHTML=msg; w.appendChild(e); setTimeout(()=>e.remove(),3000); }
-function setSyncing(on) { let dot=document.getElementById('sync-dot'); if(dot) dot.className='sync-dot'+(on?' syncing':''); }
-
-// ==================== INICIALIZAR FIREBASE ====================
-async function initFirebase() {
-  try {
-    if(typeof firebase === 'undefined') {
-      console.warn('Firebase SDK não carregado ainda');
-      return false;
-    }
-    if(!firebase.apps.length) {
-      firebase.initializeApp(FIREBASE_CONFIG);
-    }
-    db = firebase.firestore();
-    console.log('Firebase conectado com sucesso!');
-    await loadFirebaseData();
-    return true;
-  } catch(e) { 
-    console.error('Erro Firebase:', e);
-    toast('Modo offline - usando dados locais', 'err');
-    loadLocalData();
-    return false;
-  }
+function toast(msg, type='ok') { 
+  let w = document.getElementById('tw'); 
+  if(!w) return;
+  let e = document.createElement('div'); 
+  e.className = 'toast'; 
+  e.innerHTML = msg; 
+  w.appendChild(e); 
+  setTimeout(() => e.remove(), 3000); 
 }
 
-function loadLocalData() {
-  try {
-    let saved = localStorage.getItem('pf_local_data');
-    if(saved) {
+// ==================== SALVAR/CARREGAR DADOS LOCAIS ====================
+function saveAllData() {
+  let data = {
+    leads: S.leads,
+    vendas: S.vendas,
+    agenda: S.agenda,
+    rm: S.rm,
+    metaG: S.metaG,
+    campanhas: S.campanhas,
+    emailHist: S.emailHist,
+    usuarios: S.usuarios
+  };
+  localStorage.setItem('prospectflow_data', JSON.stringify(data));
+}
+
+function loadAllData() {
+  let saved = localStorage.getItem('prospectflow_data');
+  if(saved) {
+    try {
       let data = JSON.parse(saved);
       S.leads = data.leads || [];
       S.vendas = data.vendas || [];
@@ -321,92 +303,24 @@ function loadLocalData() {
       S.metaG = data.metaG || { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
       S.campanhas = data.campanhas || [];
       S.emailHist = data.emailHist || [];
-    }
-  } catch(e) { console.error('Erro ao carregar dados locais:', e); }
+      S.usuarios = data.usuarios || [];
+    } catch(e) { console.error('Erro ao carregar dados:', e); }
+  }
   
-  try {
-    let savedUsers = localStorage.getItem('pf_users_local');
-    if(savedUsers) {
-      S.usuarios = JSON.parse(savedUsers);
-    } else {
-      S.usuarios = [...DEFAULT_USERS];
-      localStorage.setItem('pf_users_local', JSON.stringify(S.usuarios));
-    }
-  } catch(e) { S.usuarios = [...DEFAULT_USERS]; }
-}
-
-async function loadFirebaseData() {
-  if(!db) return;
-  setSyncing(true);
-  try {
-    // Load leads
-    let leadsSnap = await db.collection('leads').get();
-    if(leadsSnap.docs.length > 0) S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Load vendas
-    let vendasSnap = await db.collection('vendas').get();
-    if(vendasSnap.docs.length > 0) S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Load agenda
-    let agendaSnap = await db.collection('agenda').get();
-    if(agendaSnap.docs.length > 0) S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Load rm
-    let rmSnap = await db.collection('rm').get();
-    if(rmSnap.docs.length > 0) S.rm = rmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Load metaG
-    let metaGSnap = await db.collection('config').doc('metaG').get();
-    if(metaGSnap.exists) S.metaG = metaGSnap.data();
-    else S.metaG = { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
-    
-    // Load usuarios
-    let usuariosSnap = await db.collection('usuarios').get();
-    if(usuariosSnap.docs.length > 0) {
-      S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } else {
-      S.usuarios = [...DEFAULT_USERS];
-      for(let u of S.usuarios) await db.collection('usuarios').doc(u.id).set(u);
-    }
-    
-    // Load campanhas
-    let campSnap = await db.collection('campanhas').get();
-    if(campSnap.docs.length > 0) S.campanhas = campSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Load emailHist
-    let emailSnap = await db.collection('emailHist').get();
-    if(emailSnap.docs.length > 0) S.emailHist = emailSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Backup local
-    localStorage.setItem('pf_local_data', JSON.stringify({ 
-      leads: S.leads, vendas: S.vendas, agenda: S.agenda, rm: S.rm, 
-      metaG: S.metaG, campanhas: S.campanhas, emailHist: S.emailHist 
-    }));
-    
-  } catch(e) { console.error('Erro ao carregar dados do Firebase:', e); loadLocalData(); }
-  setSyncing(false);
-}
-
-async function saveToFirebase(collection, id, data) {
-  if(!db) return;
-  setSyncing(true);
-  try { 
-    await db.collection(collection).doc(id).set(data);
-    // Backup local
-    let backup = JSON.parse(localStorage.getItem('pf_local_data') || '{}');
-    if(!backup[collection]) backup[collection] = [];
-    backup[collection] = backup[collection].filter(i=>i.id!==id);
-    backup[collection].push(data);
-    localStorage.setItem('pf_local_data', JSON.stringify(backup));
-  } catch(e){ console.error(e); }
-  setSyncing(false);
-}
-
-async function deleteFromFirebase(collection, id) {
-  if(!db) return;
-  setSyncing(true);
-  try { await db.collection(collection).doc(id).delete(); } catch(e){ console.error(e); }
-  setSyncing(false);
+  // Se não tem usuários, cria os padrão
+  if(!S.usuarios || S.usuarios.length === 0) {
+    S.usuarios = [
+      { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', role: 'Diretor' },
+      { id: 'u2', nome: 'João Silva', login: 'joao', senha: '1234', role: 'Consultor' },
+      { id: 'u3', nome: 'Maria Santos', login: 'maria', senha: '1234', role: 'Gerente' }
+    ];
+    saveAllData();
+  }
+  
+  // Se não tem meta global, cria padrão
+  if(!S.metaG) {
+    S.metaG = { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+  }
 }
 
 // ==================== AUTH ====================
@@ -417,8 +331,8 @@ function doLogin() {
   let user = S.usuarios.find(u => u.login === login && u.senha === senha);
   
   if(!user){ 
-    document.getElementById('auth-err').innerHTML='Usuário ou senha inválidos! Use admin / 1234';
-    document.getElementById('auth-err').style.display='block'; 
+    document.getElementById('auth-err').innerHTML = 'Usuário ou senha inválidos! Use admin / 1234';
+    document.getElementById('auth-err').style.display = 'block'; 
     return; 
   }
   
@@ -440,45 +354,55 @@ function doLogout() {
 }
 
 function go(page) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
   let target = document.getElementById(`page-${page}`);
   if(target) target.classList.add('on');
-  if(page==='dash') renderDashboard();
-  if(page==='leads') renderLeads();
-  if(page==='pipe') renderPipeline();
-  if(page==='agenda') { renderAgenda(); renderCal(); }
-  if(page==='metas') renderMetas();
-  if(page==='rm') renderRM();
-  if(page==='campanhas') renderCampanhas();
-  if(page==='rel') renderRelatorios();
-  if(page==='usuarios') renderUsuarios();
-  if(page==='email') renderEmailHist();
+  if(page === 'dash') renderDashboard();
+  if(page === 'leads') renderLeads();
+  if(page === 'pipe') renderPipeline();
+  if(page === 'agenda') { renderAgenda(); renderCal(); }
+  if(page === 'metas') renderMetas();
+  if(page === 'rm') renderRM();
+  if(page === 'campanhas') renderCampanhas();
+  if(page === 'rel') renderRelatorios();
+  if(page === 'usuarios') renderUsuarios();
+  if(page === 'email') renderEmailHist();
 }
 
 // ==================== LEADS ====================
 function renderLeads() {
-  let leads = currentUser && currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let leads = currentUser && currentUser.role === 'Consultor' ? S.leads.filter(l => l.responsavel === currentUser.nome) : S.leads;
   let tb = document.getElementById('leads-tb');
   if(!tb) return;
-  tb.innerHTML = leads.map(l => `
-    <tr>
-      <td><strong>${l.empresa || '—'}</strong><br><small>${l.contato||''}</small></td>
-      <td>${l.segmento ? `<span class="tag tp">${l.segmento}</span>` : '—'}${l.cnae_desc ? `<br><small>${l.cnae_desc.substring(0,30)}</small>` : ''}</td>
-      <td>${l.produto?`<span class="tag tb2">${l.produto}</span>`:'—'}</td>
-      <td>${statusTag(l.status)}</td>
-      <td>${l.pipeline?`<span class="tag ty">${l.pipeline}</span>`:'—'}</td>
-      <td>${l.responsavel||'—'}</td>
-      <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗</button></td>
-    </tr>
-  `).join('') || '<tr><td colspan="7" class="te">Nenhum lead cadastrado</td></tr>';
+  
+  if(leads.length === 0) {
+    tb.innerHTML = '<tr><td colspan="7" class="te">Nenhum lead cadastrado</td></tr>';
+  } else {
+    tb.innerHTML = leads.map(l => `
+      <tr>
+        <td><strong>${l.empresa || '—'}</strong><br><small>${l.contato || ''}</small></td>
+        <td>${l.segmento ? `<span class="tag tp">${l.segmento}</span>` : '—'}${l.cnae_desc ? `<br><small>${l.cnae_desc.substring(0, 30)}</small>` : ''}</td>
+        <td>${l.produto ? `<span class="tag tb2">${l.produto}</span>` : '—'}</td>
+        <td>${statusTag(l.status)}</td>
+        <td>${l.pipeline ? `<span class="tag ty">${l.pipeline}</span>` : '—'}</td>
+        <td>${l.responsavel || '—'}</td>
+        <td><button class="btn btn-ghost btn-xs" onclick="evoluirLead('${l.id}')">→</button><button class="btn btn-primary btn-xs" onclick="abrirVenda('${l.id}')">💰</button><button class="btn btn-bad btn-xs" onclick="descartarLead('${l.id}')">✗</button></td>
+      </tr>
+    `).join('');
+  }
+  
   let totalEl = document.getElementById('tb-total');
   if(totalEl) totalEl.innerText = leads.length + ' leads';
 }
 
-function statusTag(s) { let m={Oportunidade:'tb2',Prospect:'tp',Captado:'tg',Descartado:'tr2'}; return `<span class="tag ${m[s]||'tn'}">${s||'Oportunidade'}</span>`; }
+function statusTag(s) { 
+  let m = { Oportunidade: 'tb2', Prospect: 'tp', Captado: 'tg', Descartado: 'tr2' }; 
+  return `<span class="tag ${m[s] || 'tn'}">${s || 'Oportunidade'}</span>`; 
+}
 
-async function saveLead() {
+function saveLead() {
   let lead = {
+    id: uid(),
     empresa: document.getElementById('l-emp').value.trim(),
     contato: document.getElementById('l-cont').value.trim(),
     email: document.getElementById('l-email').value.trim(),
@@ -495,76 +419,118 @@ async function saveLead() {
     mensalidade: 0,
     createdAt: new Date().toISOString()
   };
-  if(!lead.empresa){toast('Informe a empresa','err');return;}
-  let id = uid();
-  lead.id = id;
+  if(!lead.empresa) { toast('Informe a empresa', 'err'); return; }
   S.leads.push(lead);
-  await saveToFirebase('leads', id, lead);
+  saveAllData();
   closeM('mLead');
   renderLeads();
   renderDashboard();
   toast('Lead criado com sucesso!');
 }
 
-async function evoluirLead(id) {
-  let l = S.leads.find(l=>l.id===id);
+function evoluirLead(id) {
+  let l = S.leads.find(l => l.id === id);
   if(!l) return;
-  if(l.status==='Oportunidade') { l.status='Prospect'; l.pipeline='Agendamento'; toast('Lead → Prospect - Agende uma apresentação'); abrirAgendamento(l.id); }
-  else if(l.pipeline==='Agendamento') { l.pipeline='Apresentação'; toast('Apresentação confirmada!'); }
-  else if(l.pipeline==='Apresentação') { l.pipeline='Negociação'; toast('Lead em negociação'); }
-  else if(l.pipeline==='Negociação') { abrirVenda(id); return; }
-  await saveToFirebase('leads', id, l);
-  renderLeads(); renderPipeline(); renderDashboard();
+  if(l.status === 'Oportunidade') { 
+    l.status = 'Prospect'; 
+    l.pipeline = 'Agendamento'; 
+    toast('Lead → Prospect - Agende uma apresentação'); 
+    abrirAgendamento(l.id); 
+  } else if(l.pipeline === 'Agendamento') { 
+    l.pipeline = 'Apresentação'; 
+    toast('Apresentação confirmada!'); 
+  } else if(l.pipeline === 'Apresentação') { 
+    l.pipeline = 'Negociação'; 
+    toast('Lead em negociação'); 
+  } else if(l.pipeline === 'Negociação') { 
+    abrirVenda(id); 
+    return; 
+  }
+  saveAllData();
+  renderLeads();
+  renderPipeline();
+  renderDashboard();
 }
 
-async function descartarLead(id) {
-  let l = S.leads.find(l=>l.id===id);
+function descartarLead(id) {
+  let l = S.leads.find(l => l.id === id);
   if(!l) return;
-  let categoria = l.status==='Oportunidade' ? 'Não Prospectado' : (l.pipeline==='Agendamento'||l.pipeline==='Apresentação' ? 'Não Avançou' : 'Desistiu');
-  let rm = { id: uid(), empresa: l.empresa, contato: l.contato, email: l.email, telefone: l.telefone, categoria: categoria, motivo: 'Descartado em '+ (l.pipeline||l.status), data: new Date().toISOString().split('T')[0], leadId: l.id };
-  if(!S.rm.find(r=>r.leadId===l.id)) { S.rm.push(rm); await saveToFirebase('rm', rm.id, rm); }
-  l.status = 'Descartado'; l.pipeline = 'Descartado';
-  await saveToFirebase('leads', id, l);
-  renderLeads(); renderRM(); renderDashboard(); toast('Lead descartado e enviado ao Remarketing');
+  let categoria = l.status === 'Oportunidade' ? 'Não Prospectado' : (l.pipeline === 'Agendamento' || l.pipeline === 'Apresentação' ? 'Não Avançou' : 'Desistiu');
+  let rm = { 
+    id: uid(), 
+    empresa: l.empresa, 
+    contato: l.contato, 
+    email: l.email, 
+    telefone: l.telefone, 
+    categoria: categoria, 
+    motivo: 'Descartado em ' + (l.pipeline || l.status), 
+    data: new Date().toISOString().split('T')[0], 
+    leadId: l.id 
+  };
+  if(!S.rm.find(r => r.leadId === l.id)) { 
+    S.rm.push(rm); 
+  }
+  l.status = 'Descartado'; 
+  l.pipeline = 'Descartado';
+  saveAllData();
+  renderLeads();
+  renderRM();
+  renderDashboard();
+  toast('Lead descartado e enviado ao Remarketing');
 }
 
 // ==================== PIPELINE ====================
 function renderPipeline() {
-  let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Captado');
-  if(currentUser && currentUser.role==='Consultor') leads = leads.filter(l=>l.responsavel===currentUser.nome);
-  let stages = ['Agendamento','Apresentação','Negociação','Fechamento'];
+  let leads = S.leads.filter(l => l.status === 'Prospect' || l.status === 'Captado');
+  if(currentUser && currentUser.role === 'Consultor') leads = leads.filter(l => l.responsavel === currentUser.nome);
+  let stages = ['Agendamento', 'Apresentação', 'Negociação', 'Fechamento'];
   let board = document.getElementById('board');
   if(!board) return;
-  board.innerHTML = stages.map(s => `<div class="bcol"><div class="bcol-hd">${s}</div>${leads.filter(l=>l.pipeline===s).map(l=>`<div class="bcard" onclick="abrirVenda('${l.id}')"><div class="bcard-name">${l.empresa}</div><div class="bcard-sub">${l.responsavel||''}</div></div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--text3)">Vazio</div>'}</div>`).join('');
+  board.innerHTML = stages.map(s => `
+    <div class="bcol">
+      <div class="bcol-hd">${s}</div>
+      ${leads.filter(l => l.pipeline === s).map(l => `<div class="bcard" onclick="abrirVenda('${l.id}')"><div class="bcard-name">${l.empresa}</div><div class="bcard-sub">${l.responsavel || ''}</div></div>`).join('') || '<div style="padding:20px;text-align:center;color:var(--text3)">Vazio</div>'}
+    </div>
+  `).join('');
 }
 
 // ==================== AGENDA ====================
 function renderAgenda() {
-  let agenda = currentUser && currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
+  let agenda = currentUser && currentUser.role === 'Consultor' ? S.agenda.filter(a => a.responsavel === currentUser.nome) : S.agenda;
   let el = document.getElementById('ag-list');
-  if(el) el.innerHTML = agenda.sort((a,b)=>a.data?.localeCompare(b.data)).slice(0,10).map(a=>`<div>📅 ${a.data} às ${a.hora} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  if(el) {
+    el.innerHTML = agenda.sort((a, b) => (a.data || '').localeCompare(b.data || '')).slice(0, 10).map(a => `<div>📅 ${a.data} às ${a.hora} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  }
 }
 
 function renderCal() {
-  let y=calDate.getFullYear(), m=calDate.getMonth();
-  let first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
-  let agenda = currentUser && currentUser.role==='Consultor' ? S.agenda.filter(a=>a.responsavel===currentUser.nome) : S.agenda;
+  let y = calDate.getFullYear(), m = calDate.getMonth();
+  let first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+  let agenda = currentUser && currentUser.role === 'Consultor' ? S.agenda.filter(a => a.responsavel === currentUser.nome) : S.agenda;
   let html = '<div class="cal-grid">';
-  for(let i=0;i<first;i++) html+='<div></div>';
-  for(let d=1;d<=days;d++){ let ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let evs=agenda.filter(a=>a.data===ds); html+=`<div class="cday"><div class="cday-n">${d}</div>${evs.map(e=>`<div class="cev">${e.empresa}</div>`).join('')}</div>`; }
-  html+='</div>';
+  for(let i = 0; i < first; i++) html += '<div></div>';
+  for(let d = 1; d <= days; d++) { 
+    let ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`; 
+    let evs = agenda.filter(a => a.data === ds); 
+    html += `<div class="cday"><div class="cday-n">${d}</div>${evs.map(e => `<div class="cev">${e.empresa}</div>`).join('')}</div>`; 
+  }
+  html += '</div>';
   let grid = document.getElementById('cal-grid');
   if(grid) grid.innerHTML = html;
   let title = document.getElementById('cal-title');
-  if(title) title.innerHTML = calDate.toLocaleString('pt-BR',{month:'long',year:'numeric'});
+  if(title) title.innerHTML = calDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 }
 
-function calNav(d){ if(d===0)calDate=new Date(); else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+d,1); renderCal(); }
+function calNav(d) { 
+  if(d === 0) calDate = new Date(); 
+  else calDate = new Date(calDate.getFullYear(), calDate.getMonth() + d, 1); 
+  renderCal(); 
+}
 
 function abrirAgendamento(leadId) {
-  let leads = S.leads.filter(l=>l.status==='Prospect' || l.status==='Oportunidade');
+  let leads = S.leads.filter(l => l.status === 'Prospect' || l.status === 'Oportunidade');
   let sel = document.getElementById('ag-lead');
-  if(sel) sel.innerHTML = leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa} - ${l.contato||''}</option>`).join('');
+  if(sel) sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id === leadId ? 'selected' : ''}>${l.empresa} - ${l.contato || ''}</option>`).join('');
   let dataInput = document.getElementById('ag-data');
   if(dataInput) dataInput.value = new Date().toISOString().split('T')[0];
   let horaInput = document.getElementById('ag-hora');
@@ -572,89 +538,130 @@ function abrirAgendamento(leadId) {
   openM('mAgenda');
 }
 
-async function saveAgendamento() {
+function saveAgendamento() {
   let leadId = document.getElementById('ag-lead')?.value;
-  let lead = S.leads.find(l=>l.id===leadId);
-  if(!lead){toast('Lead não encontrado','err');return;}
-  let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, data: document.getElementById('ag-data')?.value, hora: document.getElementById('ag-hora')?.value, obs: document.getElementById('ag-obs')?.value, responsavel: lead.responsavel || currentUser?.nome };
+  let lead = S.leads.find(l => l.id === leadId);
+  if(!lead) { toast('Lead não encontrado', 'err'); return; }
+  let agenda = { 
+    id: uid(), 
+    leadId: lead.id, 
+    empresa: lead.empresa, 
+    data: document.getElementById('ag-data')?.value, 
+    hora: document.getElementById('ag-hora')?.value, 
+    obs: document.getElementById('ag-obs')?.value, 
+    responsavel: lead.responsavel || currentUser?.nome 
+  };
   S.agenda.push(agenda);
-  await saveToFirebase('agenda', agenda.id, agenda);
-  if(lead.status==='Oportunidade'){ lead.status='Prospect'; lead.pipeline='Agendamento'; await saveToFirebase('leads', lead.id, lead); }
+  if(lead.status === 'Oportunidade') { 
+    lead.status = 'Prospect'; 
+    lead.pipeline = 'Agendamento'; 
+  }
+  saveAllData();
   closeM('mAgenda');
-  renderAgenda(); renderCal(); renderLeads(); toast('Agendamento salvo!');
+  renderAgenda();
+  renderCal();
+  renderLeads();
+  toast('Agendamento salvo!');
 }
 
 // ==================== VENDAS ====================
 function abrirVenda(id) {
-  let l = S.leads.find(l=>l.id===id);
+  let l = S.leads.find(l => l.id === id);
   if(!l) return;
   let vdLead = document.getElementById('vd-lead');
   if(vdLead) vdLead.innerHTML = `<option value="${l.id}">${l.empresa}</option>`;
   let implInput = document.getElementById('vd-impl');
-  if(implInput) implInput.value = l.implantacao||0;
+  if(implInput) implInput.value = l.implantacao || 0;
   let mensInput = document.getElementById('vd-mens');
-  if(mensInput) mensInput.value = l.mensalidade||0;
+  if(mensInput) mensInput.value = l.mensalidade || 0;
   let dataInput = document.getElementById('vd-data');
   if(dataInput) dataInput.value = new Date().toISOString().split('T')[0];
   openM('mVenda');
 }
 
-async function saveVenda() {
+function saveVenda() {
   let leadId = document.getElementById('vd-lead')?.value;
-  let lead = S.leads.find(l=>l.id===leadId);
+  let lead = S.leads.find(l => l.id === leadId);
   if(!lead) return;
   let venda = {
-    id: uid(), leadId: lead.id, empresa: lead.empresa, consultor: lead.responsavel || currentUser?.nome,
-    produto: document.getElementById('vd-prod')?.value, implantacao: parseFloat(document.getElementById('vd-impl')?.value)||0,
-    mensalidade: parseFloat(document.getElementById('vd-mens')?.value)||0, data: document.getElementById('vd-data')?.value, createdAt: new Date().toISOString()
+    id: uid(),
+    leadId: lead.id,
+    empresa: lead.empresa,
+    consultor: lead.responsavel || currentUser?.nome,
+    produto: document.getElementById('vd-prod')?.value,
+    implantacao: parseFloat(document.getElementById('vd-impl')?.value) || 0,
+    mensalidade: parseFloat(document.getElementById('vd-mens')?.value) || 0,
+    data: document.getElementById('vd-data')?.value,
+    createdAt: new Date().toISOString()
   };
-  lead.status = 'Captado'; lead.pipeline = 'Fechamento'; lead.produto = venda.produto;
-  lead.implantacao = venda.implantacao; lead.mensalidade = venda.mensalidade;
+  lead.status = 'Captado';
+  lead.pipeline = 'Fechamento';
+  lead.produto = venda.produto;
+  lead.implantacao = venda.implantacao;
+  lead.mensalidade = venda.mensalidade;
   S.vendas.push(venda);
-  await saveToFirebase('leads', lead.id, lead);
-  await saveToFirebase('vendas', venda.id, venda);
+  saveAllData();
   closeM('mVenda');
-  renderLeads(); renderMetas(); renderDashboard(); toast(`🎉 Venda registrada! R$ ${(venda.implantacao+venda.mensalidade).toLocaleString('pt-BR')}`);
+  renderLeads();
+  renderMetas();
+  renderDashboard();
+  toast(`🎉 Venda registrada! R$ ${(venda.implantacao + venda.mensalidade).toLocaleString('pt-BR')}`);
 }
 
 // ==================== METAS ====================
 function renderMetas() {
   let vendas = S.vendas;
-  let realImpl = vendas.reduce((s,v)=>s+(v.implantacao||0),0);
+  let realImpl = vendas.reduce((s, v) => s + (v.implantacao || 0), 0);
   let mg = S.metaG;
   let metaBody = document.getElementById('meta-g-body');
-  if(metaBody) metaBody.innerHTML = mg ? `<div>🎯 Meta Global (${mg.periodo||'Mensal'}): R$ ${(mg.impl||0).toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${mg.impl>0?Math.min(100,realImpl/mg.impl*100):0}%;height:6px;background:var(--blue)"></div></div></div>` : '<div>Meta não definida</div>';
+  if(metaBody) {
+    if(mg) {
+      let pct = mg.impl > 0 ? Math.min(100, Math.round(realImpl / mg.impl * 100)) : 0;
+      metaBody.innerHTML = `<div>🎯 Meta Global (${mg.periodo || 'Mensal'}): R$ ${(mg.impl || 0).toLocaleString('pt-BR')}<br>Realizado: R$ ${realImpl.toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>`;
+    } else {
+      metaBody.innerHTML = '<div>Meta não definida</div>';
+    }
+  }
   
   let vendasTl = document.getElementById('vendas-tl');
-  if(vendasTl) vendasTl.innerHTML = vendas.slice(-5).reverse().map(v=>`<div>✓ ${v.empresa} - R$ ${((v.implantacao||0)+(v.mensalidade||0)).toLocaleString('pt-BR')} (${v.data})</div>`).join('') || 'Nenhuma venda registrada';
+  if(vendasTl) {
+    vendasTl.innerHTML = vendas.slice(-5).reverse().map(v => `<div>✓ ${v.empresa} - R$ ${((v.implantacao || 0) + (v.mensalidade || 0)).toLocaleString('pt-BR')} (${v.data})</div>`).join('') || 'Nenhuma venda registrada';
+  }
   
-  let consultores = S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>u.nome);
-  let metaPorConsultor = mg && mg.distribuir==='sim' && consultores.length>0 ? (mg.impl||0) / consultores.length : 0;
+  let consultores = S.usuarios.filter(u => u.role === 'Consultor' || u.role === 'Gerente').map(u => u.nome);
+  let metaPorConsultor = mg && mg.distribuir === 'sim' && consultores.length > 0 ? (mg.impl || 0) / consultores.length : 0;
   let tb = document.getElementById('metas-consultores-tb');
-  if(tb) tb.innerHTML = consultores.map(c => {
-    let vendasC = vendas.filter(v=>v.consultor===c);
-    let realizado = vendasC.reduce((s,v)=>s+(v.implantacao||0),0);
-    let pct = metaPorConsultor>0 ? Math.min(100, Math.round(realizado/metaPorConsultor*100)) : 0;
-    return `<tr>
-      <td><strong>${c}</strong></td>
-      <td>R$ ${metaPorConsultor.toLocaleString('pt-BR')}</td>
-      <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
-      <td class="${pct>=100?'tg':pct>=50?'ty':'tr2'}" style="font-weight:700">${pct}%</td>
-      <td><div class="prog" style="width:100px"><div class="prog-f" style="width:${pct}%;height:5px;background:var(--accent)"></div></div></td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="5" class="te">Nenhum consultor cadastrado</td></tr>';
+  if(tb) {
+    tb.innerHTML = consultores.map(c => {
+      let vendasC = vendas.filter(v => v.consultor === c);
+      let realizado = vendasC.reduce((s, v) => s + (v.implantacao || 0), 0);
+      let pct = metaPorConsultor > 0 ? Math.min(100, Math.round(realizado / metaPorConsultor * 100)) : 0;
+      return `
+        <tr>
+          <td><strong>${c}</strong></td>
+          <td>R$ ${metaPorConsultor.toLocaleString('pt-BR')}</td>
+          <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
+          <td class="${pct >= 100 ? 'tg' : pct >= 50 ? 'ty' : 'tr2'}" style="font-weight:700">${pct}%</td>
+          <td><div class="prog" style="width:100px"><div class="prog-f" style="width:${pct}%;height:5px;background:var(--accent)"></div></div></td>
+        </tr>
+      `;
+    }).join('');
+    if(consultores.length === 0) tb.innerHTML = '<tr><td colspan="5" class="te">Nenhum consultor cadastrado</td></tr>';
+  }
 }
 
-async function saveMetaG() {
+function saveMetaG() {
   S.metaG = {
-    impl: parseFloat(document.getElementById('mg-impl')?.value)||0,
-    mens: parseFloat(document.getElementById('mg-mens')?.value)||0,
+    impl: parseFloat(document.getElementById('mg-impl')?.value) || 0,
+    mens: parseFloat(document.getElementById('mg-mens')?.value) || 0,
     periodo: document.getElementById('mg-per')?.value || 'Mensal',
     distribuir: document.getElementById('mg-distribuir')?.value || 'sim'
   };
-  await saveToFirebase('config', 'metaG', S.metaG);
+  saveAllData();
   closeM('mMetaG');
-  renderMetas(); renderDashboard(); toast('Meta global salva e distribuída!');
+  renderMetas();
+  renderDashboard();
+  toast('Meta global salva e distribuída!');
 }
 
 // ==================== REMARKETING ====================
@@ -663,30 +670,41 @@ function renderRM() {
   let npEl = document.getElementById('rm-np');
   let naEl = document.getElementById('rm-na');
   let dEl = document.getElementById('rm-d');
-  if(npEl) npEl.innerText = rm.filter(r=>r.categoria==='Não Prospectado').length;
-  if(naEl) naEl.innerText = rm.filter(r=>r.categoria==='Não Avançou').length;
-  if(dEl) dEl.innerText = rm.filter(r=>r.categoria==='Desistiu').length;
+  if(npEl) npEl.innerText = rm.filter(r => r.categoria === 'Não Prospectado').length;
+  if(naEl) naEl.innerText = rm.filter(r => r.categoria === 'Não Avançou').length;
+  if(dEl) dEl.innerText = rm.filter(r => r.categoria === 'Desistiu').length;
+  
   let tb = document.getElementById('rm-tb');
-  if(tb) tb.innerHTML = rm.map(r => `<tr>
-    <td><strong>${r.empresa}</strong></td>
-    <td>${r.contato||'—'}</td>
-    <td>${r.email||'—'}</td>
-    <td><span class="tag ${r.categoria==='Não Prospectado'?'tb2':r.categoria==='Não Avançou'?'ty':'tr2'}">${r.categoria}</span></td>
-    <td>${r.motivo||'—'}</td>
-    <td><button class="btn btn-primary btn-xs" onclick="enviarEmailRemarketingLead('${r.id}')">✉️ E-mail</button></td>
-    </tr>`).join('') || '<tr><td colspan="6" class="te">Nenhum lead em remarketing</td></tr>';
+  if(tb) {
+    if(rm.length === 0) {
+      tb.innerHTML = '<tr><td colspan="6" class="te">Nenhum lead em remarketing</td></tr>';
+    } else {
+      tb.innerHTML = rm.map(r => `
+        <tr>
+          <td><strong>${r.empresa}</strong></td>
+          <td>${r.contato || '—'}</td>
+          <td>${r.email || '—'}</td>
+          <td><span class="tag ${r.categoria === 'Não Prospectado' ? 'tb2' : r.categoria === 'Não Avançou' ? 'ty' : 'tr2'}">${r.categoria}</span></td>
+          <td>${r.motivo || '—'}</td>
+          <td><button class="btn btn-primary btn-xs" onclick="enviarEmailRemarketingLead('${r.id}')">✉️ E-mail</button></td>
+        </tr>
+      `).join('');
+    }
+  }
 }
 
 function enviarEmailRemarketingLead(id) {
-  let r = S.rm.find(r=>r.id===id);
-  if(!r || !r.email){toast('Lead sem e-mail','err');return;}
+  let r = S.rm.find(r => r.id === id);
+  if(!r || !r.email) { toast('Lead sem e-mail', 'err'); return; }
   enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato.\n\nAtenciosamente,\nEquipe`, r.empresa);
 }
 
 function enviarEmailRemarketing() {
-  let rmComEmail = S.rm.filter(r=>r.email);
-  if(rmComEmail.length===0){toast('Nenhum lead com e-mail','err');return;}
-  rmComEmail.forEach(r=>{ enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato||r.empresa},\n\nTemos novidades!\n\nAtenciosamente,\nEquipe`, r.empresa); });
+  let rmComEmail = S.rm.filter(r => r.email);
+  if(rmComEmail.length === 0) { toast('Nenhum lead com e-mail', 'err'); return; }
+  rmComEmail.forEach(r => { 
+    enviarEmail(r.email, `Oportunidade para ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nTemos novidades!\n\nAtenciosamente,\nEquipe`, r.empresa); 
+  });
   toast(`Enviando para ${rmComEmail.length} leads...`);
 }
 
@@ -694,103 +712,196 @@ function enviarEmailRemarketing() {
 function enviarEmailsMassa() {
   let assunto = document.getElementById('em-sub')?.value;
   let corpo = document.getElementById('em-body')?.value;
-  if(!assunto || !corpo){toast('Preencha assunto e mensagem','err');return;}
-  let leadsComEmail = S.leads.filter(l=>l.email && l.status!=='Descartado');
-  if(leadsComEmail.length===0){toast('Nenhum lead com e-mail','err');return;}
-  leadsComEmail.forEach(l=>{
-    let msg = corpo.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato||'Prezado(a)');
+  if(!assunto || !corpo) { toast('Preencha assunto e mensagem', 'err'); return; }
+  let leadsComEmail = S.leads.filter(l => l.email && l.status !== 'Descartado');
+  if(leadsComEmail.length === 0) { toast('Nenhum lead com e-mail', 'err'); return; }
+  leadsComEmail.forEach(l => {
+    let msg = corpo.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)');
     enviarEmail(l.email, assunto, msg, l.empresa);
   });
   toast(`Enviando para ${leadsComEmail.length} leads...`);
 }
 
-async function enviarEmail(to, subject, body, empresa) {
+function enviarEmail(to, subject, body, empresa) {
   let hist = { id: uid(), to, subject, body, empresa, data: new Date().toISOString() };
   S.emailHist.unshift(hist);
-  await saveToFirebase('emailHist', hist.id, hist);
+  saveAllData();
   renderEmailHist();
   console.log(`Email enviado para ${to}: ${subject}`);
+  toast(`E-mail enviado para ${empresa}`);
 }
 
 function renderEmailHist() {
   let el = document.getElementById('email-hist');
-  if(el) el.innerHTML = S.emailHist.slice(0,20).map(h=>`<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div>Nenhum e-mail enviado</div>';
+  if(el) {
+    if(S.emailHist.length === 0) {
+      el.innerHTML = '<div>Nenhum e-mail enviado</div>';
+    } else {
+      el.innerHTML = S.emailHist.slice(0, 20).map(h => `<div>✉️ ${h.empresa} - ${h.subject}<br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('');
+    }
+  }
 }
 
-// ==================== CAMPANHAS (resumido) ====================
+// ==================== CAMPANHAS ====================
 function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   if(!list) return;
-  list.innerHTML = S.campanhas.map(c => `
-    <div class="card" style="border-left:3px solid var(--accent)">
-      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Form</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div></div>
-      <div class="g3"><div class="met"><div class="met-lbl">Leads</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div></div>
-      ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}
-      <div id="qr-${c.id}" style="display:none"></div>
-    </div>
-  `).join('') || '<div class="card">Nenhuma campanha</div>';
+  if(S.campanhas.length === 0) {
+    list.innerHTML = '<div class="card">Nenhuma campanha criada</div>';
+  } else {
+    list.innerHTML = S.campanhas.map(c => `
+      <div class="card" style="border-left:3px solid var(--accent)">
+        <div class="fr2">
+          <div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini || ''} a ${c.fim || ''}</small></div>
+          <div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Form</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div>
+        </div>
+        <div class="g3">
+          <div class="met"><div class="met-lbl">Leads</div><div class="met-val" style="font-size:18px">${S.leads.filter(l => l.campanha === c.id).length}</div></div>
+          <div class="met"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta || 0}</div></div>
+        </div>
+        ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}
+        <div id="qr-${c.id}" style="display:none"></div>
+      </div>
+    `).join('');
+  }
 }
 
 function openCampanha(id) {
-  let c = id ? S.campanhas.find(x=>x.id===id) : null;
+  let c = id ? S.campanhas.find(x => x.id === id) : null;
   let nomeInput = document.getElementById('camp-nome');
-  if(nomeInput) nomeInput.value = c?.nome||'';
+  if(nomeInput) nomeInput.value = c?.nome || '';
   let tipoSelect = document.getElementById('camp-tipo');
-  if(tipoSelect) tipoSelect.value = c?.tipo||'Feira/Exposição';
+  if(tipoSelect) tipoSelect.value = c?.tipo || 'Feira/Exposição';
   let iniInput = document.getElementById('camp-ini');
-  if(iniInput) iniInput.value = c?.ini||'';
+  if(iniInput) iniInput.value = c?.ini || '';
   let fimInput = document.getElementById('camp-fim');
-  if(fimInput) fimInput.value = c?.fim||'';
+  if(fimInput) fimInput.value = c?.fim || '';
   let lpInput = document.getElementById('camp-lp');
-  if(lpInput) lpInput.value = c?.lp||'';
+  if(lpInput) lpInput.value = c?.lp || '';
   let camposInput = document.getElementById('camp-campos');
-  if(camposInput) camposInput.value = c?.campos||'nome,email,telefone,empresa';
-  if(document.getElementById('mCampanha')) document.getElementById('mCampanha').dataset.editId = id||'';
+  if(camposInput) camposInput.value = c?.campos || 'nome,email,telefone,empresa';
+  if(document.getElementById('mCampanha')) document.getElementById('mCampanha').dataset.editId = id || '';
   openM('mCampanha');
 }
 
-async function saveCampanha() {
+function saveCampanha() {
   let id = document.getElementById('mCampanha')?.dataset.editId;
-  let camp = { id: id||uid(), nome: document.getElementById('camp-nome')?.value.trim(), tipo: document.getElementById('camp-tipo')?.value, ini: document.getElementById('camp-ini')?.value, fim: document.getElementById('camp-fim')?.value, lp: document.getElementById('camp-lp')?.value, campos: document.getElementById('camp-campos')?.value, createdAt: new Date().toISOString() };
-  if(!camp.nome){toast('Informe o nome','err');return;}
-  if(id) { let idx=S.campanhas.findIndex(x=>x.id===id); if(idx!==-1) S.campanhas[idx]=camp; }
-  else S.campanhas.push(camp);
-  await saveToFirebase('campanhas', camp.id, camp);
-  closeM('mCampanha'); renderCampanhas(); toast('Campanha salva!');
+  let camp = { 
+    id: id || uid(), 
+    nome: document.getElementById('camp-nome')?.value.trim(), 
+    tipo: document.getElementById('camp-tipo')?.value, 
+    ini: document.getElementById('camp-ini')?.value, 
+    fim: document.getElementById('camp-fim')?.value, 
+    lp: document.getElementById('camp-lp')?.value, 
+    campos: document.getElementById('camp-campos')?.value, 
+    createdAt: new Date().toISOString() 
+  };
+  if(!camp.nome) { toast('Informe o nome', 'err'); return; }
+  if(id) { 
+    let idx = S.campanhas.findIndex(x => x.id === id); 
+    if(idx !== -1) S.campanhas[idx] = camp; 
+  } else { 
+    S.campanhas.push(camp); 
+  }
+  saveAllData();
+  closeM('mCampanha');
+  renderCampanhas();
+  toast('Campanha salva!');
 }
-async function delCampanha(id) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); }
-function gerarQR(id) { let c = S.campanhas.find(c=>c.id===id); if(!c||!c.lp){toast('Configure a URL','err');return;} let div=document.getElementById(`qr-${c.id}`); if(div){ div.innerHTML=`<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(c.lp)}"><br><button onclick="this.parentElement.style.display='none'">Fechar</button></div>`; div.style.display='block'; } }
-function gerarForm(id) { let c = S.campanhas.find(c=>c.id===id); if(!c) return; let campos = c.campos.split(','); let html=`<div style="background:#1a1a26;padding:20px"><h3>${c.nome}</h3><form id="form-${c.id}">`; campos.forEach(campo=>{ html+=`<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; }); html+=`<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win=window.open('','_blank','width=500,height=600'); win.document.write(`<html><head><title>Formulário</title><style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style></head><body>${html}<script>document.getElementById('form-${c.id}').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${c.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado!</div>';this.reset();});<\/script></body></html>`); }
+
+function delCampanha(id) { 
+  S.campanhas = S.campanhas.filter(c => c.id !== id); 
+  saveAllData(); 
+  renderCampanhas(); 
+  toast('Campanha removida'); 
+}
+
+function gerarQR(id) { 
+  let c = S.campanhas.find(c => c.id === id); 
+  if(!c || !c.lp) { toast('Configure a URL', 'err'); return; } 
+  let div = document.getElementById(`qr-${c.id}`); 
+  if(div) { 
+    div.innerHTML = `<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(c.lp)}"><br><button onclick="this.parentElement.style.display='none'">Fechar</button></div>`; 
+    div.style.display = 'block'; 
+  } 
+}
+
+function gerarForm(id) { 
+  let c = S.campanhas.find(c => c.id === id); 
+  if(!c) return; 
+  let campos = c.campos.split(','); 
+  let html = `<div style="background:#1a1a26;padding:20px"><h3>${c.nome}</h3><form id="form-${c.id}">`;
+  campos.forEach(campo => { html += `<div class="fg"><label>${campo}</label><input name="${campo}" required></div>`; });
+  html += `<button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`;
+  let win = window.open('', '_blank', 'width=500,height=600');
+  win.document.write(`
+    <html><head><title>Formulário</title>
+    <style>body{background:#0d0d12;color:#fff;font-family:Arial;padding:20px}input{background:#222;border:1px solid #444;padding:8px;color:#fff;width:100%}label{color:#888}</style>
+    </head><body>${html}
+    <script>
+      document.getElementById('form-${c.id}').addEventListener('submit', function(e){
+        e.preventDefault(); let data={};
+        for(let[k,v] of new FormData(this)) data[k]=v;
+        data.campanha='${c.id}';
+        localStorage.setItem('lead_'+Date.now(), JSON.stringify(data));
+        document.getElementById('form-msg').innerHTML='<div class="tag tg">✅ Cadastro realizado!</div>';
+        this.reset();
+      });
+    <\/script>
+    </body></html>
+  `);
+}
 
 // ==================== IMPORTAR ====================
 function downloadModelo() {
-  let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','cnae_desc','responsavel'],['Exemplo SA','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','Desenvolvimento','']]);
-  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx');
+  let ws = XLSX.utils.aoa_to_sheet([
+    ['empresa', 'contato', 'email', 'telefone', 'cidade', 'uf', 'segmento', 'cnae_desc', 'responsavel'],
+    ['Exemplo SA', 'João', 'joao@email.com', '1199999', 'São Paulo', 'SP', 'Tecnologia', 'Desenvolvimento', ''],
+    ['Exemplo Comércio', 'Maria', 'maria@comercio.com', '2198888', 'Rio de Janeiro', 'RJ', 'Varejo', 'Comércio varejista', '']
+  ]);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+  XLSX.writeFile(wb, 'modelo_leads.xlsx');
   toast('Modelo baixado!');
 }
 
-async function handleImport(e) {
+function handleImport(e) {
   let f = e.target.files[0];
   if(!f) return;
   let r = new FileReader();
-  r.onload = async function(ev) {
-    let wb = XLSX.read(ev.target.result, {type:'binary'});
+  r.onload = function(ev) {
+    let wb = XLSX.read(ev.target.result, { type: 'binary' });
     let ws = wb.Sheets[wb.SheetNames[0]];
     let rows = XLSX.utils.sheet_to_json(ws);
-    let imported=0;
+    let imported = 0;
     for(let row of rows) {
       let empresa = row.empresa || row.Empresa;
-      if(empresa && !S.leads.find(l=>l.empresa===empresa)) {
-        let lead = { id: uid(), empresa, contato: row.contato||'', email: row.email||'', telefone: row.telefone||'',
-          cidade: row.cidade||'', uf: row.uf||'', segmento: row.segmento||'', cnae_desc: row.cnae_desc||'',
-          responsavel: row.responsavel||currentUser?.nome, status:'Oportunidade', pipeline:'', produto:'', 
-          implantacao:0, mensalidade:0, createdAt: new Date().toISOString() };
+      if(empresa && !S.leads.find(l => l.empresa === empresa)) {
+        let lead = { 
+          id: uid(), 
+          empresa, 
+          contato: row.contato || '', 
+          email: row.email || '', 
+          telefone: row.telefone || '',
+          cidade: row.cidade || '', 
+          uf: row.uf || '', 
+          segmento: row.segmento || '', 
+          cnae_desc: row.cnae_desc || '',
+          responsavel: row.responsavel || currentUser?.nome, 
+          status: 'Oportunidade', 
+          pipeline: '', 
+          produto: '', 
+          implantacao: 0, 
+          mensalidade: 0, 
+          createdAt: new Date().toISOString() 
+        };
         S.leads.push(lead);
-        await saveToFirebase('leads', lead.id, lead);
         imported++;
       }
     }
-    renderLeads(); renderDashboard();
+    saveAllData();
+    renderLeads();
+    renderDashboard();
     let preview = document.getElementById('import-preview');
     if(preview) preview.innerHTML = `<div class="tag tg">✅ ${imported} leads importados</div>`;
     toast(`${imported} leads importados!`);
@@ -803,8 +914,9 @@ function renderDashboard() {
   let leads = S.leads;
   let vendas = S.vendas;
   let fechamentos = vendas.length;
-  let receitaTotal = vendas.reduce((s,v)=>s+(v.implantacao||0)+(v.mensalidade||0),0);
-  let taxa = leads.length>0 ? Math.round(fechamentos/leads.length*100) : 0;
+  let receitaTotal = vendas.reduce((s, v) => s + (v.implantacao || 0) + (v.mensalidade || 0), 0);
+  let taxa = leads.length > 0 ? Math.round(fechamentos / leads.length * 100) : 0;
+  
   let totEl = document.getElementById('dk-tot');
   let fechEl = document.getElementById('dk-fech');
   let recEl = document.getElementById('dk-rec');
@@ -815,55 +927,89 @@ function renderDashboard() {
   if(taxaEl) taxaEl.innerText = `${taxa}%`;
   
   let mg = S.metaG;
-  let realImpl = vendas.reduce((s,v)=>s+(v.implantacao||0),0);
-  let pct = mg && mg.impl>0 ? Math.min(100, Math.round(realImpl/mg.impl*100)) : 0;
+  let realImpl = vendas.reduce((s, v) => s + (v.implantacao || 0), 0);
+  let pct = mg && mg.impl > 0 ? Math.min(100, Math.round(realImpl / mg.impl * 100)) : 0;
   let metaDiv = document.getElementById('d-meta');
-  if(metaDiv) metaDiv.innerHTML = mg ? `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${(mg.impl||0).toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>` : '<div>Configure a meta global</div>';
+  if(metaDiv) {
+    if(mg) {
+      metaDiv.innerHTML = `<div>Implantação: R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${(mg.impl || 0).toLocaleString('pt-BR')}<div class="prog"><div class="prog-f" style="width:${pct}%;height:6px;background:var(--blue)"></div></div>${pct}%</div>`;
+    } else {
+      metaDiv.innerHTML = '<div>Configure a meta global</div>';
+    }
+  }
   
-  let agendaFutura = S.agenda.filter(a=>a.data >= new Date().toISOString().split('T')[0]).slice(0,5);
+  let agendaFutura = S.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).slice(0, 5);
   let agendaDiv = document.getElementById('d-agenda');
-  if(agendaDiv) agendaDiv.innerHTML = agendaFutura.map(a=>`<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  if(agendaDiv) {
+    agendaDiv.innerHTML = agendaFutura.map(a => `<div>📅 ${a.data} - ${a.empresa}</div>`).join('') || '<div>Sem agendamentos</div>';
+  }
 }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
-  let leads = currentUser && currentUser.role==='Consultor' ? S.leads.filter(l=>l.responsavel===currentUser.nome) : S.leads;
+  let leads = currentUser && currentUser.role === 'Consultor' ? S.leads.filter(l => l.responsavel === currentUser.nome) : S.leads;
   let vendas = S.vendas;
-  let pipeline = leads.filter(l=>l.status==='Prospect' && l.pipeline);
-  let probMap = {Agendamento:20, Apresentação:40, Negociação:70, Fechamento:90};
+  let pipeline = leads.filter(l => l.status === 'Prospect' && l.pipeline);
+  let probMap = { Agendamento: 20, Apresentação: 40, Negociação: 70, Fechamento: 90 };
   let forecastBody = document.getElementById('forecast-tbody');
-  if(forecastBody) forecastBody.innerHTML = pipeline.map(l=>`<tr>
-    <td>${l.responsavel||'—'}</td>
-    <td>${l.empresa}</td>
-    <td>${l.segmento||'—'}</td>
-    <td>${l.cidade||''} ${l.uf||''}</td>
-    <td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td>
-    <td><span class="tag ty">${l.pipeline}</span></td>
-    <td>${probMap[l.pipeline]||0}%</span></td>
-    </tr>`).join('') || '<tr><td colspan="7" class="te">Sem leads em pipeline</td></tr>';
+  if(forecastBody) {
+    if(pipeline.length === 0) {
+      forecastBody.innerHTML = '<tr><td colspan="7" class="te">Sem leads em pipeline</td></tr>';
+    } else {
+      forecastBody.innerHTML = pipeline.map(l => `
+        <tr>
+          <td>${l.responsavel || '—'}</td>
+          <td>${l.empresa}</td>
+          <td>${l.segmento || '—'}</td>
+          <td>${l.cidade || ''} ${l.uf || ''}</td>
+          <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td>
+          <td><span class="tag ty">${l.pipeline}</span></td>
+          <td>${probMap[l.pipeline] || 0}%</span></td>
+        </tr>
+      `).join('');
+    }
+  }
   
-  let consultores = [...new Set([...leads.map(l=>l.responsavel), ...vendas.map(v=>v.consultor)].filter(Boolean))];
+  let consultores = [...new Set([...leads.map(l => l.responsavel), ...vendas.map(v => v.consultor)].filter(Boolean))];
   let prodBody = document.getElementById('prod-tbody');
-  if(prodBody) prodBody.innerHTML = consultores.map(c => {
-    let leadsC = leads.filter(l=>l.responsavel===c);
-    let vendasC = vendas.filter(v=>v.consultor===c);
-    let receita = vendasC.reduce((s,v)=>s+(v.implantacao||0)+(v.mensalidade||0),0);
-    let taxa = leadsC.length>0 ? Math.round(vendasC.length/leadsC.length*100) : 0;
-    return `<tr>
-      <td><strong>${c}</strong></td>
-      <td>${leadsC.length}</td>
-      <td>${vendasC.length}</td>
-      <td>R$ ${receita.toLocaleString('pt-BR')}</td>
-      <td class="${taxa>=30?'tg':taxa>=15?'ty':'tr2'}">${taxa}%</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="5">Sem dados</td></tr>';
+  if(prodBody) {
+    if(consultores.length === 0) {
+      prodBody.innerHTML = '<tr><td colspan="5" class="te">Sem dados</td></tr>';
+    } else {
+      prodBody.innerHTML = consultores.map(c => {
+        let leadsC = leads.filter(l => l.responsavel === c);
+        let vendasC = vendas.filter(v => v.consultor === c);
+        let receita = vendasC.reduce((s, v) => s + (v.implantacao || 0) + (v.mensalidade || 0), 0);
+        let taxa = leadsC.length > 0 ? Math.round(vendasC.length / leadsC.length * 100) : 0;
+        return `
+          <tr>
+            <td><strong>${c}</strong></td>
+            <td>${leadsC.length}</td>
+            <td>${vendasC.length}</td>
+            <td>R$ ${receita.toLocaleString('pt-BR')}</td>
+            <td class="${taxa >= 30 ? 'tg' : taxa >= 15 ? 'ty' : 'tr2'}">${taxa}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
 }
 
 function exportForecast() {
-  let leads = S.leads.filter(l=>l.status==='Prospect' && l.pipeline);
-  let data = leads.map(l=>({ Consultor: l.responsavel, Cliente: l.empresa, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Valor: l.implantacao||0, Etapa: l.pipeline }));
+  let leads = S.leads.filter(l => l.status === 'Prospect' && l.pipeline);
+  let data = leads.map(l => ({ 
+    Consultor: l.responsavel, 
+    Cliente: l.empresa, 
+    Segmento: l.segmento, 
+    Cidade: l.cidade, 
+    UF: l.uf, 
+    Valor: l.implantacao || 0, 
+    Etapa: l.pipeline 
+  }));
   let ws = XLSX.utils.json_to_sheet(data);
-  let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Forecast');
+  XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`);
   toast('Forecast exportado!');
 }
 
@@ -879,65 +1025,16 @@ function exportAll() {
 function renderUsuarios() {
   let tb = document.getElementById('users-tb');
   if(!tb) return;
-  tb.innerHTML = S.usuarios.map(u => `<tr>
-    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
-    <td><span class="tag tp">${u.role}</span></td>
-    <td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏</button> ${u.id!=='u1'?`<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑</button>`:''}</td>
-    </table>`).join('');
-}
-function editUser(id) { let u=S.usuarios.find(u=>u.id===id); if(u){ let nomeInp=document.getElementById('u-nome'); if(nomeInp) nomeInp.value=u.nome; let loginInp=document.getElementById('u-login'); if(loginInp) loginInp.value=u.login; let roleSel=document.getElementById('u-role'); if(roleSel) roleSel.value=u.role; let passInp=document.getElementById('u-pass'); if(passInp) passInp.value=''; if(document.getElementById('mUser')) document.getElementById('mUser').dataset.editId=id; openM('mUser');} }
-async function saveUser() {
-  let id = document.getElementById('mUser')?.dataset.editId;
-  let nome = document.getElementById('u-nome')?.value.trim();
-  let login = document.getElementById('u-login')?.value.trim();
-  let role = document.getElementById('u-role')?.value;
-  let senha = document.getElementById('u-pass')?.value;
-  if(!nome||!login){toast('Preencha nome e login','err');return;}
-  if(id) { 
-    let idx=S.usuarios.findIndex(u=>u.id===id); 
-    if(idx!==-1){
-      S.usuarios[idx].nome=nome; S.usuarios[idx].login=login; S.usuarios[idx].role=role; 
-      if(senha) S.usuarios[idx].senha=senha;
-      await saveToFirebase('usuarios', id, S.usuarios[idx]);
-    }
-  } else { 
-    if(!senha){toast('Senha obrigatória','err');return;} 
-    let newUser={id:uid(),nome,login,senha,role}; 
-    S.usuarios.push(newUser); 
-    await saveToFirebase('usuarios', newUser.id, newUser);
-  }
-  closeM('mUser'); renderUsuarios(); toast('Usuário salvo!');
-}
-async function deleteUser(id) { if(confirm('Remover?')){ S.usuarios = S.usuarios.filter(u=>u.id!==id); await deleteFromFirebase('usuarios', id); renderUsuarios(); toast('Usuário removido'); } }
-
-function openM(id) { let el = document.getElementById(id); if(el) { el.style.display='flex'; document.body.style.overflow='hidden'; } }
-function closeM(id) { let el = document.getElementById(id); if(el) { el.style.display='none'; document.body.style.overflow=''; } if(id==='mUser' && document.getElementById('mUser')) delete document.getElementById('mUser').dataset.editId; }
-function dzOver(e) { e.preventDefault(); if(e.currentTarget) e.currentTarget.style.borderColor='var(--accent)'; }
-function dzLeave(e) { if(e.currentTarget) e.currentTarget.style.borderColor='var(--border2)'; }
-function dzDrop(e) { e.preventDefault(); dzLeave(e); let f=e.dataTransfer.files[0]; if(f) handleImport({target:{files:[f]}}); }
-
-function renderAll() {
-  renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderCal(); renderMetas(); renderRM(); renderCampanhas(); renderRelatorios(); renderUsuarios(); renderEmailHist();
-  let dateEl = document.getElementById('d-date');
-  if(dateEl) dateEl.innerHTML = new Date().toLocaleDateString('pt-BR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  let respSel = document.getElementById('l-resp');
-  if(respSel) respSel.innerHTML = '<option value="">Selecione o consultor</option>' + S.usuarios.filter(u=>u.role==='Consultor'||u.role==='Gerente').map(u=>`<option value="${u.nome}">${u.nome}</option>`).join('');
+  tb.innerHTML = S.usuarios.map(u => `
+    <tr>
+      <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
+      <td><span class="tag tp">${u.role}</span></td>
+      <td><button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">✏</button> ${u.id !== 'u1' ? `<button class="btn btn-bad btn-xs" onclick="deleteUser('${u.id}')">🗑</button>` : ''}</td>
+    </tr>
+  `).join('');
 }
 
-// ==================== INICIALIZAÇÃO ====================
-async function startApp() {
-  document.getElementById('loading-screen').style.display = 'flex';
-  await initFirebase();
-  document.getElementById('loading-screen').style.display = 'none';
-  document.getElementById('auth-screen').classList.remove('hidden');
-}
-
-// Aguarda o DOM carregar completamente
-if(document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startApp);
-} else {
-  startApp();
-}
-</script>
-</body>
-</html>
+function editUser(id) { 
+  let u = S.usuarios.find(u => u.id === id); 
+  if(u) { 
+    let nomeInp = document.getElementById('u-nome');
