@@ -101,7 +101,10 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
     <div class="fg"><label>Usuário</label><input id="auth-user" placeholder="Seu login" value="admin"></div>
     <div class="fg"><label>Senha</label><input id="auth-pass" type="password" placeholder="••••••••" value="1234"></div>
     <button class="btn btn-primary" style="width:100%;padding:10px" onclick="doLogin()">Entrar</button>
-    <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">🔐 Dados salvos no Firebase Firestore</div>
+    <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">
+      🔐 Acesso: admin / 1234<br>
+      📡 Dados sincronizados com Firebase
+    </div>
   </div>
 </div>
 
@@ -156,7 +159,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <!-- LEADS -->
 <div class="page" id="page-leads">
   <div class="ph"><div class="ph-title">Leads</div><div><input class="search" placeholder="Buscar..." style="width:200px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px" oninput="renderLeads()"></div></div>
-  <div class="card" style="padding:0"><div class="tw"><table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></tr></div></div>
+  <div class="card" style="padding:0"><div class="tw"></table><thead><tr><th>Empresa</th><th>Segmento/CNAE</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Responsável</th><th>Ações</th></tr></thead><tbody id="leads-tb"></tbody></table></div></div>
 </div>
 
 <!-- PIPELINE -->
@@ -178,7 +181,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <div class="page" id="page-metas">
   <div class="ph"><div class="ph-title">Metas de Vendas</div><div><button class="btn btn-ghost btn-sm" onclick="openM('mMetaG')">⚙ Meta Global</button><button class="btn btn-primary btn-sm" onclick="openM('mVenda')">+ Registrar Venda</button></div></div>
   <div class="g2"><div class="card"><div id="meta-g-body"></div></div><div class="card"><div class="card-title">Últimas Vendas</div><div id="vendas-tl"></div></div></div>
-  <div class="card"><div class="card-title">👥 Metas por Consultor (distribuídas automaticamente)</div><div class="tw"><tr><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
+  <div class="card"><div class="card-title">👥 Metas por Consultor (distribuídas automaticamente)</div><div class="tw"><table><thead><tr><th>Consultor</th><th>Meta Individual</th><th>Realizado</th><th>% Atingido</th><th>Progresso</th></tr></thead><tbody id="metas-consultores-tb"></tbody></table></div></div>
 </div>
 
 <!-- REMARKETING -->
@@ -189,7 +192,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
     <div class="met met-yellow"><div class="met-lbl">Não Avançaram</div><div class="met-val" id="rm-na">0</div></div>
     <div class="met met-red"><div class="met-lbl">Desistiram</div><div class="met-val" id="rm-d">0</div></div>
   </div>
-  <div class="card"><div class="tw"><tr><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Empresa</th><th>Contato</th><th>E-mail</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="rm-tb"></tbody></table></div></div>
 </div>
 
 <!-- CAMPANHAS -->
@@ -245,8 +248,14 @@ td{padding:9px 12px;border-bottom:1px solid var(--border)}
 <div class="toast-wrap" id="tw"></div>
 
 <script>
-// ==================== FIREBASE CONFIGURAÇÃO FIXA ====================
-// Configuração do Firebase - já incluída no código, não precisa mais configurar
+// ==================== USUÁRIOS PADRÃO (FALBACK) ====================
+const DEFAULT_USERS = [
+  { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', role: 'Diretor' },
+  { id: 'u2', nome: 'João Silva', login: 'joao', senha: '1234', role: 'Consultor' },
+  { id: 'u3', nome: 'Maria Santos', login: 'maria', senha: '1234', role: 'Gerente' }
+];
+
+// ==================== FIREBASE CONFIGURAÇÃO ====================
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
   authDomain: "prospectflow-crm-5775a.firebaseapp.com",
@@ -270,14 +279,36 @@ async function initFirebase() {
   try {
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    await db.collection('_test').doc('test').set({ ok: true }).catch(() => {});
     console.log('Firebase conectado!');
     await loadFirebaseData();
-    document.getElementById('auth-screen').classList.remove('hidden');
   } catch(e) { 
     console.error('Erro Firebase:', e);
-    toast('Erro ao conectar ao Firebase. Usando modo offline.', 'err');
-    document.getElementById('auth-screen').classList.remove('hidden');
+    toast('Modo offline - usando dados locais', 'err');
+    loadLocalData();
+  }
+  document.getElementById('auth-screen').classList.remove('hidden');
+}
+
+function loadLocalData() {
+  // Carregar dados do localStorage como fallback
+  let saved = localStorage.getItem('pf_local_data');
+  if(saved) {
+    let data = JSON.parse(saved);
+    S.leads = data.leads || [];
+    S.vendas = data.vendas || [];
+    S.agenda = data.agenda || [];
+    S.rm = data.rm || [];
+    S.metaG = data.metaG || { impl: 50000, mens: 10000, periodo: 'Mensal', distribuir: 'sim' };
+    S.campanhas = data.campanhas || [];
+    S.emailHist = data.emailHist || [];
+  }
+  // Carregar usuários
+  let savedUsers = localStorage.getItem('pf_users_local');
+  if(savedUsers) {
+    S.usuarios = JSON.parse(savedUsers);
+  } else {
+    S.usuarios = [...DEFAULT_USERS];
+    localStorage.setItem('pf_users_local', JSON.stringify(S.usuarios));
   }
 }
 
@@ -305,7 +336,7 @@ async function loadFirebaseData() {
     if(usuariosSnap.docs.length > 0) {
       S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } else {
-      S.usuarios = [{ id: 'u1', nome: 'Admin', login: 'admin', senha: '1234', role: 'Diretor' }];
+      S.usuarios = [...DEFAULT_USERS];
       for(let u of S.usuarios) await db.collection('usuarios').doc(u.id).set(u);
     }
     // Load campanhas
@@ -315,15 +346,25 @@ async function loadFirebaseData() {
     let emailSnap = await db.collection('emailHist').get();
     S.emailHist = emailSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     
-    renderAll();
-  } catch(e) { console.error(e); toast('Erro ao carregar dados','err'); }
+    // Salvar backup local
+    localStorage.setItem('pf_local_data', JSON.stringify({ leads: S.leads, vendas: S.vendas, agenda: S.agenda, rm: S.rm, metaG: S.metaG, campanhas: S.campanhas, emailHist: S.emailHist }));
+    
+  } catch(e) { console.error('Erro ao carregar dados do Firebase:', e); loadLocalData(); }
   setSyncing(false);
 }
 
 async function saveToFirebase(collection, id, data) {
   if(!db) return;
   setSyncing(true);
-  try { await db.collection(collection).doc(id).set(data); } catch(e){ console.error(e); }
+  try { 
+    await db.collection(collection).doc(id).set(data);
+    // Backup local
+    let backup = JSON.parse(localStorage.getItem('pf_local_data') || '{}');
+    if(!backup[collection]) backup[collection] = [];
+    backup[collection] = backup[collection].filter(i=>i.id!==id);
+    backup[collection].push(data);
+    localStorage.setItem('pf_local_data', JSON.stringify(backup));
+  } catch(e){ console.error(e); }
   setSyncing(false);
 }
 
@@ -338,17 +379,32 @@ async function deleteFromFirebase(collection, id) {
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
+  
+  // Busca em S.usuarios (já carregado do Firebase ou localStorage)
   let user = S.usuarios.find(u => u.login === login && u.senha === senha);
-  if(!user){ document.getElementById('auth-err').innerHTML='Credenciais inválidas'; document.getElementById('auth-err').style.display='block'; return; }
+  
+  if(!user){ 
+    document.getElementById('auth-err').innerHTML='Usuário ou senha inválidos! Use admin / 1234';
+    document.getElementById('auth-err').style.display='block'; 
+    return; 
+  }
+  
   currentUser = user;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-main').style.display='block';
   document.getElementById('tb-uname').innerText = user.nome.split(' ')[0];
   document.getElementById('tb-av').innerText = user.nome.charAt(0).toUpperCase();
   renderAll();
+  toast(`Bem-vindo, ${user.nome}!`);
 }
 
-function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-main').style.display='none'; }
+function doLogout() { 
+  currentUser = null; 
+  document.getElementById('auth-screen').style.display='flex'; 
+  document.getElementById('app-main').style.display='none';
+  document.getElementById('auth-user').value = 'admin';
+  document.getElementById('auth-pass').value = '1234';
+}
 
 function go(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -613,7 +669,7 @@ function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   list.innerHTML = S.campanhas.map(c => `
     <div class="card" style="border-left:3px solid var(--accent)">
-      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR Code</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Formulário</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑</button></div></div>
+      <div class="fr2"><div><strong>📣 ${c.nome}</strong><br><small>${c.tipo} | ${c.ini||''} a ${c.fim||''}</small></div><div><button class="btn btn-ghost btn-xs" onclick="gerarQR('${c.id}')">📱 QR Code</button><button class="btn btn-ghost btn-xs" onclick="gerarForm('${c.id}')">📝 Formulário</button><button class="btn btn-bad btn-xs" onclick="delCampanha('${c.id}')">🗑 Remover</button></div></div>
       <div class="g3" style="margin-top:8px"><div class="met" style="padding:8px"><div class="met-lbl">Leads Gerados</div><div class="met-val" style="font-size:18px">${S.leads.filter(l=>l.campanha===c.id).length}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Meta</div><div class="met-val" style="font-size:18px">${c.meta||0}</div></div><div class="met" style="padding:8px"><div class="met-lbl">Conversão</div><div class="met-val" style="font-size:18px">${c.meta>0?Math.round(S.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div></div></div>
       ${c.lp ? `<div>🌐 <a href="${c.lp}" target="_blank" style="color:var(--accent2)">${c.lp}</a></div>` : ''}
       <div id="qr-${c.id}" style="display:none;margin-top:10px"></div>
@@ -714,8 +770,8 @@ function renderRelatorios() {
     <td>${l.cidade||''} ${l.uf||''}</td>
     <td>R$ ${(l.implantacao||0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ty">${l.pipeline}</span></td>
-    <td>${probMap[l.pipeline]||0}%</td>
-   </tr>`).join('') || '<tr><td colspan="7" class="te">Nenhum lead em pipeline no momento</td></tr>';
+    <td>${probMap[l.pipeline]||0}%</span></td>
+    </tr>`).join('') || '<tr><td colspan="7" class="te">Nenhum lead em pipeline no momento</td></tr>';
   
   let consultores = [...new Set([...leads.map(l=>l.responsavel), ...vendas.map(v=>v.consultor)].filter(Boolean))];
   let prodBody = document.getElementById('prod-tbody');
