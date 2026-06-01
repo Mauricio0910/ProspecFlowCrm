@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProspectFlow CRM - Sistema Avançado</title>
+<title>ProspectFlow CRM - Forecast 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -66,7 +66,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .tag-purple { background: #f5f3ff; color: #8b5cf6; }
 .tag-danger { background: #fef2f2; color: #ef4444; }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
-.modal { background: white; border-radius: 20px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal { background: white; border-radius: 20px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
 .modal-title { font-size: 18px; font-weight: 700; }
 .modal-body { padding: 20px; }
@@ -79,9 +79,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .page { display: none; }
-.pipeline-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-.pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; }
-.pipeline-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.chart-container { height: 300px; position: relative; }
 </style>
 </head>
 <body>
@@ -91,7 +89,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
   <div class="auth-card">
     <div class="auth-icon"><i class="fas fa-chart-line"></i></div>
     <h1 class="auth-title">ProspectFlow CRM</h1>
-    <p class="auth-sub">Sistema profissional de gestão de vendas</p>
+    <p class="auth-sub">Forecast 2026 - Sistema de Gestão de Vendas</p>
     <div id="auth-error" style="display:none; background:#fef2f2; color:#ef4444; padding:10px; border-radius:12px; margin-bottom:16px"></div>
     <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
     <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
@@ -106,17 +104,13 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
     <div class="sidebar">
       <div class="logo-area"><div class="logo-icon">🎯</div><div class="logo-text">Prospect<span>Flow</span></div></div>
       <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
+      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> Forecast 2026</div>
       <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> Leads</div>
       <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> Pipeline</div>
-      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> Agenda</div>
       <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> Metas</div>
-      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> Produtos</div>
-      <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> Remarketing</div>
       <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> Campanhas</div>
-      <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> Importar</div>
-      <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> E-mails</div>
-      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-line"></i> Relatórios</div>
-      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-simple"></i> Forecast</div>
+      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> Produtos</div>
+      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> Relatórios</div>
       <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> Usuários</div>
     </div>
 
@@ -133,121 +127,80 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page">
         <div class="stats-grid">
-          <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Leads</div></div>
-          <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-fechamentos">0</div><div class="stat-label">Fechamentos (mês)</div></div>
-          <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-receita">R$ 0</div><div class="stat-label">Receita Mensal</div></div>
-          <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-conversao">0%</div><div class="stat-label">Conversão</div></div>
+          <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-chart-line"></i></div><div class="stat-value" id="stat-forecast-total">R$ 0</div><div class="stat-label">Total Forecast</div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-realizado">R$ 0</div><div class="stat-label">Realizado</div></div>
+          <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-clock"></i></div><div class="stat-value" id="stat-a-realizar">R$ 0</div><div class="stat-label">A Realizar</div></div>
+          <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-atingimento">0%</div><div class="stat-label">Atingimento</div></div>
         </div>
-        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div id="meta-progress"></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Evolução Mensal - Forecast vs Realizado</h3></div><div class="chart-container"><canvas id="monthly-chart"></canvas></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-pie"></i> Desempenho por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Forecast</th><th>Realizado</th><th>A Realizar</th><th>% Atingimento</th></tr></thead><tbody id="vendedor-stats"></tbody></table></div></div>
+      </div>
+
+      <!-- FORECAST 2026 -->
+      <div id="page-forecast" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Forecast 2026</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn btn-outline btn-sm" onclick="importForecastExcel()"><i class="fas fa-upload"></i> Importar</button></div></div>
+          <div class="table-container"><table class="data-table" id="forecast-table"><thead><tr><th>Mês/Semana</th><th>Vendedor</th><th>Empresa</th><th>Adesão</th><th>Mensalidade</th><th>Produto</th><th>Data Prevista</th><th>Status</th><th>Observação</th><th>Indicação</th><th>Ações</th></tr></thead><tbody id="forecast-tbody"></tbody></table></div>
+        </div>
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar"></i> Resumo por Mês</h3></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Mês</th><th>Total Forecast</th><th>Realizado</th><th>A Realizar</th><th>% Atingimento</th></tr></thead><tbody id="resumo-mensal"></tbody></table></div>
+        </div>
       </div>
 
       <!-- LEADS -->
       <div id="page-leads" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
-          <input type="text" class="form-input" placeholder="Buscar..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Segmento</th><th>Produto</th><th>Status</th><th>Pipeline</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- PIPELINE -->
       <div id="page-pipeline" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3><button class="btn btn-outline btn-sm" onclick="exportPipelineReport()"><i class="fas fa-file-excel"></i> Exportar Relatório</button></div>
-          <div class="pipeline-tabs">
-            <div class="pipeline-tab active" data-stage="Agendamento" onclick="setPipelineStage('Agendamento')">Agendamento</div>
-            <div class="pipeline-tab" data-stage="Apresentação" onclick="setPipelineStage('Apresentação')">Apresentação</div>
-            <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">Negociação</div>
-            <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">Fechamento</div>
-          </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Cliente</th><th>Segmento</th><th>Produto</th><th>Cidade/UF</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Data Entrada</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- AGENDA -->
-      <div id="page-agenda" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Agenda</h3><button class="btn btn-primary" onclick="openAgendaModal()">+ Agendar</button></div>
-          <div id="agenda-list"></div>
+          <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- METAS -->
       <div id="page-metas" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Metas</h3><div><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Meta Global</button><button class="btn btn-outline btn-sm" onclick="openMetaEquipeModal()">Meta por Equipe</button><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">Meta por Vendedor</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Tipo</th><th>Nome/Equipe</th><th>Meta Implantação</th><th>Meta Mensalidade</th><th>Realizado</th><th>% Atingido</th><th>Período</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="card-header"><h3 class="card-title">Metas Realizadas vs A Realizar</h3></div>
+          <div class="chart-container"><canvas id="metas-chart"></canvas></div>
+        </div>
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaModal()">+ Nova Meta</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Mensal</th><th>Realizado</th><th>A Realizar</th><th>% Atingimento</th><th>Ações</th><tr></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita Impl</th><th>Receita Mens</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- PRODUTOS -->
-      <div id="page-produtos" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Produtos / Soluções</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome do Produto</th><th>Categoria</th><th>Valor Implantação</th><th>Valor Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
-        </div>
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Vendas por Produto</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Quantidade Vendida</th><th>Receita Total</th><th>% do Total</th></tr></thead><tbody id="vendas-produto-table"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- REMARKETING -->
-      <div id="page-remarketing" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Remarketing</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar para Todos</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Total Leads</th><th>Em Negociação</th><th>Fechados</th><th>Ticket Médio</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- CAMPANHAS -->
       <div id="page-campanhas" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
+          <div class="card-header"><h3 class="card-title">Campanhas de Vendas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
           <div id="campanhas-list"></div>
         </div>
       </div>
 
-      <!-- IMPORTAR -->
-      <div id="page-importar" class="page">
+      <!-- PRODUTOS -->
+      <div id="page-produtos" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Baixar Modelo</button></div>
-          <div class="dz" style="border: 2px dashed #cbd5e1; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
-            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #94a3b8;"></i><p>Clique para importar Excel</p>
-          </div>
-          <input type="file" id="import-file" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleImport(event)">
-          <div id="import-preview"></div>
+          <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Vendas</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
-      </div>
-
-      <!-- E-MAILS -->
-      <div id="page-email" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Envio de E-mails</h3></div>
-          <div class="form-group"><label class="form-label">Assunto</label><input type="text" class="form-input" id="email-subject"></div>
-          <div class="form-group"><label class="form-label">Mensagem</label><textarea class="form-textarea" id="email-body" rows="4" placeholder="Use {empresa} e {contato}"></textarea></div>
-          <button class="btn btn-primary" onclick="sendBulkEmail()">Enviar para todos</button>
-        </div>
-        <div class="content-card"><div class="card-header"><h3 class="card-title">Histórico</h3></div><div id="email-history"></div></div>
       </div>
 
       <!-- RELATÓRIOS -->
       <div id="page-relatorios" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Relatório de Produtividade</h3><div><button class="btn btn-outline btn-sm" onclick="exportExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Segmento</th><th>Cidade</th><th>Implantação</th><th>Mensalidade</th><th>Estágio</th><th>Data</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- FORECAST -->
-      <div id="page-forecast" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Forecast - Pipeline de Vendas</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()">Exportar Excel</button><button class="btn btn-outline btn-sm" onclick="exportForecastPDF()">Exportar PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Consultor</th><th>Cliente</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Probabilidade</th><th>Valor Ponderado</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
+          <div class="card-header"><h3 class="card-title">Relatórios Gerenciais</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Período</th><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Campanha</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
@@ -255,7 +208,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody>｜｜DSML｜｜</div>
         </div>
       </div>
     </div>
@@ -263,92 +216,84 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 </div>
 
 <!-- MODAIS -->
-<div id="modal-lead" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Lead</h3><button onclick="closeModal('modal-lead')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="lead-empresa"></div><div class="form-group"><label>Contato</label><input class="form-input" id="lead-contato"></div><div class="form-group"><label>Email</label><input class="form-input" id="lead-email"></div><div class="form-group"><label>Telefone</label><input class="form-input" id="lead-telefone"></div><div class="form-group"><label>Cidade</label><input class="form-input" id="lead-cidade"></div><div class="form-group"><label>UF</label><input class="form-input" id="lead-uf"></div><div class="form-group"><label>Segmento</label><input class="form-input" id="lead-segmento"></div><div class="form-group"><label>Produto</label><select class="form-select" id="lead-produto"></select></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="lead-vendedor"></select></div><div class="form-group"><label>Implantação (R$)</label><input class="form-input" type="number" id="lead-implantacao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="lead-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
+<div id="modal-lead" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Lead</h3><button onclick="closeModal('modal-lead')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="lead-empresa"></div><div class="form-group"><label>Contato</label><input class="form-input" id="lead-contato"></div><div class="form-group"><label>Email</label><input class="form-input" id="lead-email"></div><div class="form-group"><label>Telefone</label><input class="form-input" id="lead-telefone"></div><div class="form-group"><label>Cidade/UF</label><div style="display:grid; grid-template-columns:2fr 1fr; gap:10px"><input class="form-input" id="lead-cidade" placeholder="Cidade"><input class="form-input" id="lead-uf" placeholder="UF"></div></div><div class="form-group"><label>Produto</label><select class="form-select" id="lead-produto"></select></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="lead-vendedor"></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="lead-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="lead-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
-<div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
+<div id="modal-meta" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor"></select></div><div class="form-group"><label>Mês/Ano</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Salvar</button></div></div></div>
 
-<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Implantação (R$)</label><input class="form-input" type="number" id="meta-vendedor-impl"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-vendedor-mens"></div><div class="form-group"><label>Período</label><select class="form-select" id="meta-vendedor-periodo"><option>Janeiro/2025</option><option>Fevereiro/2025</option><option>Março/2025</option><option>Abril/2025</option><option>Maio/2025</option><option>Junho/2025</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha de Vendas</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome da Campanha</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Promocional</option><option>Seasonal</option><option>Lançamento</option><option>Fidelização</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>Produto</label><select class="form-select" id="camp-produto"></select></div><div class="form-group"><label>Desconto (%)</label><input class="form-input" type="number" id="camp-desconto"></div><div class="form-group"><label>Meta da Campanha (R$)</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
-<div id="modal-meta-equipe" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Equipe</h3><button onclick="closeModal('modal-meta-equipe')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Equipe</label><select class="form-select" id="meta-equipe-nome"><option>Comercial</option><option>Inside Sales</option><option>Campo</option></select></div><div class="form-group"><label>Meta Implantação (R$)</label><input class="form-input" type="number" id="meta-equipe-impl"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-equipe-mens"></div><div class="form-group"><label>Período</label><select class="form-select" id="meta-equipe-periodo"><option>Janeiro/2025</option><option>Fevereiro/2025</option><option>Março/2025</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-equipe')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaEquipe()">Salvar</button></div></div></div>
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome do Produto</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option></select></div><div class="form-group"><label>Valor Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Valor Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
-<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Implantação (R$)</label><input class="form-input" type="number" id="global-impl"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mens"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2025</option><option>Fevereiro/2025</option><option>Março/2025</option><option>Abril/2025</option><option>Maio/2025</option><option>Junho/2025</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
-
-<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome do Produto</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option><option>CRM</option></select></div><div class="form-group"><label>Valor Implantação (R$)</label><input class="form-input" type="number" id="produto-impl"></div><div class="form-group"><label>Valor Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mens"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
-
-<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Campanha Vendas</option><option>Evento Online</option></select></div><div class="form-group"><label>URL Landing Page</label><input class="form-input" id="camp-lp"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
-
-<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar Senha</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar Senha</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option><option>Campo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== PRODUTOS PADRÃO ====================
-const PRODUTOS_PADRAO = [
-  { id: 'p1', nome: 'SCE', categoria: 'ERP', implantacao: 5000, mensalidade: 1000, ativo: true },
-  { id: 'p2', nome: 'Easyren', categoria: 'ERP', implantacao: 4000, mensalidade: 800, ativo: true },
-  { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', implantacao: 3000, mensalidade: 600, ativo: true },
-  { id: 'p4', nome: 'PDV', categoria: 'ERP', implantacao: 2500, mensalidade: 500, ativo: true },
-  { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', implantacao: 3500, mensalidade: 700, ativo: true },
-  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', implantacao: 4500, mensalidade: 900, ativo: true },
-  { id: 'p7', nome: 'E-commerce Tray', categoria: 'E-commerce', implantacao: 8000, mensalidade: 1500, ativo: true },
-  { id: 'p8', nome: 'E-commerce Instabuy', categoria: 'E-commerce', implantacao: 7500, mensalidade: 1400, ativo: true },
-  { id: 'p9', nome: 'MD-e', categoria: 'Fiscal', implantacao: 2000, mensalidade: 400, ativo: true }
+// ==================== DADOS PADRÃO - FORECAST 2026 ====================
+const FORECAST_PADRAO = [
+  { id: 'f1', mes: 'Janeiro', semana: 'Semana 5', vendedor: 'Gusthavo', empresa: 'Tocantins Aero Drones', adesao: 1000, mensalidade: 150, produto: 'Easyren', dataPrevista: '2026-01-31', status: 'NAO', observacao: 'Usa Conta Azul', indicacao: 'Sim' },
+  { id: 'f2', mes: 'Janeiro', semana: 'Semana 5', vendedor: 'Gusthavo', empresa: 'Nanda Outlet', adesao: 1000, mensalidade: 150, produto: 'Easyren', dataPrevista: '2026-02-15', status: 'NAO', observacao: 'Cliente caiu num golpe', indicacao: 'Sim' },
+  { id: 'f3', mes: 'Janeiro', semana: 'Semana 5', vendedor: 'Israel', empresa: 'Mix JJM Supermercado', adesao: 2200, mensalidade: 490, produto: 'SCE', dataPrevista: '2026-01-31', status: 'NAO', observacao: 'Situação gerada pelo Heitor', indicacao: 'Não' },
+  { id: 'f4', mes: 'Janeiro', semana: 'Semana 5', vendedor: 'Gusthavo', empresa: 'Cimefer', adesao: 1600, mensalidade: 220, produto: 'SCE', dataPrevista: '2026-01-31', status: 'FECHADO', observacao: 'Falta o Pagamento', indicacao: 'Não' },
+  { id: 'f5', mes: 'Janeiro', semana: 'Semana 5', vendedor: 'Katia', empresa: 'Gesso União', adesao: 1500, mensalidade: 220, produto: 'SCE', dataPrevista: '2026-01-31', status: 'NAO', observacao: 'Aguardando receber', indicacao: 'Sim' },
+  { id: 'f6', mes: 'Fevereiro', semana: 'Semana 1', vendedor: 'Gusthavo', empresa: 'Fabricio - Supermercado Nova Olina', adesao: 1200, mensalidade: 220, produto: 'SCE', dataPrevista: '2026-02-05', status: 'Negociando', observacao: 'Aguardando Pagamento', indicacao: 'Sim' },
+  { id: 'f7', mes: 'Fevereiro', semana: 'Semana 1', vendedor: 'Israel', empresa: 'Diná - Loja de Roupas', adesao: 1200, mensalidade: 250, produto: 'SCE', dataPrevista: '2026-02-05', status: 'Negociando', observacao: '', indicacao: 'Não' },
+  { id: 'f8', mes: 'Fevereiro', semana: 'Semana 1', vendedor: 'Gusthavo', empresa: 'Essencia Cosmeticos', adesao: 500, mensalidade: 300, produto: 'SCE', dataPrevista: '2026-02-05', status: 'FECHADO', observacao: 'Fechado', indicacao: '' },
+  { id: 'f9', mes: 'Fevereiro', semana: 'Semana 2', vendedor: 'Israel', empresa: 'Atacadão dos pneus', adesao: 1200, mensalidade: 340, produto: 'SCE', dataPrevista: '2026-02-13', status: 'Negociando', observacao: 'Em negociação', indicacao: 'sim' },
+  { id: 'f10', mes: 'Fevereiro', semana: 'Semana 2', vendedor: 'Kátia', empresa: 'RMH Nutricao Animal', adesao: 1000, mensalidade: 150, produto: 'SCE', dataPrevista: '2026-02-13', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Não' },
+  { id: 'f11', mes: 'Fevereiro', semana: 'Semana 3', vendedor: 'Gusthavo', empresa: 'Central do Iphone', adesao: 500, mensalidade: 200, produto: 'SCE', dataPrevista: '2026-02-16', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Sim' },
+  { id: 'f12', mes: 'Fevereiro', semana: 'Semana 4', vendedor: 'Israel', empresa: 'Mercadinho Araguaína', adesao: 950, mensalidade: 150, produto: 'Easyren', dataPrevista: '2026-02-27', status: 'FECHADO', observacao: 'Fechado', indicacao: '' },
+  { id: 'f13', mes: 'Março', semana: 'Semana 1', vendedor: 'Israel', empresa: 'Sheilon Materiais para Construção', adesao: 1200, mensalidade: 220, produto: 'SCE', dataPrevista: '2026-03-06', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Sim' },
+  { id: 'f14', mes: 'Março', semana: 'Semana 2', vendedor: 'Israel', empresa: 'Seata', adesao: 1250, mensalidade: 200, produto: 'SCE', dataPrevista: '2026-03-13', status: 'FECHADO', observacao: 'FECHADO', indicacao: 'NÃO' },
+  { id: 'f15', mes: 'Março', semana: 'Semana 2', vendedor: 'Gusthavo', empresa: 'Sudrefarma', adesao: 1300, mensalidade: 150, produto: 'SCE', dataPrevista: '2026-03-13', status: 'FECHADO', observacao: 'FECHADO', indicacao: 'Sim' },
+  { id: 'f16', mes: 'Março', semana: 'Semana 3', vendedor: 'ISRAEL', empresa: 'USE KAELY', adesao: 300, mensalidade: 150, produto: 'EASYREN', dataPrevista: '2026-03-20', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Não' },
+  { id: 'f17', mes: 'Abril', semana: 'Semana 3', vendedor: 'Gusthavo', empresa: 'Calixta', adesao: 770, mensalidade: 190.8, produto: 'EASYREN', dataPrevista: '2026-04-14', status: 'FECHADO', observacao: 'FECHADO!!', indicacao: 'Não' },
+  { id: 'f18', mes: 'Maio', semana: 'Semana 1', vendedor: 'Gusthavo', empresa: 'Country Life', adesao: 600, mensalidade: 120, produto: 'EASYREN', dataPrevista: '2026-04-30', status: 'FECHADO', observacao: 'FECHADO ! ! !', indicacao: 'Não' },
+  { id: 'f19', mes: 'Maio', semana: 'Semana 3', vendedor: 'Gusthavo', empresa: 'Tropicalia sorvetes', adesao: 2250, mensalidade: 460, produto: 'SCE', dataPrevista: '2026-05-15', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Não' },
+  { id: 'f20', mes: 'Maio', semana: 'Semana 5', vendedor: 'Gusthavo', empresa: 'Ovonorte', adesao: 2000, mensalidade: 230, produto: 'SCE', dataPrevista: '2026-05-29', status: 'FECHADO', observacao: 'Fechado', indicacao: 'Não' }
 ];
 
 // ==================== DADOS GLOBAIS ====================
 let currentUser = null;
-let currentPipelineStage = 'Agendamento';
 let charts = {};
 
 let db = {
+  forecast: [...FORECAST_PADRAO],
   leads: [],
   vendas: [],
-  agenda: [],
-  remarketing: [],
-  metasVendedor: [],
-  metasEquipe: [],
-  metaGlobal: { impl: 100000, mens: 20000, periodo: 'Janeiro/2025' },
-  produtos: [...PRODUTOS_PADRAO],
-  usuarios: [
-    { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', equipe: 'Comercial' },
-    { id: '2', nome: 'João Silva', login: 'joao', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
-    { id: '3', nome: 'Maria Santos', login: 'maria', senha: '1234', perfil: 'Consultor', equipe: 'Inside Sales' }
+  metas: [],
+  produtos: [
+    { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p7', nome: 'E-commerce Tray', categoria: 'E-commerce', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p8', nome: 'E-commerce Instabuy', categoria: 'E-commerce', adesao: 0, mensalidade: 0, vendas: 0 },
+    { id: 'p9', nome: 'MD-e', categoria: 'Fiscal', adesao: 0, mensalidade: 0, vendas: 0 }
   ],
   campanhas: [],
-  emailHist: []
+  usuarios: [
+    { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', equipe: 'Comercial' },
+    { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
+    { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
+    { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', equipe: 'Inside Sales' },
+    { id: '5', nome: 'João Renye', login: 'joao', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' }
+  ]
 };
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function saveData() { localStorage.setItem('prospectflow_db', JSON.stringify(db)); }
-function loadData() { 
-  let d = localStorage.getItem('prospectflow_db'); 
-  if(d) { 
-    let p = JSON.parse(d); 
-    db.leads = p.leads || []; 
-    db.vendas = p.vendas || []; 
-    db.agenda = p.agenda || []; 
-    db.remarketing = p.remarketing || []; 
-    db.metasVendedor = p.metasVendedor || []; 
-    db.metasEquipe = p.metasEquipe || []; 
-    db.metaGlobal = p.metaGlobal || { impl: 100000, mens: 20000, periodo: 'Janeiro/2025' }; 
-    db.produtos = p.produtos || PRODUTOS_PADRAO;
-    db.usuarios = p.usuarios || db.usuarios; 
-    db.campanhas = p.campanhas || []; 
-    db.emailHist = p.emailHist || []; 
-  } 
-}
+function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.forecast = p.forecast || FORECAST_PADRAO; db.leads = p.leads || []; db.vendas = p.vendas || []; db.metas = p.metas || []; db.produtos = p.produtos || db.produtos; db.campanhas = p.campanhas || []; db.usuarios = p.usuarios || db.usuarios; } }
 
 // ==================== AUTENTICAÇÃO ====================
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
   let user = db.usuarios.find(u => u.login === login && u.senha === senha);
-  if (!user) { 
-    document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin / 1234';
-    document.getElementById('auth-error').style.display = 'block'; 
-    return; 
-  }
+  if (!user) { document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos!'; document.getElementById('auth-error').style.display = 'block'; return; }
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-main').style.display = 'block';
@@ -365,278 +310,190 @@ function goToPage(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   let activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
   if(activeNav) activeNav.classList.add('active');
-  let titles = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline', agenda:'Agenda', metas:'Metas', produtos:'Produtos', remarketing:'Remarketing', campanhas:'Campanhas', importar:'Importar', email:'E-mails', relatorios:'Relatórios', forecast:'Forecast', usuarios:'Usuários' };
+  let titles = { dashboard:'Dashboard', forecast:'Forecast 2026', leads:'Leads', pipeline:'Pipeline', metas:'Metas', campanhas:'Campanhas', produtos:'Produtos', relatorios:'Relatórios', usuarios:'Usuários' };
   let titleEl = document.getElementById('page-title');
   if(titleEl) titleEl.innerText = titles[page] || page;
   if (page === 'dashboard') renderDashboard();
+  if (page === 'forecast') renderForecast();
   if (page === 'leads') renderLeads();
   if (page === 'pipeline') renderPipeline();
-  if (page === 'agenda') renderAgenda();
   if (page === 'metas') renderMetas();
-  if (page === 'produtos') renderProdutos();
-  if (page === 'remarketing') renderRemarketing();
   if (page === 'campanhas') renderCampanhas();
+  if (page === 'produtos') renderProdutos();
   if (page === 'relatorios') renderRelatorios();
-  if (page === 'forecast') renderForecast();
   if (page === 'usuarios') renderUsuarios();
-  if (page === 'email') renderEmailHistory();
 }
+
+// ==================== FORECAST ====================
+function renderForecast() {
+  let tb = document.getElementById('forecast-tbody');
+  if(!tb) return;
+  tb.innerHTML = db.forecast.map(f => `<tr>
+    <td>${f.mes} - ${f.semana || ''}</span></td>
+    <td>${f.vendedor}</span></td>
+    <td><strong>${f.empresa}</strong></span></td>
+    <td>R$ ${f.adesao.toLocaleString('pt-BR')}</span></td>
+    <td>R$ ${f.mensalidade.toLocaleString('pt-BR')}</span></td>
+    <td><span class="tag ${f.produto === 'SCE' ? 'tag-purple' : 'tag-info'}">${f.produto}</span></span></td>
+    <td>${f.dataPrevista ? new Date(f.dataPrevista).toLocaleDateString('pt-BR') : '—'}</span></td>
+    <td><span class="tag ${f.status === 'FECHADO' ? 'tag-success' : f.status === 'Negociando' ? 'tag-warning' : 'tag-danger'}">${f.status || 'NAO'}</span></span></td>
+    <td><small>${f.observacao || ''}</small></span></td>
+    <td>${f.indicacao || '—'}</span></td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarForecast('${f.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletarForecast('${f.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<tr><td colspan="11" style="text-align:center">Nenhum registro no forecast</span></tr>';
+  
+  // Resumo mensal
+  let meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  let resumo = meses.map(mes => {
+    let items = db.forecast.filter(f => f.mes === mes);
+    let total = items.reduce((s,f) => s + f.adesao, 0);
+    let realizado = items.filter(f => f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0);
+    let aRealizar = total - realizado;
+    let pct = total > 0 ? Math.round(realizado / total * 100) : 0;
+    return { mes, total, realizado, aRealizar, pct };
+  }).filter(r => r.total > 0);
+  document.getElementById('resumo-mensal').innerHTML = resumo.map(r => `<tr>
+    <td><strong>${r.mes}</strong></span><td>R$ ${r.total.toLocaleString('pt-BR')}</span><td>R$ ${r.realizado.toLocaleString('pt-BR')}</span><td>R$ ${r.aRealizar.toLocaleString('pt-BR')}</span><td><span class="tag ${r.pct >= 100 ? 'tag-success' : r.pct >= 50 ? 'tag-warning' : 'tag-danger'}">${r.pct}%</span></span></td>
+  </tr>`).join('');
+}
+
+function editarForecast(id) { showToast('Funcionalidade em desenvolvimento'); }
+function deletarForecast(id) { if(confirm('Remover este registro?')) { db.forecast = db.forecast.filter(f => f.id !== id); saveData(); renderForecast(); renderDashboard(); showToast('Registro removido!'); } }
+function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.forecast.map(f => ({ Mês: f.mes, Vendedor: f.vendedor, Empresa: f.empresa, Adesão: f.adesao, Mensalidade: f.mensalidade, Produto: f.produto, DataPrevista: f.dataPrevista, Status: f.status, Observação: f.observacao }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast_2026'); XLSX.writeFile(wb, `forecast_2026_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
+function importForecastExcel() { document.getElementById('import-file').click(); }
 
 // ==================== LEADS ====================
 function renderLeads() {
-  let search = document.getElementById('search-lead')?.value.toLowerCase() || '';
-  let leads = (currentUser.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search));
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  tb.innerHTML = leads.map(l => `<tr>
-    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
-    <td>${l.segmento || '—'}</td>
-    <td>${l.produto ? `<span class="tag tag-info">${l.produto}</span>` : '—'}</td>
-    <td>${getStatusTag(l.status)}</span></td>
-    <td>${l.pipeline ? `<span class="tag tag-warning">${l.pipeline}</span>` : '—'}</span></td>
+  tb.innerHTML = db.leads.map(l => `<tr>
+    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></span></td>
+    <td>${l.contato || '—'}</span></td>
+    <td><span class="tag tag-info">${l.produto || '—'}</span></span></td>
+    <td><span class="tag tag-warning">${l.status || 'Oportunidade'}</span></span></td>
     <td>${l.vendedor || '—'}</span></td>
-    <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</span></td>
+    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</span></td>
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="avancarLead('${l.id}')"><i class="fas fa-arrow-right"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deletarLead('${l.id}')"><i class="fas fa-trash"></i></button></td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>';
+    <td><button class="btn btn-outline btn-sm" onclick="editarLead('${l.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletarLead('${l.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center">Nenhum lead cadastrado</span></tr>';
 }
-function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purple', Captado:'tag-success', Descartado:'tag-danger' }; return `<span class="tag ${m[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`; }
-function openLeadModal() {
-  document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-implantacao').value = ''; document.getElementById('lead-mensalidade').value = '';
-  let selProduto = document.getElementById('lead-produto');
-  selProduto.innerHTML = '<option value="">Selecione</option>' + db.produtos.filter(p => p.ativo).map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
-  let selVendedor = document.getElementById('lead-vendedor');
-  selVendedor.innerHTML = '<option value="">Selecione</option>' + db.usuarios.filter(u => u.perfil === 'Consultor').map(u => `<option value="${u.nome}">${u.nome}</option>`).join('');
-  openModal('modal-lead');
-}
-function saveLead() {
-  let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, implantacao: parseFloat(document.getElementById('lead-implantacao').value) || 0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
-  if(!lead.empresa){ showToast('Informe a empresa!'); return; }
-  db.leads.push(lead); saveData(); closeModal('modal-lead'); renderLeads(); renderDashboard(); showToast('Lead criado!');
-}
-function avancarLead(id) {
-  let l = db.leads.find(l => l.id === id); if(!l) return;
-  if(l.status === 'Oportunidade') { l.status = 'Prospect'; l.pipeline = 'Agendamento'; showToast('Lead → Prospect'); openAgendaModal(l.id); }
-  else if(l.pipeline === 'Agendamento') { l.pipeline = 'Apresentação'; showToast('Apresentação confirmada'); }
-  else if(l.pipeline === 'Apresentação') { l.pipeline = 'Negociação'; showToast('Em negociação'); }
-  else if(l.pipeline === 'Negociação') { l.status = 'Captado'; l.pipeline = 'Fechamento'; db.vendas.push({ id: uid(), leadId: l.id, empresa: l.empresa, vendedor: l.vendedor, produto: l.produto, implantacao: l.implantacao, mensalidade: l.mensalidade, data: new Date().toISOString().split('T')[0] }); showToast('Venda fechada! 🎉'); }
-  saveData(); renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderProdutos();
-}
-function deletarLead(id) { if(confirm('Remover lead?')) { db.leads = db.leads.filter(l => l.id !== id); saveData(); renderLeads(); renderDashboard(); showToast('Lead removido!'); } }
+function openLeadModal() { document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = ''; let selProduto = document.getElementById('lead-produto'); selProduto.innerHTML = '<option value="">Selecione</option>' + db.produtos.map(p => `<option value="${p.nome}">${p.nome}</option>`).join(''); let selVendedor = document.getElementById('lead-vendedor'); selVendedor.innerHTML = '<option value="">Selecione</option>' + db.usuarios.filter(u => u.perfil === 'Consultor').map(u => `<option value="${u.nome}">${u.nome}</option>`).join(''); openModal('modal-lead'); }
+function saveLead() { let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value) || 0, status: 'Oportunidade', createdAt: new Date().toISOString() }; if(!lead.empresa){ showToast('Informe a empresa!'); return; } db.leads.push(lead); saveData(); closeModal('modal-lead'); renderLeads(); showToast('Lead criado!'); }
+function editarLead(id) { showToast('Funcionalidade em desenvolvimento'); }
+function deletarLead(id) { if(confirm('Remover lead?')) { db.leads = db.leads.filter(l => l.id !== id); saveData(); renderLeads(); showToast('Lead removido!'); } }
 
 // ==================== PIPELINE ====================
 function renderPipeline() {
-  let leads = db.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado');
-  if(currentUser.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  tb.innerHTML = leads.map(l => `<tr>
-    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
-    <td>${l.segmento || '—'}</td>
-    <td>${l.produto ? `<span class="tag tag-info">${l.produto}</span>` : '—'}</td>
-    <td>${l.cidade || ''} ${l.uf || ''}</td>
-    <td>${l.vendedor || '—'}</td>
-    <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="avancarLead('${l.id}')">Avançar</button></td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead nesta etapa</span></tr>';
+  let pipeline = db.forecast.filter(f => f.status !== 'FECHADO').slice(0, 20);
+  tb.innerHTML = pipeline.map(f => `<tr>
+    <td><strong>${f.empresa}</strong></span></td>
+    <td><span class="tag tag-info">${f.produto}</span></span></td>
+    <td>R$ ${f.adesao.toLocaleString('pt-BR')}</span></td>
+    <td>R$ ${f.mensalidade.toLocaleString('pt-BR')}</span></td>
+    <td><span class="tag tag-warning">${f.status || 'Negociando'}</span></span></td>
+    <td>${f.vendedor}</span></td>
+    <td>${f.dataPrevista ? new Date(f.dataPrevista).toLocaleDateString('pt-BR') : '—'}</span></td>
+    <td><button class="btn btn-primary btn-sm" onclick="avancarPipeline('${f.id}')">Avançar</button></span></td>
+  </td>`).join('') || '<tr><td colspan="8" style="text-align:center">Nenhum lead em pipeline</span></tr>';
 }
-function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
-function exportPipelineReport() {
-  let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline));
-  let data = leads.map(l => ({ Cliente: l.empresa, Segmento: l.segmento, Produto: l.produto, Cidade: l.cidade, UF: l.uf, Vendedor: l.vendedor, Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, DataEntrada: new Date(l.createdAt).toLocaleDateString('pt-BR') }));
-  let ws = XLSX.utils.json_to_sheet(data); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pipeline'); XLSX.writeFile(wb, `pipeline_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Relatório exportado!');
-}
-
-// ==================== AGENDA ====================
-function renderAgenda() {
-  let agenda = db.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
-  let el = document.getElementById('agenda-list');
-  if(!el) return;
-  el.innerHTML = agenda.map(a => `<div style="padding:10px; border-bottom:1px solid #e2e8f0"><strong>${a.empresa}</strong> - ${a.data} às ${a.hora}<br><small>Vendedor: ${a.vendedor} | Produto: ${a.produto || '—'}</small></div>`).join('') || '<div style="text-align:center; padding:20px">Sem agendamentos</div>';
-}
-function openAgendaModal(leadId) {
-  let leads = db.leads.filter(l => l.status === 'Prospect' || l.status === 'Oportunidade');
-  let sel = document.getElementById('agenda-lead');
-  sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id === leadId ? 'selected' : ''}>${l.empresa} - ${l.produto || 'Sem produto'}</option>`).join('');
-  document.getElementById('agenda-data').value = new Date().toISOString().split('T')[0];
-  document.getElementById('agenda-hora').value = '10:00';
-  openModal('modal-agenda');
-}
-function saveAgenda() {
-  let leadId = document.getElementById('agenda-lead').value;
-  let lead = db.leads.find(l => l.id === leadId);
-  if(!lead){ showToast('Lead não encontrado'); return; }
-  db.agenda.push({ id: uid(), leadId: lead.id, empresa: lead.empresa, produto: lead.produto, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value });
-  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; }
-  saveData(); closeModal('modal-agenda'); renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendado!');
-}
+function avancarPipeline(id) { let f = db.forecast.find(f => f.id === id); if(f) { if(f.status === 'Negociando') f.status = 'FECHADO'; else f.status = 'Negociando'; saveData(); renderPipeline(); renderForecast(); renderDashboard(); showToast('Status atualizado!'); } }
 
 // ==================== METAS ====================
 function renderMetas() {
-  let mesAtual = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-  let vendasMes = db.vendas.filter(v => new Date(v.data).getMonth() === new Date().getMonth());
-  let totalImpl = vendasMes.reduce((s,v) => s + v.implantacao, 0);
-  let totalMens = vendasMes.reduce((s,v) => s + v.mensalidade, 0);
+  let vendasRealizadas = db.forecast.filter(f => f.status === 'FECHADO');
+  let vendasPorVendedor = {};
+  vendasRealizadas.forEach(v => { vendasPorVendedor[v.vendedor] = (vendasPorVendedor[v.vendedor] || 0) + v.adesao; });
   
   let tb = document.getElementById('metas-table');
-  if(!tb) return;
-  let metasHtml = '';
-  metasHtml += `<tr style="background:#f1f5f9"><td colspan="8"><strong>🎯 Metas por Vendedor</strong></td></tr>`;
-  metasHtml += db.metasVendedor.map(m => { let vendasV = db.vendas.filter(v => v.vendedor === m.vendedor && new Date(v.data).getMonth() === new Date().getMonth()); let realizado = vendasV.reduce((s,v) => s + v.implantacao, 0); let pct = m.impl > 0 ? Math.min(100, Math.round(realizado / m.impl * 100)) : 0; return `<tr><td>Vendedor</td><td><strong>${m.vendedor}</strong></td><td>R$ ${m.impl.toLocaleString('pt-BR')}</td><td>R$ ${m.mens.toLocaleString('pt-BR')}</td><td>R$ ${realizado.toLocaleString('pt-BR')}</td><td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td><td>${m.periodo || mesAtual}</td><td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma meta por vendedor</td></tr>';
-  metasHtml += `<tr style="background:#f1f5f9"><td colspan="8"><strong>👥 Metas por Equipe</strong></td></tr>`;
-  metasHtml += db.metasEquipe.map(m => { let membros = db.usuarios.filter(u => u.equipe === m.equipe && u.perfil === 'Consultor'); let realizado = 0; membros.forEach(membro => { let vendasMembro = db.vendas.filter(v => v.vendedor === membro.nome && new Date(v.data).getMonth() === new Date().getMonth()); realizado += vendasMembro.reduce((s,v) => s + v.implantacao, 0); }); let pct = m.impl > 0 ? Math.min(100, Math.round(realizado / m.impl * 100)) : 0; return `<tr><td>Equipe</td><td><strong>${m.equipe}</strong></td><td>R$ ${m.impl.toLocaleString('pt-BR')}</td><td>R$ ${m.mens.toLocaleString('pt-BR')}</td><td>R$ ${realizado.toLocaleString('pt-BR')}</td><td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td><td>${m.periodo || mesAtual}</td><td><button class="btn btn-danger btn-sm" onclick="deletarMetaEquipe('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`; }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma meta por equipe</td></tr>';
-  tb.innerHTML = metasHtml;
+  if(tb) {
+    let vendedores = [...new Set(db.forecast.map(f => f.vendedor))];
+    tb.innerHTML = vendedores.map(v => {
+      let meta = db.metas.find(m => m.vendedor === v) || { adesao: 50000 };
+      let realizado = vendasPorVendedor[v] || 0;
+      let aRealizar = meta.adesao - realizado;
+      let pct = meta.adesao > 0 ? Math.round(realizado / meta.adesao * 100) : 0;
+      return `<tr>
+        <td><strong>${v}</strong></span><td>R$ ${meta.adesao.toLocaleString('pt-BR')}</span><td>R$ ${realizado.toLocaleString('pt-BR')}</span><td>R$ ${aRealizar > 0 ? aRealizar.toLocaleString('pt-BR') : '0'}</span><td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></span><td><button class="btn btn-outline btn-sm" onclick="editarMeta('${v}')"><i class="fas fa-edit"></i></button></span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span></tr>';
+  }
   
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
-    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
-    prodTb.innerHTML = vendedores.map(v => { let leadsV = db.leads.filter(l => l.vendedor === v); let vendasV = db.vendas.filter(vd => vd.vendedor === v); let receitaImpl = vendasV.reduce((s,vd) => s + vd.implantacao, 0); let receitaMens = vendasV.reduce((s,vd) => s + vd.mensalidade, 0); return `<tr><td><strong>${v}</strong></td><td>${leadsV.length}</td><td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</td><td>${leadsV.filter(l => l.pipeline === 'Apresentação').length}</td><td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</td><td>${leadsV.filter(l => l.pipeline === 'Fechamento').length}</td><td>R$ ${receitaImpl.toLocaleString('pt-BR')}</td><td>R$ ${receitaMens.toLocaleString('pt-BR')}</td></tr>`; }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhum dado</td></tr>';
+    let vendedores = [...new Set(db.forecast.map(f => f.vendedor))];
+    prodTb.innerHTML = vendedores.map(v => {
+      let leadsV = db.forecast.filter(f => f.vendedor === v);
+      let negociando = leadsV.filter(f => f.status !== 'FECHADO').length;
+      let fechados = leadsV.filter(f => f.status === 'FECHADO').length;
+      let totalAdesao = fechados > 0 ? leadsV.filter(f => f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0) / fechados : 0;
+      return `<tr>
+        <td><strong>${v}</strong></span><td>${leadsV.length}</span><td>${negociando}</span><td>${fechados}</span><td>R$ ${totalAdesao.toLocaleString('pt-BR')}</span></td>
+      </tr>`;
+    }).join('');
   }
+  
+  // Gráfico Realizado vs A Realizar
+  let meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'];
+  let realizadoData = meses.map(m => db.forecast.filter(f => f.mes === m && f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0));
+  let forecastData = meses.map(m => db.forecast.filter(f => f.mes === m).reduce((s,f) => s + f.adesao, 0));
+  if(charts.metas) charts.metas.destroy();
+  let ctx = document.getElementById('metas-chart')?.getContext('2d');
+  if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: meses, datasets: [{ label: 'Realizado', data: realizadoData, backgroundColor: '#10b981' }, { label: 'Forecast', data: forecastData, backgroundColor: '#8b5cf6' }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
 }
-function openMetaVendedorModal() {
-  let sel = document.getElementById('meta-vendedor-nome');
-  sel.innerHTML = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => `<option value="${u.nome}">${u.nome}</option>`).join('');
-  document.getElementById('meta-vendedor-impl').value = '';
-  document.getElementById('meta-vendedor-mens').value = '';
-  openModal('modal-meta-vendedor');
-}
-function saveMetaVendedor() {
-  let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, impl: parseFloat(document.getElementById('meta-vendedor-impl').value) || 0, mens: parseFloat(document.getElementById('meta-vendedor-mens').value) || 0, periodo: document.getElementById('meta-vendedor-periodo').value };
-  if(!meta.vendedor) { showToast('Selecione um vendedor!'); return; }
-  db.metasVendedor.push(meta); saveData(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
-}
-function deletarMetaVendedor(id) { db.metasVendedor = db.metasVendedor.filter(m => m.id !== id); saveData(); renderMetas(); showToast('Meta removida!'); }
-function openMetaEquipeModal() { document.getElementById('meta-equipe-impl').value = ''; document.getElementById('meta-equipe-mens').value = ''; openModal('modal-meta-equipe'); }
-function saveMetaEquipe() {
-  let meta = { id: uid(), equipe: document.getElementById('meta-equipe-nome').value, impl: parseFloat(document.getElementById('meta-equipe-impl').value) || 0, mens: parseFloat(document.getElementById('meta-equipe-mens').value) || 0, periodo: document.getElementById('meta-equipe-periodo').value };
-  db.metasEquipe.push(meta); saveData(); closeModal('modal-meta-equipe'); renderMetas(); showToast('Meta por equipe salva!');
-}
-function deletarMetaEquipe(id) { db.metasEquipe = db.metasEquipe.filter(m => m.id !== id); saveData(); renderMetas(); showToast('Meta removida!'); }
-function openMetaGlobalModal() { document.getElementById('global-impl').value = db.metaGlobal.impl; document.getElementById('global-mens').value = db.metaGlobal.mens; document.getElementById('global-periodo').value = db.metaGlobal.periodo; openModal('modal-meta-global'); }
-function saveMetaGlobal() { db.metaGlobal = { impl: parseFloat(document.getElementById('global-impl').value) || 0, mens: parseFloat(document.getElementById('global-mens').value) || 0, periodo: document.getElementById('global-periodo').value }; saveData(); closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!'); }
-
-// ==================== PRODUTOS ====================
-function renderProdutos() {
-  let tb = document.getElementById('produtos-table');
-  if(!tb) return;
-  tb.innerHTML = db.produtos.map(p => `<tr>
-    <td><strong>${p.nome}</strong></td>
-    <td>${p.categoria}</span></td>
-    <td>R$ ${p.implantacao.toLocaleString('pt-BR')}</span></td>
-    <td>R$ ${p.mensalidade.toLocaleString('pt-BR')}</span></td>
-    <td><span class="tag ${p.ativo ? 'tag-success' : 'tag-danger'}">${p.ativo ? 'Ativo' : 'Inativo'}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
-  let vendasProduto = {};
-  db.vendas.forEach(v => { if(v.produto) vendasProduto[v.produto] = (vendasProduto[v.produto] || 0) + v.implantacao; });
-  let total = Object.values(vendasProduto).reduce((a,b) => a+b, 0);
-  let prodTb = document.getElementById('vendas-produto-table');
-  prodTb.innerHTML = Object.entries(vendasProduto).map(([prod, valor]) => `<tr><td><strong>${prod}</strong></td><td>—</td><td>R$ ${valor.toLocaleString('pt-BR')}</td><td>${total > 0 ? Math.round(valor/total*100) : 0}%</td></tr>`).join('') || '<tr><td colspan="4" style="text-align:center">Nenhuma venda registrada</td></tr>';
-}
-function openProdutoModal() { document.getElementById('produto-nome').value = ''; document.getElementById('produto-categoria').value = 'ERP'; document.getElementById('produto-impl').value = ''; document.getElementById('produto-mens').value = ''; openModal('modal-produto'); }
-function saveProduto() {
-  let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, implantacao: parseFloat(document.getElementById('produto-impl').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mens').value) || 0, ativo: true };
-  if(!produto.nome){ showToast('Informe o nome do produto!'); return; }
-  db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
-}
-function editarProduto(id) { let p = db.produtos.find(p => p.id === id); if(!p) return; document.getElementById('produto-nome').value = p.nome; document.getElementById('produto-categoria').value = p.categoria; document.getElementById('produto-impl').value = p.implantacao; document.getElementById('produto-mens').value = p.mensalidade; document.getElementById('modal-produto').dataset.editId = id; openModal('modal-produto'); }
-function deletarProduto(id) { if(confirm('Remover produto?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); showToast('Produto removido!'); } }
-
-// ==================== REMARKETING ====================
-function renderRemarketing() {
-  let tb = document.getElementById('remarketing-table');
-  if(!tb) return;
-  tb.innerHTML = db.remarketing.map(r => `<tr>
-    <td><strong>${r.empresa}</strong></td>
-    <td>${r.contato || '—'}</td>
-    <td>${r.email || '—'}</td>
-    <td><span class="tag tag-warning">${r.categoria}</span></td>
-    <td><button class="btn btn-primary btn-sm" onclick="enviarEmailRemarketing('${r.id}')">Enviar</button></td>
-  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhum lead em remarketing</span></tr>';
-}
-function enviarEmailRemarketing(id) { let r = db.remarketing.find(r => r.id === id); if(r && r.email) { enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nVamos retomar o contato!`); showToast(`Email enviado para ${r.empresa}`); } }
-function sendMarketingEmail() { let rm = db.remarketing.filter(r => r.email); rm.forEach(r => enviarEmail(r.email, `Oportunidade`, `Olá ${r.empresa},\n\nTemos novidades!`)); showToast(`Enviado para ${rm.length} leads`); }
+function openMetaModal() { let sel = document.getElementById('meta-vendedor'); sel.innerHTML = [...new Set(db.forecast.map(f => f.vendedor))].map(v => `<option value="${v}">${v}</option>`).join(''); document.getElementById('meta-adesao').value = ''; openModal('modal-meta'); }
+function saveMeta() { let meta = { vendedor: document.getElementById('meta-vendedor').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, mes: document.getElementById('meta-mes').value }; let idx = db.metas.findIndex(m => m.vendedor === meta.vendedor && m.mes === meta.mes); if(idx >= 0) db.metas[idx] = meta; else db.metas.push(meta); saveData(); closeModal('modal-meta'); renderMetas(); showToast('Meta salva!'); }
+function editarMeta(vendedor) { let meta = db.metas.find(m => m.vendedor === vendedor); if(meta) { document.getElementById('meta-vendedor').value = meta.vendedor; document.getElementById('meta-adesao').value = meta.adesao; document.getElementById('meta-mensalidade').value = meta.mensalidade; openModal('modal-meta'); } }
 
 // ==================== CAMPANHAS ====================
 function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   if(!list) return;
-  if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha</div>'; return; }
-  list.innerHTML = db.campanhas.map(c => `<div class="content-card"><div style="display:flex; justify-content:space-between"><div><strong>${c.nome}</strong><br><small>${c.tipo}</small></div><div><button class="btn btn-outline btn-sm" onclick="gerarQR('${c.id}')">QR Code</button> <button class="btn btn-outline btn-sm" onclick="gerarForm('${c.id}')">Formulário</button></div></div>${c.lp ? `<div><i class="fas fa-link"></i> <a href="${c.lp}" target="_blank">${c.lp}</a></div>` : ''}<div id="qr-${c.id}" style="display:none; margin-top:10px"></div></div>`).join('');
+  list.innerHTML = db.campanhas.map(c => {
+    let vendasCampanha = db.forecast.filter(f => f.campanha === c.id && f.status === 'FECHADO');
+    let totalVendas = vendasCampanha.reduce((s,f) => s + f.adesao, 0);
+    let pct = c.meta > 0 ? Math.round(totalVendas / c.meta * 100) : 0;
+    return `<div class="content-card"><div style="display:flex; justify-content:space-between"><div><strong>${c.nome}</strong><br><small>${c.tipo} | ${c.inicio} a ${c.fim}</small><br><small>Produto: ${c.produto} | Desconto: ${c.desconto}%</small></div><div><span class="tag ${pct >= 100 ? 'tag-success' : 'tag-warning'}">${pct}% da Meta</span></div></div><div style="margin-top:12px"><div>Vendas: R$ ${totalVendas.toLocaleString('pt-BR')} / Meta: R$ ${(c.meta || 0).toLocaleString('pt-BR')}</div><div style="background:#e2e8f0; border-radius:10px; margin-top:8px"><div style="width:${pct}%; background:linear-gradient(135deg,#667eea,#764ba2); height:8px; border-radius:10px"></div></div></div></div>`;
+  }).join('') || '<div style="text-align:center; padding:40px">Nenhuma campanha cadastrada</div>';
 }
-function openCampanhaModal() { document.getElementById('camp-nome').value = ''; document.getElementById('camp-tipo').value = 'Feira/Exposição'; document.getElementById('camp-lp').value = ''; openModal('modal-campanha'); }
-function saveCampanha() { let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, lp: document.getElementById('camp-lp').value, createdAt: new Date().toISOString() }; if(!camp.nome){ showToast('Informe o nome!'); return; } db.campanhas.push(camp); saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!'); }
-function gerarQR(id) { let c = db.campanhas.find(c => c.id === id); if(!c || !c.lp){ showToast('Configure a URL!'); return; } let div = document.getElementById(`qr-${id}`); div.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(c.lp)}"><br><button class="btn btn-outline btn-sm" onclick="this.parentElement.style.display='none'">Fechar</button>`; div.style.display = 'block'; }
-function gerarForm(id) { let c = db.campanhas.find(c => c.id === id); if(!c) return; let html = `<div style="background:white; padding:20px; border-radius:16px"><h3>${c.nome}</h3><form id="form-campanha"><div><label>Nome</label><input name="nome" class="form-input" required></div><div><label>Email</label><input name="email" class="form-input" type="email" required></div><div><label>Telefone</label><input name="telefone" class="form-input" required></div><div><label>Empresa</label><input name="empresa" class="form-input" required></div><button type="submit" class="btn btn-primary">Enviar</button></form><div id="form-msg"></div></div>`; let win = window.open('', '_blank', 'width=500,height=600'); win.document.write(`<html><head><title>${c.nome}</title><style>body{font-family:Arial; padding:20px} .form-input{width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px}</style></head><body>${html}<script>document.getElementById('form-campanha').addEventListener('submit', function(e){ e.preventDefault(); let data={}; for(let[k,v] of new FormData(this)) data[k]=v; localStorage.setItem('lead_'+Date.now(), JSON.stringify(data)); document.getElementById('form-msg').innerHTML='<div style="background:#d1fae5; padding:10px; border-radius:8px; margin-top:10px;">✅ Cadastro realizado!</div>'; this.reset(); });<\/script></body></html>`); }
+function openCampanhaModal() { let sel = document.getElementById('camp-produto'); sel.innerHTML = db.produtos.map(p => `<option value="${p.nome}">${p.nome}</option>`).join(''); document.getElementById('camp-nome').value = ''; document.getElementById('camp-inicio').value = ''; document.getElementById('camp-fim').value = ''; document.getElementById('camp-desconto').value = ''; document.getElementById('camp-meta').value = ''; openModal('modal-campanha'); }
+function saveCampanha() { let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, produto: document.getElementById('camp-produto').value, desconto: parseFloat(document.getElementById('camp-desconto').value) || 0, meta: parseFloat(document.getElementById('camp-meta').value) || 0, createdAt: new Date().toISOString() }; if(!camp.nome){ showToast('Informe o nome!'); return; } db.campanhas.push(camp); saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!'); }
 
-// ==================== IMPORTAR ====================
-function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','implantacao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
-function handleImport(e) { let f = e.target.files[0]; if(!f) return; let r = new FileReader(); r.onload = function(ev){ let wb = XLSX.read(ev.target.result, {type:'binary'}); let ws = wb.Sheets[wb.SheetNames[0]]; let rows = XLSX.utils.sheet_to_json(ws); let imported = 0; for(let row of rows){ let empresa = row.empresa || row.Empresa; if(empresa && !db.leads.find(l => l.empresa === empresa)){ db.leads.push({ id: uid(), empresa, contato: row.contato || '', email: row.email || '', telefone: row.telefone || '', cidade: row.cidade || '', uf: row.uf || '', segmento: row.segmento || '', produto: row.produto || '', vendedor: row.vendedor || '', implantacao: parseFloat(row.implantacao) || 0, mensalidade: parseFloat(row.mensalidade) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() }); imported++; } } saveData(); renderLeads(); renderDashboard(); document.getElementById('import-preview').innerHTML = `<div style="background:#d1fae5; padding:10px; border-radius:10px">✅ ${imported} leads importados!</div>`; showToast(`${imported} leads importados!`); }; r.readAsBinaryString(f); }
-
-// ==================== E-MAILS ====================
-function enviarEmail(to, subject, body) { let hist = { id: uid(), to, subject, body, data: new Date().toISOString() }; db.emailHist.unshift(hist); saveData(); renderEmailHistory(); return true; }
-function sendBulkEmail() { let subject = document.getElementById('email-subject').value; let body = document.getElementById('email-body').value; if(!subject || !body){ showToast('Preencha assunto e mensagem!'); return; } let leads = db.leads.filter(l => l.email && l.status !== 'Descartado'); leads.forEach(l => enviarEmail(l.email, subject, body.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)'))); showToast(`Enviado para ${leads.length} leads`); }
-function renderEmailHistory() { let el = document.getElementById('email-history'); if(!el) return; el.innerHTML = db.emailHist.slice(0,20).map(h => `<div style="padding:10px; border-bottom:1px solid #e2e8f0"><strong>${h.subject}</strong><br><small>Para: ${h.to} - ${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div style="text-align:center; padding:20px">Nenhum e-mail enviado</div>'; }
+// ==================== PRODUTOS ====================
+function renderProdutos() {
+  let tb = document.getElementById('produtos-table');
+  if(!tb) return;
+  let vendasPorProduto = {};
+  db.forecast.filter(f => f.status === 'FECHADO').forEach(f => { vendasPorProduto[f.produto] = (vendasPorProduto[f.produto] || 0) + f.adesao; });
+  tb.innerHTML = db.produtos.map(p => `<tr>
+    <td><strong>${p.nome}</strong></span><td>${p.categoria}</span><td>R$ ${p.adesao.toLocaleString('pt-BR')}</span><td>R$ ${p.mensalidade.toLocaleString('pt-BR')}</span><td>R$ ${(vendasPorProduto[p.nome] || 0).toLocaleString('pt-BR')}</span><td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button></span></tr>`).join('');
+}
+function openProdutoModal() { document.getElementById('produto-nome').value = ''; document.getElementById('produto-adesao').value = ''; document.getElementById('produto-mensalidade').value = ''; openModal('modal-produto'); }
+function saveProduto() { let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0, vendas: 0 }; if(!produto.nome){ showToast('Informe o nome!'); return; } db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!'); }
+function editarProduto(id) { showToast('Funcionalidade em desenvolvimento'); }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
-  let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline));
   let tb = document.getElementById('relatorio-table');
   if(!tb) return;
-  tb.innerHTML = leads.map(l => `<tr>
-    <td>${l.vendedor || '—'}</td>
-    <td><strong>${l.empresa}</strong></td>
-    <td>${l.produto || '—'}</td>
-    <td>${l.segmento || '—'}</td>
-    <td>${l.cidade || ''} ${l.uf || ''}</td>
-    <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td><span class="tag tag-warning">${l.pipeline}</span></td>
-    <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead em pipeline</span></tr>';
+  tb.innerHTML = db.forecast.slice(0, 50).map(f => `<tr>
+    <td>${f.mes}</span><td>${f.vendedor}</span><td><strong>${f.empresa}</strong></span><td>${f.produto}</span><td>R$ ${f.adesao.toLocaleString('pt-BR')}</span><td>R$ ${f.mensalidade.toLocaleString('pt-BR')}</span><td><span class="tag ${f.status === 'FECHADO' ? 'tag-success' : 'tag-warning'}">${f.status || 'Pendente'}</span></span><td>${f.campanha || '—'}</span></tr>`).join('');
 }
-function exportExcel() { let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline)); let data = leads.map(l => ({ Vendedor: l.vendedor, Cliente: l.empresa, Produto: l.produto, Segmento: l.segmento, Cidade: l.cidade, UF: l.uf, Implantacao: l.implantacao, Mensalidade: l.mensalidade, Estagio: l.pipeline, Data: new Date(l.createdAt).toLocaleDateString('pt-BR') })); let ws = XLSX.utils.json_to_sheet(data); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
-function exportPDF() { let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline)); let html = `<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Produtividade</h1><table><thead><tr><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Segmento</th><th>Cidade</th><th>Implantação</th><th>Mensalidade</th><th>Estágio</th></tr></thead><tbody>${leads.map(l => `<tr><td>${l.vendedor || '—'}</td><td>${l.empresa}</td><td>${l.produto || '—'}</td><td>${l.segmento || '—'}</td><td>${l.cidade || ''}</td><td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td><td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td><td>${l.pipeline}</td></tr>`).join('')}</tbody></table></body></html>`; let win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print(); showToast('PDF gerado!'); }
-
-// ==================== FORECAST ====================
-function renderForecast() {
-  let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline));
-  let probMap = { Agendamento: 20, Apresentação: 40, Negociação: 70, Fechamento: 90 };
-  let tb = document.getElementById('forecast-table');
-  if(!tb) return;
-  tb.innerHTML = leads.map(l => { let prob = probMap[l.pipeline] || 0; let valorPonderado = (l.implantacao || 0) * prob / 100; return `<tr>
-    <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-    <td>${l.vendedor || '—'}</td>
-    <td><strong>${l.empresa}</strong></td>
-    <td>${l.produto || '—'}</td>
-    <td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td><span class="tag tag-warning">${l.pipeline}</span></td>
-    <td>${prob}%</span></td>
-    <td>R$ ${valorPonderado.toLocaleString('pt-BR')}</td>
-  </tr>`; }).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead em pipeline</span></tr>';
-}
-function exportForecastExcel() { let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline)); let probMap = { Agendamento: 20, Apresentação: 40, Negociação: 70, Fechamento: 90 }; let data = leads.map(l => ({ Data: new Date(l.createdAt).toLocaleDateString('pt-BR'), Consultor: l.vendedor, Cliente: l.empresa, Produto: l.produto, Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: probMap[l.pipeline] + '%', ValorPonderado: (l.implantacao || 0) * (probMap[l.pipeline] || 0) / 100 })); let ws = XLSX.utils.json_to_sheet(data); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
-function exportForecastPDF() { let leads = db.leads.filter(l => l.pipeline && ['Agendamento','Apresentação','Negociação','Fechamento'].includes(l.pipeline)); let probMap = { Agendamento: 20, Apresentação: 40, Negociação: 70, Fechamento: 90 }; let html = `<html><head><title>Forecast</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Forecast - Pipeline de Vendas</h1><table><thead><tr><th>Data</th><th>Consultor</th><th>Cliente</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Probabilidade</th><th>Valor Ponderado</th></tr></thead><tbody>${leads.map(l => { let prob = probMap[l.pipeline] || 0; let valorPonderado = (l.implantacao || 0) * prob / 100; return `<tr><td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td><td>${l.vendedor || '—'}</td><td>${l.empresa}</td><td>${l.produto || '—'}</td><td>R$ ${(l.implantacao || 0).toLocaleString('pt-BR')}</td><td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td><td>${l.pipeline}</td><td>${prob}%</td><td>R$ ${valorPonderado.toLocaleString('pt-BR')}</td></tr>`; }).join('')}</tbody><table></body></html>`; let win = window.open('', '_blank'); win.document.write(html); win.document.close(); win.print(); showToast('PDF gerado!'); }
+function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(db.forecast.map(f => ({ Mês: f.mes, Vendedor: f.vendedor, Empresa: f.empresa, Produto: f.produto, Adesão: f.adesao, Mensalidade: f.mensalidade, Status: f.status, DataPrevista: f.dataPrevista }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio_Geral'); XLSX.writeFile(wb, `relatorio_geral_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Relatório exportado!'); }
+function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório Geral</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
 
 // ==================== USUÁRIOS ====================
 function renderUsuarios() {
   let tb = document.getElementById('users-table');
   if(!tb) return;
   tb.innerHTML = db.usuarios.map(u => `<tr>
-    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
-    <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
-    <td>${u.equipe || '—'}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
-          ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</span></td>
-  </tr>`).join('');
+    <td><strong>${u.nome}</strong><br><small>${u.login}</small></span><td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : 'tag-info'}">${u.perfil}</span></span><td>${u.equipe || '—'}</span><td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button> ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</span></td>`).join('');
 }
-function openUserModal() { document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('user-perfil').value = 'Consultor'; document.getElementById('user-equipe').value = 'Comercial'; delete document.getElementById('modal-user').dataset.editId; openModal('modal-user'); }
-function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(!u) return; document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe || 'Comercial'; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); }
+function openUserModal() { document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; openModal('modal-user'); }
+function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; openModal('modal-user'); document.getElementById('modal-user').dataset.editId = id; } }
 function saveUser() {
   let id = document.getElementById('modal-user').dataset.editId;
   let nome = document.getElementById('user-nome').value.trim();
@@ -649,14 +506,10 @@ function saveUser() {
   if(db.usuarios.some(u => u.login === login && u.id !== id)) { showToast('Login já existe!'); return; }
   if(id) {
     let idx = db.usuarios.findIndex(u => u.id === id);
-    if(idx !== -1) {
-      db.usuarios[idx].nome = nome; db.usuarios[idx].login = login; db.usuarios[idx].perfil = perfil; db.usuarios[idx].equipe = equipe;
-      if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; } db.usuarios[idx].senha = senha; }
-    }
+    if(idx !== -1) { db.usuarios[idx].nome = nome; db.usuarios[idx].login = login; db.usuarios[idx].perfil = perfil; db.usuarios[idx].equipe = equipe; if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } db.usuarios[idx].senha = senha; } }
   } else {
     if(!senha){ showToast('Senha obrigatória!'); return; }
     if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
-    if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
     db.usuarios.push({ id: uid(), nome, login, senha, perfil, equipe });
   }
   saveData(); closeModal('modal-user'); renderUsuarios(); showToast('Usuário salvo!');
@@ -665,23 +518,40 @@ function deletarUsuario(id) { if(confirm('Remover usuário?')) { db.usuarios = d
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
-  let mesAtual = new Date().getMonth();
-  let vendasMes = db.vendas.filter(v => new Date(v.data).getMonth() === mesAtual);
-  let receitaTotal = vendasMes.reduce((s,v) => s + v.implantacao + v.mensalidade, 0);
-  let taxa = db.leads.length > 0 ? Math.round(vendasMes.length / db.leads.length * 100) : 0;
-  document.getElementById('stat-total').innerText = db.leads.length;
-  document.getElementById('stat-fechamentos').innerText = vendasMes.length;
-  document.getElementById('stat-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
-  document.getElementById('stat-conversao').innerText = `${taxa}%`;
-  let realImpl = vendasMes.reduce((s,v) => s + v.implantacao, 0);
-  let pct = db.metaGlobal.impl > 0 ? Math.min(100, Math.round(realImpl / db.metaGlobal.impl * 100)) : 0;
-  document.getElementById('meta-progress').innerHTML = `<div><div style="display:flex; justify-content:space-between"><span>Meta ${db.metaGlobal.periodo}</span><span>R$ ${realImpl.toLocaleString('pt-BR')} / R$ ${db.metaGlobal.impl.toLocaleString('pt-BR')}</span></div><div style="background:#e2e8f0; border-radius:20px; margin-top:8px"><div style="width:${pct}%; background:linear-gradient(135deg,#667eea,#764ba2); height:10px; border-radius:20px"></div></div><div style="text-align:center; margin-top:8px; font-size:20px; font-weight:700">${pct}%</div></div>`;
+  let totalForecast = db.forecast.reduce((s,f) => s + f.adesao, 0);
+  let totalRealizado = db.forecast.filter(f => f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0);
+  let aRealizar = totalForecast - totalRealizado;
+  let pct = totalForecast > 0 ? Math.round(totalRealizado / totalForecast * 100) : 0;
+  document.getElementById('stat-forecast-total').innerText = `R$ ${totalForecast.toLocaleString('pt-BR')}`;
+  document.getElementById('stat-realizado').innerText = `R$ ${totalRealizado.toLocaleString('pt-BR')}`;
+  document.getElementById('stat-a-realizar').innerText = `R$ ${aRealizar.toLocaleString('pt-BR')}`;
+  document.getElementById('stat-atingimento').innerText = `${pct}%`;
+  
+  let vendedores = [...new Set(db.forecast.map(f => f.vendedor))];
+  let vendedorStats = vendedores.map(v => {
+    let total = db.forecast.filter(f => f.vendedor === v).reduce((s,f) => s + f.adesao, 0);
+    let realizado = db.forecast.filter(f => f.vendedor === v && f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0);
+    let aReal = total - realizado;
+    let pctV = total > 0 ? Math.round(realizado / total * 100) : 0;
+    return { v, total, realizado, aReal, pct: pctV };
+  });
+  document.getElementById('vendedor-stats').innerHTML = vendedorStats.map(v => `<tr>
+    <td><strong>${v.v}</strong></span><td>R$ ${v.total.toLocaleString('pt-BR')}</span><td>R$ ${v.realizado.toLocaleString('pt-BR')}</span><td>R$ ${v.aReal.toLocaleString('pt-BR')}</span><td><span class="tag ${v.pct >= 100 ? 'tag-success' : v.pct >= 50 ? 'tag-warning' : 'tag-danger'}">${v.pct}%</span></span></td>
+  </tr>`).join('');
+  
+  // Gráfico mensal
+  let meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'];
+  let forecastData = meses.map(m => db.forecast.filter(f => f.mes === m).reduce((s,f) => s + f.adesao, 0));
+  let realizadoData = meses.map(m => db.forecast.filter(f => f.mes === m && f.status === 'FECHADO').reduce((s,f) => s + f.adesao, 0));
+  if(charts.monthly) charts.monthly.destroy();
+  let ctx = document.getElementById('monthly-chart')?.getContext('2d');
+  if(ctx) charts.monthly = new Chart(ctx, { type: 'line', data: { labels: meses, datasets: [{ label: 'Forecast', data: forecastData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', fill: true }, { label: 'Realizado', data: realizadoData, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
 }
 
 // ==================== UTILIDADES ====================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderProdutos(); renderRemarketing(); renderCampanhas(); renderRelatorios(); renderForecast(); renderUsuarios(); renderEmailHistory(); }
+function renderAll() { renderDashboard(); renderForecast(); renderLeads(); renderPipeline(); renderMetas(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); }
 
 loadData();
 </script>
