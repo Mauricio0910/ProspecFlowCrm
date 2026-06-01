@@ -23,7 +23,14 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
 #app-main { display: none; }
 .app-container { display: flex; }
-.sidebar { width: 260px; background: #0f172a; min-height: 100vh; padding: 24px 16px; position: fixed; overflow-y: auto; }
+.sidebar { width: 260px; background: #0f172a; min-height: 100vh; padding: 24px 16px; position: fixed; transition: all 0.3s ease; z-index: 100; }
+.sidebar.collapsed { width: 70px; }
+.sidebar.collapsed .logo-text, .sidebar.collapsed .nav-item span { display: none; }
+.sidebar.collapsed .nav-item { justify-content: center; }
+.sidebar.collapsed .nav-item i { margin: 0; }
+.toggle-sidebar { position: absolute; top: 20px; right: -12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 101; }
+.main-content { flex: 1; margin-left: 260px; padding: 20px; transition: all 0.3s ease; }
+.main-content.expanded { margin-left: 70px; }
 .logo-area { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
 .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 .logo-text { font-size: 18px; font-weight: 700; color: white; }
@@ -31,7 +38,6 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #94a3b8; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
 .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
 .nav-item i { width: 20px; }
-.main-content { flex: 1; margin-left: 260px; padding: 20px; }
 .top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 18px; font-weight: 700; color: #1e293b; }
 .user-info { display: flex; align-items: center; gap: 12px; }
@@ -84,11 +90,15 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; }
 .pipeline-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
 .chart-container { height: 300px; position: relative; }
-.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; }
-.step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
+.step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
 .step.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
 .step.completed { background: #10b981; color: white; }
 .step.pending { background: #e2e8f0; color: #64748b; }
+.scrollable-nav { max-height: calc(100vh - 120px); overflow-y: auto; }
+.scrollable-nav::-webkit-scrollbar { width: 4px; }
+.scrollable-nav::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.scrollable-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -109,24 +119,27 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 <!-- APLICATIVO PRINCIPAL -->
 <div id="app-main">
   <div class="app-container">
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+      <button class="toggle-sidebar" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
       <div class="logo-area"><div class="logo-icon">🎯</div><div class="logo-text">Prospect<span>Flow</span></div></div>
-      <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
-      <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> Leads</div>
-      <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> Pipeline</div>
-      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> Agenda</div>
-      <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> Metas</div>
-      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> Forecast</div>
-      <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> Remarketing</div>
-      <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> Campanhas</div>
-      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> Produtos</div>
-      <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> Importar</div>
-      <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> E-mails</div>
-      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> Relatórios</div>
-      <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> Usuários</div>
+      <div class="scrollable-nav">
+        <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
+        <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
+        <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
+        <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
+        <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
+        <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
+        <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> <span>Remarketing</span></div>
+        <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> <span>Campanhas</span></div>
+        <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
+        <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> <span>Importar</span></div>
+        <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> <span>E-mails</span></div>
+        <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
+        <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
+      </div>
     </div>
 
-    <div class="main-content">
+    <div class="main-content" id="main-content">
       <div class="top-bar">
         <h2 class="page-title" id="page-title">Dashboard</h2>
         <div class="user-info">
@@ -146,14 +159,15 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
         </div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Metas vs Realizado</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar Meta</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-simple"></i> Top 5 Produtos</h3></div><div id="top-produtos"></div></div>
       </div>
 
-      <!-- LEADS com Jornada Completa -->
+      <!-- LEADS -->
       <div id="page-leads" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Telefone</th><th>Cidade/UF</th><th>Segmento</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
@@ -167,7 +181,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
             <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
@@ -195,7 +209,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast 2026</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Mês</th><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Data Prevista</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Data Prevista</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
         </div>
       </div>
 
@@ -203,7 +217,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-remarketing" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail para Todos</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></table></thead><tbody id="remarketing-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -219,7 +233,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Ações</th></td></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
@@ -250,7 +264,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios Gerenciais</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Campanha</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Campanha</th></tr></thead><tbody id="relatorio-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -287,6 +301,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 let currentUser = null;
 let currentPipelineStage = 'Agendamento';
 let charts = {};
+let sidebarCollapsed = false;
 
 // Produtos padrão
 const PRODUTOS_PADRAO = [
@@ -310,8 +325,16 @@ const USUARIOS_PADRAO = [
   { id: '5', nome: 'João Renye', login: 'joao', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' }
 ];
 
+// Leads de exemplo
+const LEADS_EXEMPLO = [
+  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@tocantinsaero.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
+  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@mixjjm.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
+  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@cimefer.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
+  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@gessouniao.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
+];
+
 let db = {
-  leads: [],
+  leads: [...LEADS_EXEMPLO],
   vendas: [],
   agenda: [],
   remarketing: [],
@@ -326,7 +349,25 @@ let db = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function saveData() { localStorage.setItem('prospectflow_db', JSON.stringify(db)); }
-function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.leads = p.leads || []; db.vendas = p.vendas || []; db.agenda = p.agenda || []; db.remarketing = p.remarketing || []; db.metas = p.metas || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || []; db.remarketing = p.remarketing || []; db.metas = p.metas || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+
+// ==================== SIDEBAR TOGGLE ====================
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.getElementById('main-content');
+  const toggleBtn = document.querySelector('.toggle-sidebar i');
+  
+  if (sidebarCollapsed) {
+    sidebar.classList.add('collapsed');
+    mainContent.classList.add('expanded');
+    toggleBtn.className = 'fas fa-chevron-right';
+  } else {
+    sidebar.classList.remove('collapsed');
+    mainContent.classList.remove('expanded');
+    toggleBtn.className = 'fas fa-chevron-left';
+  }
+}
 
 // ==================== AUTENTICAÇÃO ====================
 function doLogin() {
@@ -370,33 +411,22 @@ function goToPage(page) {
 // ==================== JORNADA DO LEAD ====================
 const JORNADA_ETAPAS = ['Captação', 'Agendamento', 'Apresentação', 'Negociação', 'Fechamento'];
 
-function getEtapaAtual(lead) {
-  if (lead.status === 'Fechado') return 'Fechamento';
-  if (lead.pipeline === 'Agendamento') return 'Agendamento';
-  if (lead.pipeline === 'Apresentação') return 'Apresentação';
-  if (lead.pipeline === 'Negociação') return 'Negociação';
-  return 'Captação';
-}
-
 function avancarEtapa(leadId) {
   let lead = db.leads.find(l => l.id === leadId);
   if (!lead) return;
   
-  let etapaAtual = getEtapaAtual(lead);
-  let indexAtual = JORNADA_ETAPAS.indexOf(etapaAtual);
-  
-  if (etapaAtual === 'Captação') {
+  if (lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
     lead.status = 'Prospect';
     lead.pipeline = 'Agendamento';
     showToast('Lead avançou para Agendamento!');
     openAgendaModal(leadId);
-  } else if (etapaAtual === 'Agendamento') {
+  } else if (lead.pipeline === 'Agendamento') {
     lead.pipeline = 'Apresentação';
     showToast('Apresentação confirmada!');
-  } else if (etapaAtual === 'Apresentação') {
+  } else if (lead.pipeline === 'Apresentação') {
     lead.pipeline = 'Negociação';
     showToast('Lead em negociação');
-  } else if (etapaAtual === 'Negociação') {
+  } else if (lead.pipeline === 'Negociação') {
     lead.status = 'Fechado';
     lead.pipeline = 'Fechamento';
     db.vendas.push({
@@ -443,9 +473,13 @@ function renderLeads() {
     .filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  tb.innerHTML = leads.map(l => `<td>
+  tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
+    <td>${l.email || '—'}</td>
+    <td>${l.telefone || '—'}</td>
+    <td>${l.cidade || ''} ${l.uf || ''}</td>
+    <td>${l.segmento || '—'}</td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>${getStatusTag(l.status)}</span></td>
     <td>${getPipelineTag(l.pipeline)}</span></td>
@@ -457,7 +491,7 @@ function renderLeads() {
       <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
       <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button>
     </span>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>';
+  </tr>`).join('') || '<tr><td colspan="13" style="text-align:center">Nenhum lead cadastrado</span></tr>';
 }
 function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purple', Fechado:'tag-success', Descartado:'tag-danger' }; return `<span class="tag ${m[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`; }
 function getPipelineTag(p) { if(!p) return '—'; let m = { Agendamento:'tag-warning', Apresentação:'tag-info', Negociação:'tag-purple', Fechamento:'tag-success' }; return `<span class="tag ${m[p] || 'tag-info'}">${p}</span>`; }
@@ -482,13 +516,14 @@ function renderPipeline() {
   if(!tb) return;
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
+    <td>${l.contato || '—'}</td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor || '—'}</td>
     <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>';
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center">Nenhum lead nesta etapa</span></tr>';
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -545,7 +580,7 @@ function renderMetas() {
       let leadsV = db.leads.filter(l => l.vendedor === v);
       let vendasV = db.vendas.filter(vd => vd.vendedor === v);
       let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
-      return `</tr>
+      return `<tr>
         <td><strong>${v}</strong></td>
         <td>${leadsV.length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</span></td>
@@ -592,7 +627,7 @@ function renderRemarketing() {
     <td><span class="tag ${r.categoria === 'Não Prospectado' ? 'tag-info' : r.categoria === 'Não Avançou' ? 'tag-warning' : 'tag-danger'}">${r.categoria}</span></td>
     <td>${r.motivo || '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="enviarEmailRemarketing('${r.id}')"><i class="fas fa-envelope"></i> Enviar</button></td>
-  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhum lead em remarketing</span></table>';
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhum lead em remarketing</span></tr>';
 }
 function enviarEmailRemarketing(id) { let r = db.remarketing.find(r => r.id === id); if(r && r.email) { enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nGostaríamos de retomar o contato!`); showToast(`Email enviado para ${r.empresa}`); } }
 function sendMarketingEmail() { let rm = db.remarketing.filter(r => r.email); rm.forEach(r => enviarEmail(r.email, `Oportunidade`, `Olá ${r.empresa},\n\nTemos novidades!`)); showToast(`Enviado para ${rm.length} leads`); }
@@ -644,7 +679,7 @@ function renderRelatorios() {
   let allData = [...db.vendas, ...db.leads.filter(l => l.pipeline).slice(0, 30)];
   tb.innerHTML = allData.map(item => `<tr>
     <td>${item.data || new Date(item.createdAt).toLocaleDateString('pt-BR')}</span><td>${item.vendedor || '—'}</span><td><strong>${item.empresa}</strong></span><td>${item.produto || '—'}</span><td>R$ ${(item.adesao || 0).toLocaleString('pt-BR')}</span><td>R$ ${(item.mensalidade || 0).toLocaleString('pt-BR')}</span><td><span class="tag ${item.status === 'Fechado' ? 'tag-success' : 'tag-warning'}">${item.status || item.pipeline || 'Lead'}</span></span><td>${item.campanha || '—'}</span></td>
-  <tr>`).join('');
+  </tr>`).join('');
 }
 function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(db.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio_Vendas'); XLSX.writeFile(wb, `relatorio_vendas_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Relatório exportado!'); }
 function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório de Vendas</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1><p>Período: ${new Date().toLocaleDateString('pt-BR')}</p>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
@@ -714,6 +749,12 @@ function renderDashboard() {
   if(charts.metas) charts.metas.destroy();
   let ctx = document.getElementById('metas-chart')?.getContext('2d');
   if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#10b981', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
+  
+  // Top 5 produtos
+  let vendasPorProduto = {};
+  db.vendas.forEach(v => { vendasPorProduto[v.produto] = (vendasPorProduto[v.produto] || 0) + v.adesao; });
+  let topProdutos = Object.entries(vendasPorProduto).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  document.getElementById('top-produtos').innerHTML = `<div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Receita</th></tr></thead><tbody>${topProdutos.map(p => `<tr><td>${p[0]}</td><td>R$ ${p[1].toLocaleString('pt-BR')}</td></tr>`).join('') || '<td><td colspan="2">Nenhuma venda registrada</td></td>'}</tbody></table></div>`;
 }
 
 // ==================== UTILIDADES ====================
