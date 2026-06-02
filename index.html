@@ -22,8 +22,8 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .auth-input:focus { outline: none; border-color: #667eea; }
 .btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
 #app-main { display: none; }
-.app-container { display: flex; }
-.sidebar { width: 260px; background: #0f172a; min-height: 100vh; padding: 24px 16px; position: fixed; transition: all 0.3s ease; z-index: 100; }
+.app-container { display: flex; min-height: 100vh; }
+.sidebar { width: 260px; background: #0f172a; padding: 24px 16px; position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 100; }
 .sidebar.collapsed { width: 70px; }
 .sidebar.collapsed .logo-text, .sidebar.collapsed .nav-item span { display: none; }
 .sidebar.collapsed .nav-item { justify-content: center; }
@@ -38,12 +38,12 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #94a3b8; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
 .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
 .nav-item i { width: 20px; }
-.top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .page-title { font-size: 18px; font-weight: 700; color: #1e293b; }
 .user-info { display: flex; align-items: center; gap: 12px; }
 .user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-.stat-card { background: white; border-radius: 16px; padding: 16px; }
+.stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
 .stat-icon.blue { background: #eff6ff; color: #3b82f6; }
 .stat-icon.green { background: #ecfdf5; color: #10b981; }
@@ -51,7 +51,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .stat-icon.orange { background: #fff7ed; color: #f59e0b; }
 .stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
 .stat-label { font-size: 13px; color: #64748b; }
-.content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+.content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .card-title { font-size: 16px; font-weight: 700; }
 .btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.3s; }
@@ -72,7 +72,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .tag-info { background: #eff6ff; color: #3b82f6; }
 .tag-purple { background: #f5f3ff; color: #8b5cf6; }
 .tag-danger { background: #fef2f2; color: #ef4444; }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
 .modal { background: white; border-radius: 20px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
 .modal-title { font-size: 18px; font-weight: 700; }
@@ -92,13 +92,8 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .chart-container { height: 300px; position: relative; }
 .jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
 .step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
-.step.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
 .step.completed { background: #10b981; color: white; }
 .step.pending { background: #e2e8f0; color: #64748b; }
-.scrollable-nav { max-height: calc(100vh - 120px); overflow-y: auto; }
-.scrollable-nav::-webkit-scrollbar { width: 4px; }
-.scrollable-nav::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
-.scrollable-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -122,21 +117,19 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
     <div class="sidebar" id="sidebar">
       <button class="toggle-sidebar" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
       <div class="logo-area"><div class="logo-icon">🎯</div><div class="logo-text">Prospect<span>Flow</span></div></div>
-      <div class="scrollable-nav">
-        <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
-        <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
-        <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
-        <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
-        <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
-        <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
-        <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> <span>Remarketing</span></div>
-        <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> <span>Campanhas</span></div>
-        <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
-        <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> <span>Importar</span></div>
-        <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> <span>E-mails</span></div>
-        <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
-        <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
-      </div>
+      <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
+      <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
+      <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
+      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
+      <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
+      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
+      <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> <span>Remarketing</span></div>
+      <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> <span>Campanhas</span></div>
+      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
+      <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> <span>Importar</span></div>
+      <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> <span>E-mails</span></div>
+      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
+      <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
     </div>
 
     <div class="main-content" id="main-content">
@@ -159,7 +152,6 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
         </div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Metas vs Realizado</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar Meta</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
-        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-simple"></i> Top 5 Produtos</h3></div><div id="top-produtos"></div></div>
       </div>
 
       <!-- LEADS -->
@@ -197,11 +189,11 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>% Atingido</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão (R$)</th><th>Meta Mensalidade (R$)</th><th>Realizado Adesão</th><th>Realizado Mensalidade</th><th>% Atingido</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Total Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Total Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita Adesão</th><th>Receita Mensalidade</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
         </div>
       </div>
 
@@ -217,7 +209,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-remarketing" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail para Todos</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></table></thead><tbody id="remarketing-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
         </div>
       </div>
 
@@ -233,7 +225,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Ações</th></td></thead><tbody id="produtos-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
@@ -264,15 +256,15 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios Gerenciais</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Campanha</th></tr></thead><tbody id="relatorio-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th><th>Campanha</th></tr></thead><tbody id="relatorio-table"></tbody><tr></div>
         </div>
       </div>
 
       <!-- USUÁRIOS -->
       <div id="page-usuarios" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="card-header"><h3 class="card-title">Usuários do Sistema</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Data Cadastro</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -284,7 +276,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar Apresentação</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-meta" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês/Ano</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Salvar</button></div></div></div>
+<div id="modal-meta" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês/Ano</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Salvar</button></div></div></div>
 
 <div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
@@ -292,7 +284,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
 <div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome do Produto</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option><option>CRM</option></select></div><div class="form-group"><label>Valor Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Valor Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
-<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar Senha</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option><option>Campo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login *</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha *</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar Senha *</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option><option>Campo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-container" id="toast-container"></div>
 
@@ -318,11 +310,11 @@ const PRODUTOS_PADRAO = [
 
 // Usuários padrão
 const USUARIOS_PADRAO = [
-  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', equipe: 'Comercial' },
-  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
-  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
-  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', equipe: 'Inside Sales' },
-  { id: '5', nome: 'João Renye', login: 'joao', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' }
+  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', equipe: 'Comercial', dataCadastro: new Date().toISOString() },
+  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', equipe: 'Comercial', dataCadastro: new Date().toISOString() },
+  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', equipe: 'Comercial', dataCadastro: new Date().toISOString() },
+  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', equipe: 'Inside Sales', dataCadastro: new Date().toISOString() },
+  { id: '5', nome: 'João Renye', login: 'joao', senha: '1234', perfil: 'Consultor', equipe: 'Comercial', dataCadastro: new Date().toISOString() }
 ];
 
 // Leads de exemplo
@@ -357,16 +349,8 @@ function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.getElementById('main-content');
   const toggleBtn = document.querySelector('.toggle-sidebar i');
-  
-  if (sidebarCollapsed) {
-    sidebar.classList.add('collapsed');
-    mainContent.classList.add('expanded');
-    toggleBtn.className = 'fas fa-chevron-right';
-  } else {
-    sidebar.classList.remove('collapsed');
-    mainContent.classList.remove('expanded');
-    toggleBtn.className = 'fas fa-chevron-left';
-  }
+  if (sidebarCollapsed) { sidebar.classList.add('collapsed'); mainContent.classList.add('expanded'); if(toggleBtn) toggleBtn.className = 'fas fa-chevron-right'; }
+  else { sidebar.classList.remove('collapsed'); mainContent.classList.remove('expanded'); if(toggleBtn) toggleBtn.className = 'fas fa-chevron-left'; }
 }
 
 // ==================== AUTENTICAÇÃO ====================
@@ -409,68 +393,34 @@ function goToPage(page) {
 }
 
 // ==================== JORNADA DO LEAD ====================
-const JORNADA_ETAPAS = ['Captação', 'Agendamento', 'Apresentação', 'Negociação', 'Fechamento'];
-
 function avancarEtapa(leadId) {
   let lead = db.leads.find(l => l.id === leadId);
   if (!lead) return;
-  
   if (lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
-    lead.status = 'Prospect';
-    lead.pipeline = 'Agendamento';
-    showToast('Lead avançou para Agendamento!');
-    openAgendaModal(leadId);
-  } else if (lead.pipeline === 'Agendamento') {
-    lead.pipeline = 'Apresentação';
-    showToast('Apresentação confirmada!');
-  } else if (lead.pipeline === 'Apresentação') {
-    lead.pipeline = 'Negociação';
-    showToast('Lead em negociação');
+    lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; showToast('Lead avançou para Agendamento!'); openAgendaModal(leadId);
+  } else if (lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; showToast('Apresentação confirmada!');
+  } else if (lead.pipeline === 'Apresentação') { lead.pipeline = 'Negociação'; showToast('Lead em negociação');
   } else if (lead.pipeline === 'Negociação') {
-    lead.status = 'Fechado';
-    lead.pipeline = 'Fechamento';
-    db.vendas.push({
-      id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor,
-      produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade,
-      data: new Date().toISOString().split('T')[0]
-    });
+    lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
+    db.vendas.push({ id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] });
     showToast('🎉 Venda fechada com sucesso!');
   }
-  
-  saveData();
-  renderLeads();
-  renderPipeline();
-  renderDashboard();
-  renderMetas();
+  saveData(); renderLeads(); renderPipeline(); renderDashboard(); renderMetas();
 }
 
 function descartarLead(id) {
   let lead = db.leads.find(l => l.id === id);
   if (!lead) return;
-  
-  let categoria = lead.status === 'Oportunidade' ? 'Não Prospectado' : 
-                  (lead.pipeline === 'Agendamento' || lead.pipeline === 'Apresentação') ? 'Não Avançou' : 'Desistiu';
-  
-  db.remarketing.push({
-    id: uid(), empresa: lead.empresa, contato: lead.contato, email: lead.email,
-    categoria: categoria, motivo: 'Descartado em ' + (lead.pipeline || lead.status),
-    data: new Date().toISOString().split('T')[0], leadId: lead.id
-  });
-  
-  lead.status = 'Descartado';
-  lead.pipeline = 'Descartado';
-  saveData();
-  renderLeads();
-  renderRemarketing();
-  renderDashboard();
-  showToast('Lead descartado e enviado ao Remarketing');
+  let categoria = lead.status === 'Oportunidade' ? 'Não Prospectado' : (lead.pipeline === 'Agendamento' || lead.pipeline === 'Apresentação') ? 'Não Avançou' : 'Desistiu';
+  db.remarketing.push({ id: uid(), empresa: lead.empresa, contato: lead.contato, email: lead.email, categoria: categoria, motivo: 'Descartado em ' + (lead.pipeline || lead.status), data: new Date().toISOString().split('T')[0], leadId: lead.id });
+  lead.status = 'Descartado'; lead.pipeline = 'Descartado';
+  saveData(); renderLeads(); renderRemarketing(); renderDashboard(); showToast('Lead descartado e enviado ao Remarketing');
 }
 
 // ==================== LEADS ====================
 function renderLeads() {
   let search = document.getElementById('search-lead')?.value.toLowerCase() || '';
-  let leads = (currentUser.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads)
-    .filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
+  let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
   tb.innerHTML = leads.map(l => `<tr>
@@ -486,11 +436,9 @@ function renderLeads() {
     <td>${l.vendedor || '—'}</td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td>
-      <button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')" title="Avançar etapa"><i class="fas fa-arrow-right"></i></button>
-      <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
-      <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button>
-    </span>
+    <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')" title="Avançar etapa"><i class="fas fa-arrow-right"></i></button>
+          <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button></span></td>
   </tr>`).join('') || '<tr><td colspan="13" style="text-align:center">Nenhum lead cadastrado</span></tr>';
 }
 function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purple', Fechado:'tag-success', Descartado:'tag-danger' }; return `<span class="tag ${m[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`; }
@@ -511,7 +459,7 @@ function openLeadEdit(id) { let l = db.leads.find(l => l.id === id); if(!l) retu
 // ==================== PIPELINE ====================
 function renderPipeline() {
   let leads = db.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado' && l.status !== 'Fechado');
-  if(currentUser.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
+  if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
   tb.innerHTML = leads.map(l => `<tr>
@@ -553,48 +501,109 @@ function saveAgenda() {
 
 // ==================== METAS ====================
 function renderMetas() {
+  // Metas por vendedor
   let vendas = db.vendas;
   let vendasPorVendedor = {};
   vendas.forEach(v => { vendasPorVendedor[v.vendedor] = (vendasPorVendedor[v.vendedor] || 0) + v.adesao; });
+  let vendasMensPorVendedor = {};
+  vendas.forEach(v => { vendasMensPorVendedor[v.vendedor] = (vendasMensPorVendedor[v.vendedor] || 0) + v.mensalidade; });
+  
   let tb = document.getElementById('metas-table');
   if(tb) {
     let vendedores = [...new Set(db.leads.map(l => l.vendedor).filter(Boolean))];
+    if(vendedores.length === 0 && db.usuarios.some(u => u.perfil === 'Consultor')) {
+      vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    }
     tb.innerHTML = vendedores.map(v => {
-      let meta = db.metas.find(m => m.vendedor === v) || { adesao: 0 };
+      let meta = db.metas.find(m => m.vendedor === v) || { adesao: 0, mensalidade: 0 };
       let realizado = vendasPorVendedor[v] || 0;
-      let pct = meta.adesao > 0 ? Math.round(realizado / meta.adesao * 100) : 0;
-      return `<tr>
+      let realizadoMens = vendasMensPorVendedor[v] || 0;
+      let pctAdesao = meta.adesao > 0 ? Math.round(realizado / meta.adesao * 100) : 0;
+      let pctMens = meta.mensalidade > 0 ? Math.round(realizadoMens / meta.mensalidade * 100) : 0;
+      let pctTotal = (meta.adesao + meta.mensalidade) > 0 ? Math.round((realizado + realizadoMens) / (meta.adesao + meta.mensalidade) * 100) : 0;
+      return `</tr>
         <td><strong>${v}</strong></td>
         <td>R$ ${meta.adesao.toLocaleString('pt-BR')}</td>
-        <td>R$ ${(meta.mensalidade || 0).toLocaleString('pt-BR')}</td>
+        <td>R$ ${meta.mensalidade.toLocaleString('pt-BR')}</td>
         <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
-        <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
-        <td><button class="btn btn-outline btn-sm" onclick="editarMeta('${v}')"><i class="fas fa-edit"></i></button></span></td>
+        <td>R$ ${realizadoMens.toLocaleString('pt-BR')}</td>
+        <td><span class="tag ${pctTotal >= 100 ? 'tag-success' : pctTotal >= 50 ? 'tag-warning' : 'tag-danger'}">${pctTotal}%</span></td>
+        <td><button class="btn btn-outline btn-sm" onclick="editarMeta('${v}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletarMeta('${v}')"><i class="fas fa-trash"></i></button></span></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span></tr>';
+    }).join('') || '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></tr>';
   }
+  
+  // Produtividade por vendedor
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
     let vendedores = [...new Set(db.leads.map(l => l.vendedor).filter(Boolean))];
+    if(vendedores.length === 0 && db.usuarios.some(u => u.perfil === 'Consultor')) {
+      vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    }
     prodTb.innerHTML = vendedores.map(v => {
       let leadsV = db.leads.filter(l => l.vendedor === v);
       let vendasV = db.vendas.filter(vd => vd.vendedor === v);
-      let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
+      let receitaAdesao = vendasV.reduce((s,vd) => s + vd.adesao, 0);
+      let receitaMens = vendasV.reduce((s,vd) => s + vd.mensalidade, 0);
       return `<tr>
         <td><strong>${v}</strong></td>
         <td>${leadsV.length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Apresentação').length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
-        <td>${leadsV.filter(l => l.pipeline === 'Fechamento' || l.status === 'Fechado').length}</span></td>
-        <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </tr>`;
+        <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
+        <td>R$ ${receitaAdesao.toLocaleString('pt-BR')}</span></td>
+        <td>R$ ${receitaMens.toLocaleString('pt-BR')}</span></td>
+      </td>`;
     }).join('');
   }
 }
-function openMetaModal() { let sel = document.getElementById('meta-vendedor'); sel.innerHTML = [...new Set(db.leads.map(l => l.vendedor).filter(Boolean))].map(v => `<option value="${v}">${v}</option>`).join(''); openModal('modal-meta'); }
-function saveMeta() { let meta = { vendedor: document.getElementById('meta-vendedor').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, mes: document.getElementById('meta-mes').value }; let idx = db.metas.findIndex(m => m.vendedor === meta.vendedor && m.mes === meta.mes); if(idx >= 0) db.metas[idx] = meta; else db.metas.push(meta); saveData(); closeModal('modal-meta'); renderMetas(); showToast('Meta salva!'); }
-function editarMeta(vendedor) { let meta = db.metas.find(m => m.vendedor === vendedor); if(meta) { document.getElementById('meta-vendedor').value = meta.vendedor; document.getElementById('meta-adesao').value = meta.adesao; document.getElementById('meta-mensalidade').value = meta.mensalidade; openModal('modal-meta'); } }
+function openMetaModal() { 
+  let sel = document.getElementById('meta-vendedor'); 
+  let vendedores = [...new Set(db.leads.map(l => l.vendedor).filter(Boolean))];
+  if(vendedores.length === 0 && db.usuarios.some(u => u.perfil === 'Consultor')) {
+    vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+  }
+  sel.innerHTML = vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+  document.getElementById('meta-adesao').value = '';
+  document.getElementById('meta-mensalidade').value = '';
+  openModal('modal-meta'); 
+}
+function saveMeta() { 
+  let meta = { 
+    vendedor: document.getElementById('meta-vendedor').value, 
+    adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, 
+    mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, 
+    mes: document.getElementById('meta-mes').value 
+  }; 
+  if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
+  let idx = db.metas.findIndex(m => m.vendedor === meta.vendedor && m.mes === meta.mes); 
+  if(idx >= 0) db.metas[idx] = meta; 
+  else db.metas.push(meta); 
+  saveData(); closeModal('modal-meta'); renderMetas(); showToast('Meta salva!'); 
+}
+function editarMeta(vendedor) { 
+  let meta = db.metas.find(m => m.vendedor === vendedor); 
+  if(meta) { 
+    document.getElementById('meta-vendedor').value = meta.vendedor; 
+    document.getElementById('meta-adesao').value = meta.adesao; 
+    document.getElementById('meta-mensalidade').value = meta.mensalidade; 
+    document.getElementById('meta-mes').value = meta.mes || 'Janeiro/2026';
+    openModal('modal-meta'); 
+  } else {
+    document.getElementById('meta-vendedor').value = vendedor;
+    document.getElementById('meta-adesao').value = '';
+    document.getElementById('meta-mensalidade').value = '';
+    openModal('modal-meta');
+  }
+}
+function deletarMeta(vendedor) { 
+  if(confirm(`Remover meta do vendedor ${vendedor}?`)) { 
+    db.metas = db.metas.filter(m => m.vendedor !== vendedor); 
+    saveData(); renderMetas(); showToast('Meta removida!'); 
+  } 
+}
 function openMetaGlobalModal() { document.getElementById('global-adesao').value = db.metaGlobal.adesao; document.getElementById('global-mensalidade').value = db.metaGlobal.mensalidade; openModal('modal-meta-global'); }
 function saveMetaGlobal() { db.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value) || 0, periodo: document.getElementById('global-periodo').value }; saveData(); closeModal('modal-meta-global'); renderDashboard(); showToast('Meta global salva!'); }
 
@@ -656,12 +665,14 @@ function renderProdutos() {
     <td>${p.categoria}</span></td>
     <td>R$ ${(p.adesao || 0).toLocaleString('pt-BR')}</span></td>
     <td>R$ ${(p.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button></span></td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
   </tr>`).join('');
 }
 function openProdutoModal() { document.getElementById('produto-nome').value = ''; document.getElementById('produto-adesao').value = ''; document.getElementById('produto-mensalidade').value = ''; openModal('modal-produto'); }
 function saveProduto() { let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0 }; if(!produto.nome){ showToast('Informe o nome!'); return; } db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!'); }
 function editarProduto(id) { let p = db.produtos.find(p => p.id === id); if(p) { document.getElementById('produto-nome').value = p.nome; document.getElementById('produto-adesao').value = p.adesao; document.getElementById('produto-mensalidade').value = p.mensalidade; document.getElementById('modal-produto').dataset.editId = id; openModal('modal-produto'); } }
+function deletarProduto(id) { if(confirm('Remover produto?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); showToast('Produto removido!'); } }
 
 // ==================== IMPORTAR ====================
 function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
@@ -692,12 +703,13 @@ function renderUsuarios() {
     <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
     <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
     <td>${u.equipe || '—'}</span></td>
+    <td>${new Date(u.dataCadastro).toLocaleDateString('pt-BR')}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
           ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</span></td>
   </tr>`).join('');
 }
-function openUserModal() { document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; openModal('modal-user'); }
-function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; openModal('modal-user'); document.getElementById('modal-user').dataset.editId = id; } }
+function openUserModal() { document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('user-perfil').value = 'Consultor'; document.getElementById('user-equipe').value = 'Comercial'; delete document.getElementById('modal-user').dataset.editId; openModal('modal-user'); }
+function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); } }
 function saveUser() {
   let id = document.getElementById('modal-user').dataset.editId;
   let nome = document.getElementById('user-nome').value.trim();
@@ -710,15 +722,27 @@ function saveUser() {
   if(db.usuarios.some(u => u.login === login && u.id !== id)) { showToast('Login já existe!'); return; }
   if(id) {
     let idx = db.usuarios.findIndex(u => u.id === id);
-    if(idx !== -1) { db.usuarios[idx].nome = nome; db.usuarios[idx].login = login; db.usuarios[idx].perfil = perfil; db.usuarios[idx].equipe = equipe; if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } db.usuarios[idx].senha = senha; } }
+    if(idx !== -1) { db.usuarios[idx].nome = nome; db.usuarios[idx].login = login; db.usuarios[idx].perfil = perfil; db.usuarios[idx].equipe = equipe; if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } if(senha.length < 4){ showToast('A senha deve ter pelo menos 4 caracteres!'); return; } db.usuarios[idx].senha = senha; } }
   } else {
     if(!senha){ showToast('Senha obrigatória!'); return; }
     if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
-    db.usuarios.push({ id: uid(), nome, login, senha, perfil, equipe });
+    if(senha.length < 4){ showToast('A senha deve ter pelo menos 4 caracteres!'); return; }
+    db.usuarios.push({ id: uid(), nome, login, senha, perfil, equipe, dataCadastro: new Date().toISOString() });
   }
-  saveData(); closeModal('modal-user'); renderUsuarios(); showToast('Usuário salvo!');
+  saveData(); closeModal('modal-user'); renderUsuarios(); updateVendedorSelects(); showToast('Usuário salvo!');
 }
-function deletarUsuario(id) { if(confirm('Remover usuário?')) { db.usuarios = db.usuarios.filter(u => u.id !== id); saveData(); renderUsuarios(); showToast('Usuário removido!'); } }
+function deletarUsuario(id) { if(confirm('Remover usuário permanentemente?')) { db.usuarios = db.usuarios.filter(u => u.id !== id); saveData(); renderUsuarios(); updateVendedorSelects(); showToast('Usuário removido!'); } }
+function updateVendedorSelects() {
+  let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+  let selects = ['lead-vendedor', 'meta-vendedor'];
+  selects.forEach(id => {
+    let sel = document.getElementById(id);
+    if(sel) {
+      let currentVal = sel.value;
+      sel.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}" ${v === currentVal ? 'selected' : ''}>${v}</option>`).join('');
+    }
+  });
+}
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
@@ -731,7 +755,6 @@ function renderDashboard() {
   document.getElementById('stat-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
   document.getElementById('stat-conversao').innerText = `${conversao}%`;
   
-  // Jornada steps
   let etapasCount = { Captação: 0, Agendamento: 0, Apresentação: 0, Negociação: 0, Fechamento: 0 };
   db.leads.forEach(l => {
     if (l.status === 'Fechado') etapasCount.Fechamento++;
@@ -740,27 +763,20 @@ function renderDashboard() {
     else if (l.pipeline === 'Agendamento') etapasCount.Agendamento++;
     else etapasCount.Captação++;
   });
-  document.getElementById('jornada-steps').innerHTML = JORNADA_ETAPAS.map(etapa => `<div class="step ${etapasCount[etapa] > 0 ? 'completed' : 'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join('');
+  document.getElementById('jornada-steps').innerHTML = ['Captação', 'Agendamento', 'Apresentação', 'Negociação', 'Fechamento'].map(etapa => `<div class="step ${etapasCount[etapa] > 0 ? 'completed' : 'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join('');
   
-  // Gráfico metas
   let totalMeta = db.metaGlobal.adesao;
   let totalRealizado = db.vendas.reduce((s,v) => s + v.adesao, 0);
   let aRealizar = totalMeta - totalRealizado;
   if(charts.metas) charts.metas.destroy();
   let ctx = document.getElementById('metas-chart')?.getContext('2d');
   if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#10b981', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
-  
-  // Top 5 produtos
-  let vendasPorProduto = {};
-  db.vendas.forEach(v => { vendasPorProduto[v.produto] = (vendasPorProduto[v.produto] || 0) + v.adesao; });
-  let topProdutos = Object.entries(vendasPorProduto).sort((a,b) => b[1] - a[1]).slice(0, 5);
-  document.getElementById('top-produtos').innerHTML = `<div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Receita</th></tr></thead><tbody>${topProdutos.map(p => `<tr><td>${p[0]}</td><td>R$ ${p[1].toLocaleString('pt-BR')}</td></tr>`).join('') || '<td><td colspan="2">Nenhuma venda registrada</td></td>'}</tbody></table></div>`;
 }
 
 // ==================== UTILIDADES ====================
-function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); }
+function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; }
+function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); }
 
 loadData();
 </script>
