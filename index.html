@@ -196,15 +196,15 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast 2026</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><td><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Data</th></tr></thead><tbody id="forecast-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Data</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- REMARKETING -->
       <div id="page-remarketing" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Remarketing</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
+          <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail para Todos</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th><tr></thead><tbody id="remarketing-table"></tbody></table></div>
         </div>
       </div>
 
@@ -251,14 +251,14 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th></tr></thead><tbody id="relatorio-table"></tbody><table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- USUÁRIOS -->
       <div id="page-usuarios" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
+          <div class="card-header"><h3 class="card-title">Usuários do Sistema</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
           <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
         </div>
       </div>
@@ -319,11 +319,18 @@ const LEADS_EXEMPLO = [
   { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@gessouniao.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
+// REMARKETING EXEMPLO
+const REMARKETING_EXEMPLO = [
+  { id: 'r1', empresa: 'Cliente Perdido A', contato: 'João', email: 'joao@perdido.com', categoria: 'Não Prospectado', motivo: 'Não demonstrou interesse', data: new Date().toISOString().split('T')[0] },
+  { id: 'r2', empresa: 'Cliente Perdido B', contato: 'Maria', email: 'maria@perdido.com', categoria: 'Não Avançou', motivo: 'Cancelou reunião', data: new Date().toISOString().split('T')[0] },
+  { id: 'r3', empresa: 'Cliente Perdido C', contato: 'Pedro', email: 'pedro@perdido.com', categoria: 'Desistiu', motivo: 'Preço acima do orçamento', data: new Date().toISOString().split('T')[0] }
+];
+
 let db = {
   leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
   vendas: [],
   agenda: [],
-  remarketing: [],
+  remarketing: JSON.parse(JSON.stringify(REMARKETING_EXEMPLO)),
   metas: [],
   metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
   produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
@@ -335,7 +342,7 @@ let db = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function saveData() { localStorage.setItem('prospectflow_db', JSON.stringify(db)); }
-function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || []; db.remarketing = p.remarketing || []; db.metas = p.metas || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || []; db.remarketing = p.remarketing || REMARKETING_EXEMPLO; db.metas = p.metas || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -400,6 +407,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</td></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
@@ -412,7 +420,7 @@ function renderLeads() {
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')" title="Avançar"><i class="fas fa-arrow-right"></i></button>
           <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('') || '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>';
+  </tr>`).join('');
 }
 function openLeadModal() {
   document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
@@ -434,7 +442,7 @@ function openLeadEdit(id) {
   document.getElementById('modal-lead').dataset.editId = id; openModal('modal-lead');
 }
 function avancarEtapa(leadId) {
-  let lead = db.leads.find(l => l.id === leadId); if(!lead) return;
+  let lead = db.leads.find(l => l.id === leadId); if(!l) return;
   if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
     lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; showToast('Lead → Agendamento!'); openAgendaModal(leadId);
   } else if(lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; showToast('Apresentação confirmada!');
@@ -447,7 +455,7 @@ function avancarEtapa(leadId) {
   saveData(); renderLeads(); renderPipeline(); renderDashboard(); renderMetas();
 }
 function descartarLead(id) {
-  let lead = db.leads.find(l => l.id === id); if(!lead) return;
+  let lead = db.leads.find(l => l.id === id); if(!l) return;
   let categoria = lead.status === 'Oportunidade' ? 'Não Prospectado' : (lead.pipeline === 'Agendamento' || lead.pipeline === 'Apresentação') ? 'Não Avançou' : 'Desistiu';
   db.remarketing.push({ id: uid(), empresa: lead.empresa, contato: lead.contato, email: lead.email, categoria: categoria, motivo: 'Descartado em ' + (lead.pipeline || lead.status), data: new Date().toISOString().split('T')[0], leadId: lead.id });
   lead.status = 'Descartado'; lead.pipeline = 'Descartado';
@@ -460,6 +468,7 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</td></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
@@ -467,7 +476,7 @@ function renderPipeline() {
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor || '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span></tr>';
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -476,7 +485,8 @@ function renderAgenda() {
   let agenda = db.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
   let el = document.getElementById('agenda-list');
   if(!el) return;
-  el.innerHTML = agenda.map(a => `<div style="padding:12px; border-bottom:1px solid #e2e8f0"><strong>${a.empresa}</strong> - ${a.data} às ${a.hora}<br><small>Vendedor: ${a.vendedor}</small></div>`).join('') || '<div style="text-align:center; padding:20px">Sem agendamentos</div>';
+  if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Sem agendamentos</div>'; return; }
+  el.innerHTML = agenda.map(a => `<div style="padding:12px; border-bottom:1px solid #e2e8f0"><strong>${a.empresa}</strong> - ${a.data} às ${a.hora}<br><small>Vendedor: ${a.vendedor}</small></div>`).join('');
 }
 function openAgendaModal(leadId) {
   let leads = db.leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
@@ -503,6 +513,7 @@ function renderMetas() {
   let tb = document.getElementById('metas-table');
   if(tb) {
     let vendedores = [...new Set([...db.leads.map(l => l.vendedor).filter(Boolean), ...db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome)])];
+    if(vendedores.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</td></tr>'; return; }
     tb.innerHTML = vendedores.map(v => {
       let meta = db.metas.find(m => m.vendedor === v) || { adesao: 0, mensalidade: 0 };
       let realizado = vendasPorVendedor[v] || 0;
@@ -516,11 +527,12 @@ function renderMetas() {
         <td><button class="btn btn-outline btn-sm" onclick="editarMeta('${v}')"><i class="fas fa-edit"></i></button>
               <button class="btn btn-danger btn-sm" onclick="deletarMeta('${v}')"><i class="fas fa-trash"></i></button></span></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span></tr>';
+    }).join('');
   }
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
     let vendedores = [...new Set([...db.leads.map(l => l.vendedor).filter(Boolean), ...db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome)])];
+    if(vendedores.length === 0) { prodTb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</td></tr>'; return; }
     prodTb.innerHTML = vendedores.map(v => {
       let leadsV = db.leads.filter(l => l.vendedor === v);
       let vendasV = db.vendas.filter(vd => vd.vendedor === v);
@@ -559,6 +571,7 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado no forecast</td></tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor || '—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -567,7 +580,7 @@ function renderForecast() {
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ${l.pipeline === 'Fechamento' ? 'tag-success' : 'tag-warning'}">${l.pipeline || 'Lead'}</span></td>
     <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhum dado</span></tr>';
+  </tr>`).join('');
 }
 function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filter(l => l.pipeline).map(l => ({ Vendedor: l.vendedor, Empresa: l.empresa, Produto: l.produto, Adesão: l.adesao, Mensalidade: l.mensalidade, Etapa: l.pipeline }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
 
@@ -575,16 +588,18 @@ function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filt
 function renderRemarketing() {
   let tb = document.getElementById('remarketing-table');
   if(!tb) return;
+  if(db.remarketing.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead em remarketing</td></tr>'; return; }
   tb.innerHTML = db.remarketing.map(r => `<tr>
     <td><strong>${r.empresa}</strong></td>
     <td>${r.contato || '—'}</td>
     <td>${r.email || '—'}</td>
     <td><span class="tag ${r.categoria === 'Não Prospectado' ? 'tag-info' : r.categoria === 'Não Avançou' ? 'tag-warning' : 'tag-danger'}">${r.categoria}</span></td>
+    <td>${r.motivo || '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="enviarEmailRemarketing('${r.id}')"><i class="fas fa-envelope"></i> Enviar</button></td>
-  <tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhum lead</span></tr>';
+  </td>`).join('');
 }
 function enviarEmailRemarketing(id) { let r = db.remarketing.find(r => r.id === id); if(r && r.email) { enviarEmail(r.email, `Reativação - ${r.empresa}`, `Olá ${r.contato || r.empresa},\n\nVamos retomar o contato!`); showToast(`Email enviado`); } }
-function sendMarketingEmail() { let rm = db.remarketing.filter(r => r.email); rm.forEach(r => enviarEmail(r.email, `Oportunidade`, `Olá ${r.empresa},\n\nTemos novidades!`)); showToast(`Enviado para ${rm.length} leads`); }
+function sendMarketingEmail() { let rm = db.remarketing.filter(r => r.email); if(rm.length === 0) { showToast('Nenhum lead com email'); return; } rm.forEach(r => enviarEmail(r.email, `Oportunidade`, `Olá ${r.empresa},\n\nTemos novidades!`)); showToast(`Enviado para ${rm.length} leads`); }
 
 // ==================== CAMPANHAS ====================
 function renderCampanhas() {
@@ -620,14 +635,15 @@ function handleImport(e) { let f = e.target.files[0]; if(!f) return; let r = new
 
 // ==================== E-MAILS ====================
 function enviarEmail(to, subject, body) { let hist = { id: uid(), to, subject, body, data: new Date().toISOString() }; db.emailHist.unshift(hist); saveData(); renderEmailHistory(); return true; }
-function sendBulkEmail() { let subject = document.getElementById('email-subject').value; let body = document.getElementById('email-body').value; if(!subject || !body){ showToast('Preencha assunto e mensagem!'); return; } let leads = db.leads.filter(l => l.email && l.status !== 'Descartado'); leads.forEach(l => enviarEmail(l.email, subject, body.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)'))); showToast(`Enviado para ${leads.length} leads`); }
-function renderEmailHistory() { let el = document.getElementById('email-history'); if(!el) return; el.innerHTML = db.emailHist.slice(0,20).map(h => `<div style="padding:10px; border-bottom:1px solid #e2e8f0"><strong>${h.subject}</strong><br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div style="text-align:center; padding:20px">Nenhum e-mail</div>'; }
+function sendBulkEmail() { let subject = document.getElementById('email-subject').value; let body = document.getElementById('email-body').value; if(!subject || !body){ showToast('Preencha assunto e mensagem!'); return; } let leads = db.leads.filter(l => l.email && l.status !== 'Descartado'); if(leads.length === 0) { showToast('Nenhum lead com email'); return; } leads.forEach(l => enviarEmail(l.email, subject, body.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)'))); showToast(`Enviado para ${leads.length} leads`); }
+function renderEmailHistory() { let el = document.getElementById('email-history'); if(!el) return; if(db.emailHist.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Nenhum e-mail enviado</div>'; return; } el.innerHTML = db.emailHist.slice(0,20).map(h => `<div style="padding:10px; border-bottom:1px solid #e2e8f0"><strong>${h.subject}</strong><br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join(''); }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
   let tb = document.getElementById('relatorio-table');
   if(!tb) return;
   let allData = [...db.vendas, ...db.leads.filter(l => l.pipeline).slice(0, 30)];
+  if(allData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</span></tr>'; return; }
   tb.innerHTML = allData.map(item => `<tr>
     <td>${item.data || new Date(item.createdAt).toLocaleDateString('pt-BR')}</span><td>${item.vendedor || '—'}</span><td><strong>${item.empresa}</strong></span><td>${item.produto || '—'}</span><td>R$ ${(item.adesao || 0).toLocaleString('pt-BR')}</span><td>R$ ${(item.mensalidade || 0).toLocaleString('pt-BR')}</span><td><span class="tag ${item.status === 'Fechado' ? 'tag-success' : 'tag-warning'}">${item.status || item.pipeline || 'Lead'}</span></span></td>
   </tr>`).join('');
@@ -639,6 +655,7 @@ function exportRelatorioPDF() { let win = window.open('', '_blank'); win.documen
 function renderUsuarios() {
   let tb = document.getElementById('users-table');
   if(!tb) return;
+  if(db.usuarios.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center">Nenhum usuário cadastrado</span></table>'; return; }
   tb.innerHTML = db.usuarios.map(u => `<tr>
     <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
     <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
