@@ -147,6 +147,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
         </div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-simple"></i> Ranking de Vendedores</h3></div><div id="ranking-vendedores"></div></div>
       </div>
 
       <!-- LEADS -->
@@ -168,7 +169,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
             <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -183,12 +184,12 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <!-- METAS -->
       <div id="page-metas" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>% Atingido</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="card-header"><h3 class="card-title">Configuração de Metas</h3><div><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()"><i class="fas fa-globe"></i> Meta Global</button><button class="btn btn-outline btn-sm" onclick="openMetaProdutoModal()"><i class="fas fa-box"></i> Meta por Produto</button><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()"><i class="fas fa-user"></i> Meta por Vendedor</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Tipo</th><th>Nome</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Total Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Total Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Adesão (R$)</th><th>Mensalidade (R$)</th><th>Meta Atingida</th></tr></thead><tbody id="produtividade-table"></tbody><tr></div>
         </div>
       </div>
 
@@ -204,7 +205,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-remarketing" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail para Todos</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th><tr></thead><tbody id="remarketing-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
         </div>
       </div>
 
@@ -271,9 +272,11 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-meta" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Individual</h3><button onclick="closeModal('modal-meta')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta')">Cancelar</button><button class="btn btn-primary" onclick="saveMeta()">Salvar</button></div></div></div>
+<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="meta-vendedor-produto"><option value="todos">Todos os produtos</option></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-vendedor-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-vendedor-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-vendedor-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
-<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
+<div id="modal-meta-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Produto</h3><button onclick="closeModal('modal-meta-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Produto</label><select class="form-select" id="meta-produto-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-produto-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-produto-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-produto-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaProduto()">Salvar</button></div></div></div>
+
+<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div><div class="form-group"><label>Distribuir automaticamente entre vendedores?</label><select class="form-select" id="global-distribuir"><option value="sim">Sim - Distribuir igualmente</option><option value="nao">Não - Apenas meta global</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
 <div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Promocional</option><option>Seasonal</option><option>Lançamento</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>Produto</label><select class="form-select" id="camp-produto"></select></div><div class="form-group"><label>Meta (R$)</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
@@ -296,11 +299,7 @@ const PRODUTOS_PADRAO = [
   { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 0, mensalidade: 0 },
   { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 0, mensalidade: 0 },
   { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 0, mensalidade: 0 },
-  { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 0, mensalidade: 0 },
-  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 0, mensalidade: 0 },
-  { id: 'p7', nome: 'E-commerce Tray', categoria: 'E-commerce', adesao: 0, mensalidade: 0 },
-  { id: 'p8', nome: 'E-commerce Instabuy', categoria: 'E-commerce', adesao: 0, mensalidade: 0 },
-  { id: 'p9', nome: 'MD-e', categoria: 'Fiscal', adesao: 0, mensalidade: 0 }
+  { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 0, mensalidade: 0 }
 ];
 
 // USUÁRIOS PADRÃO
@@ -331,8 +330,9 @@ let db = {
   vendas: [],
   agenda: [],
   remarketing: JSON.parse(JSON.stringify(REMARKETING_EXEMPLO)),
-  metas: [],
-  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
+  metasVendedor: [],
+  metasProduto: [],
+  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026', distribuir: 'sim' },
   produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
   campanhas: [],
   emailHist: [],
@@ -342,7 +342,23 @@ let db = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function saveData() { localStorage.setItem('prospectflow_db', JSON.stringify(db)); }
-function loadData() { let d = localStorage.getItem('prospectflow_db'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || []; db.remarketing = p.remarketing || REMARKETING_EXEMPLO; db.metas = p.metas || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+function loadData() { 
+  let d = localStorage.getItem('prospectflow_db'); 
+  if(d) { 
+    let p = JSON.parse(d); 
+    db.leads = p.leads || LEADS_EXEMPLO; 
+    db.vendas = p.vendas || []; 
+    db.agenda = p.agenda || []; 
+    db.remarketing = p.remarketing || REMARKETING_EXEMPLO; 
+    db.metasVendedor = p.metasVendedor || []; 
+    db.metasProduto = p.metasProduto || []; 
+    db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026', distribuir: 'sim' }; 
+    db.produtos = p.produtos || PRODUTOS_PADRAO; 
+    db.campanhas = p.campanhas || []; 
+    db.emailHist = p.emailHist || []; 
+    db.usuarios = p.usuarios || USUARIOS_PADRAO; 
+  } 
+}
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -395,10 +411,21 @@ function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purp
 function getPipelineTag(p) { if(!p) return '—'; let m = { Agendamento:'tag-warning', Apresentação:'tag-info', Negociação:'tag-purple', Fechamento:'tag-success' }; return `<span class="tag ${m[p] || 'tag-info'}">${p}</span>`; }
 function updateVendedorSelects() {
   let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
-  ['lead-vendedor', 'meta-vendedor'].forEach(id => {
-    let sel = document.getElementById(id);
-    if(sel) { let currentVal = sel.value; sel.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}" ${v === currentVal ? 'selected' : ''}>${v}</option>`).join(''); }
-  });
+  let selVendedor = document.getElementById('lead-vendedor');
+  if(selVendedor) selVendedor.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+  let selMetaVendedor = document.getElementById('meta-vendedor-nome');
+  if(selMetaVendedor) selMetaVendedor.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+}
+function updateProdutoSelects() {
+  let produtos = db.produtos.map(p => p.nome);
+  let selProdutoLead = document.getElementById('lead-produto');
+  if(selProdutoLead) selProdutoLead.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+  let selProdutoMeta = document.getElementById('meta-produto-nome');
+  if(selProdutoMeta) selProdutoMeta.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+  let selProdutoMetaVendedor = document.getElementById('meta-vendedor-produto');
+  if(selProdutoMetaVendedor) selProdutoMetaVendedor.innerHTML = '<option value="todos">Todos os produtos</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+  let selCampanhaProduto = document.getElementById('camp-produto');
+  if(selCampanhaProduto) selCampanhaProduto.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
 }
 
 // ==================== LEADS ====================
@@ -407,7 +434,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</td></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span><tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
@@ -424,7 +451,7 @@ function renderLeads() {
 }
 function openLeadModal() {
   document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
-  let selProduto = document.getElementById('lead-produto'); selProduto.innerHTML = '<option value="">Selecione</option>' + db.produtos.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
+  updateProdutoSelects();
   updateVendedorSelects();
   openModal('modal-lead');
 }
@@ -436,8 +463,9 @@ function saveLead() {
 function openLeadEdit(id) {
   let l = db.leads.find(l => l.id === id); if(!l) return;
   document.getElementById('lead-empresa').value = l.empresa; document.getElementById('lead-contato').value = l.contato || ''; document.getElementById('lead-email').value = l.email || ''; document.getElementById('lead-telefone').value = l.telefone || ''; document.getElementById('lead-cidade').value = l.cidade || ''; document.getElementById('lead-uf').value = l.uf || ''; document.getElementById('lead-segmento').value = l.segmento || ''; document.getElementById('lead-adesao').value = l.adesao; document.getElementById('lead-mensalidade').value = l.mensalidade;
-  let selProduto = document.getElementById('lead-produto'); selProduto.innerHTML = '<option value="">Selecione</option>' + db.produtos.map(p => `<option value="${p.nome}" ${p.nome === l.produto ? 'selected' : ''}>${p.nome}</option>`).join('');
+  updateProdutoSelects();
   updateVendedorSelects();
+  let selProduto = document.getElementById('lead-produto'); if(selProduto && l.produto) selProduto.value = l.produto;
   let selVendedor = document.getElementById('lead-vendedor'); if(selVendedor && l.vendedor) selVendedor.value = l.vendedor;
   document.getElementById('modal-lead').dataset.editId = id; openModal('modal-lead');
 }
@@ -468,7 +496,7 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</td></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
@@ -508,35 +536,86 @@ function saveAgenda() {
 // ==================== METAS ====================
 function renderMetas() {
   let vendas = db.vendas;
-  let vendasPorVendedor = {};
-  vendas.forEach(v => { vendasPorVendedor[v.vendedor] = (vendasPorVendedor[v.vendedor] || 0) + v.adesao; });
+  let mesAtual = 'Janeiro/2026';
+  
+  // Calcula realizado por vendedor e por produto
+  let realizadoPorVendedor = {};
+  let realizadoPorProduto = {};
+  vendas.forEach(v => {
+    if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0, mensalidade: 0 };
+    realizadoPorVendedor[v.vendedor].adesao += v.adesao;
+    realizadoPorVendedor[v.vendedor].mensalidade += v.mensalidade;
+    if(!realizadoPorProduto[v.produto]) realizadoPorProduto[v.produto] = { adesao: 0, mensalidade: 0 };
+    realizadoPorProduto[v.produto].adesao += v.adesao;
+    realizadoPorProduto[v.produto].mensalidade += v.mensalidade;
+  });
+  
+  // Tabela de Metas
   let tb = document.getElementById('metas-table');
   if(tb) {
-    let vendedores = [...new Set([...db.leads.map(l => l.vendedor).filter(Boolean), ...db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome)])];
-    if(vendedores.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</td></tr>'; return; }
-    tb.innerHTML = vendedores.map(v => {
-      let meta = db.metas.find(m => m.vendedor === v) || { adesao: 0, mensalidade: 0 };
-      let realizado = vendasPorVendedor[v] || 0;
-      let pct = meta.adesao > 0 ? Math.round(realizado / meta.adesao * 100) : 0;
-      return `<tr>
-        <td><strong>${v}</strong></td>
-        <td>R$ ${meta.adesao.toLocaleString('pt-BR')}</td>
-        <td>R$ ${meta.mensalidade.toLocaleString('pt-BR')}</td>
-        <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
-        <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
-        <td><button class="btn btn-outline btn-sm" onclick="editarMeta('${v}')"><i class="fas fa-edit"></i></button>
-              <button class="btn btn-danger btn-sm" onclick="deletarMeta('${v}')"><i class="fas fa-trash"></i></button></span></td>
-      </tr>`;
-    }).join('');
+    let metasHtml = '';
+    
+    // Metas por Vendedor
+    metasHtml += `<tr style="background:#f1f5f9"><td colspan="9"><strong>📊 Metas por Vendedor</strong></td></tr>`;
+    if(db.metasVendedor.length === 0) {
+      metasHtml += `<tr><td colspan="9" style="text-align:center">Nenhuma meta por vendedor cadastrada</td></tr>`;
+    } else {
+      db.metasVendedor.forEach(m => {
+        let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0, mensalidade: 0 };
+        let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
+        metasHtml += `<tr>
+          <td>Vendedor</td>
+          <td><strong>${m.vendedor}</strong></td>
+          <td>${m.produto || 'Todos'}</td>
+          <td>R$ ${m.adesao.toLocaleString('pt-BR')}</td>
+          <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
+          <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
+          <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
+          <td>${m.mes}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="editarMetaVendedor('${m.id}')"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+      });
+    }
+    
+    // Metas por Produto
+    metasHtml += `<tr style="background:#f1f5f9"><td colspan="9"><strong>📦 Metas por Produto</strong></td></tr>`;
+    if(db.metasProduto.length === 0) {
+      metasHtml += `<tr><td colspan="9" style="text-align:center">Nenhuma meta por produto cadastrada</td></tr>`;
+    } else {
+      db.metasProduto.forEach(m => {
+        let realizado = realizadoPorProduto[m.produto] || { adesao: 0, mensalidade: 0 };
+        let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
+        metasHtml += `<tr>
+          <td>Produto</td>
+          <td><strong>${m.produto}</strong></td>
+          <td>-</td>
+          <td>R$ ${m.adesao.toLocaleString('pt-BR')}</td>
+          <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
+          <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
+          <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
+          <td>${m.mes}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="editarMetaProduto('${m.id}')"><i class="fas fa-edit"></i></button>
+              <button class="btn btn-danger btn-sm" onclick="deletarMetaProduto('${m.id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+      });
+    }
+    
+    tb.innerHTML = metasHtml;
   }
+  
+  // Produtividade por Vendedor
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
-    let vendedores = [...new Set([...db.leads.map(l => l.vendedor).filter(Boolean), ...db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome)])];
-    if(vendedores.length === 0) { prodTb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</td></tr>'; return; }
+    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    if(vendedores.length === 0) { prodTb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum vendedor cadastrado</span></table>'; return; }
     prodTb.innerHTML = vendedores.map(v => {
       let leadsV = db.leads.filter(l => l.vendedor === v);
       let vendasV = db.vendas.filter(vd => vd.vendedor === v);
-      let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
+      let receitaAdesao = vendasV.reduce((s,vd) => s + vd.adesao, 0);
+      let receitaMens = vendasV.reduce((s,vd) => s + vd.mensalidade, 0);
+      let metaV = db.metasVendedor.find(m => m.vendedor === v && m.mes === 'Janeiro/2026');
+      let metaAtingida = metaV ? (receitaAdesao >= metaV.adesao ? 'Sim' : 'Não') : 'Sem meta';
       return `<tr>
         <td><strong>${v}</strong></td>
         <td>${leadsV.length}</span></td>
@@ -544,34 +623,143 @@ function renderMetas() {
         <td>${leadsV.filter(l => l.pipeline === 'Apresentação').length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
         <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
-        <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
+        <td>R$ ${receitaAdesao.toLocaleString('pt-BR')}</span></td>
+        <td>R$ ${receitaMens.toLocaleString('pt-BR')}</span></td>
+        <td><span class="tag ${metaAtingida === 'Sim' ? 'tag-success' : metaAtingida === 'Não' ? 'tag-danger' : 'tag-info'}">${metaAtingida}</span></td>
       </tr>`;
     }).join('');
   }
 }
-function openMetaModal() { updateVendedorSelects(); document.getElementById('meta-adesao').value = ''; document.getElementById('meta-mensalidade').value = ''; openModal('modal-meta'); }
-function saveMeta() {
-  let meta = { vendedor: document.getElementById('meta-vendedor').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, mes: document.getElementById('meta-mes').value };
+
+// Metas por Vendedor
+function openMetaVendedorModal() { 
+  updateVendedorSelects();
+  updateProdutoSelects();
+  document.getElementById('meta-vendedor-adesao').value = ''; 
+  document.getElementById('meta-vendedor-mensalidade').value = ''; 
+  openModal('modal-meta-vendedor'); 
+}
+function saveMetaVendedor() {
+  let meta = { 
+    id: uid(),
+    vendedor: document.getElementById('meta-vendedor-nome').value, 
+    produto: document.getElementById('meta-vendedor-produto').value,
+    adesao: parseFloat(document.getElementById('meta-vendedor-adesao').value) || 0, 
+    mensalidade: parseFloat(document.getElementById('meta-vendedor-mensalidade').value) || 0, 
+    mes: document.getElementById('meta-vendedor-mes').value 
+  };
   if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
-  let idx = db.metas.findIndex(m => m.vendedor === meta.vendedor && m.mes === meta.mes);
-  if(idx >= 0) db.metas[idx] = meta; else db.metas.push(meta);
-  saveData(); closeModal('modal-meta'); renderMetas(); showToast('Meta salva!');
+  db.metasVendedor.push(meta);
+  saveData(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
 }
-function editarMeta(vendedor) {
-  let meta = db.metas.find(m => m.vendedor === vendedor);
-  if(meta) { document.getElementById('meta-vendedor').value = meta.vendedor; document.getElementById('meta-adesao').value = meta.adesao; document.getElementById('meta-mensalidade').value = meta.mensalidade; document.getElementById('meta-mes').value = meta.mes || 'Janeiro/2026'; openModal('modal-meta'); }
-  else { document.getElementById('meta-vendedor').value = vendedor; document.getElementById('meta-adesao').value = ''; document.getElementById('meta-mensalidade').value = ''; openModal('modal-meta'); }
+function editarMetaVendedor(id) {
+  let meta = db.metasVendedor.find(m => m.id === id);
+  if(meta) {
+    document.getElementById('meta-vendedor-nome').value = meta.vendedor;
+    document.getElementById('meta-vendedor-produto').value = meta.produto || 'todos';
+    document.getElementById('meta-vendedor-adesao').value = meta.adesao;
+    document.getElementById('meta-vendedor-mensalidade').value = meta.mensalidade;
+    document.getElementById('meta-vendedor-mes').value = meta.mes;
+    document.getElementById('modal-meta-vendedor').dataset.editId = id;
+    openModal('modal-meta-vendedor');
+  }
 }
-function deletarMeta(vendedor) { if(confirm(`Remover meta de ${vendedor}?`)) { db.metas = db.metas.filter(m => m.vendedor !== vendedor); saveData(); renderMetas(); showToast('Meta removida!'); } }
-function openMetaGlobalModal() { document.getElementById('global-adesao').value = db.metaGlobal.adesao; document.getElementById('global-mensalidade').value = db.metaGlobal.mensalidade; openModal('modal-meta-global'); }
-function saveMetaGlobal() { db.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value) || 0, periodo: document.getElementById('global-periodo').value }; saveData(); closeModal('modal-meta-global'); renderDashboard(); showToast('Meta global salva!'); }
+function deletarMetaVendedor(id) { 
+  if(confirm('Remover esta meta?')) { 
+    db.metasVendedor = db.metasVendedor.filter(m => m.id !== id); 
+    saveData(); renderMetas(); showToast('Meta removida!'); 
+  } 
+}
+
+// Metas por Produto
+function openMetaProdutoModal() { 
+  updateProdutoSelects();
+  document.getElementById('meta-produto-adesao').value = ''; 
+  document.getElementById('meta-produto-mensalidade').value = ''; 
+  openModal('modal-meta-produto'); 
+}
+function saveMetaProduto() {
+  let meta = { 
+    id: uid(),
+    produto: document.getElementById('meta-produto-nome').value, 
+    adesao: parseFloat(document.getElementById('meta-produto-adesao').value) || 0, 
+    mensalidade: parseFloat(document.getElementById('meta-produto-mensalidade').value) || 0, 
+    mes: document.getElementById('meta-produto-mes').value 
+  };
+  if(!meta.produto){ showToast('Selecione um produto!'); return; }
+  db.metasProduto.push(meta);
+  saveData(); closeModal('modal-meta-produto'); renderMetas(); showToast('Meta salva!');
+}
+function editarMetaProduto(id) {
+  let meta = db.metasProduto.find(m => m.id === id);
+  if(meta) {
+    document.getElementById('meta-produto-nome').value = meta.produto;
+    document.getElementById('meta-produto-adesao').value = meta.adesao;
+    document.getElementById('meta-produto-mensalidade').value = meta.mensalidade;
+    document.getElementById('meta-produto-mes').value = meta.mes;
+    document.getElementById('modal-meta-produto').dataset.editId = id;
+    openModal('modal-meta-produto');
+  }
+}
+function deletarMetaProduto(id) { 
+  if(confirm('Remover esta meta?')) { 
+    db.metasProduto = db.metasProduto.filter(m => m.id !== id); 
+    saveData(); renderMetas(); showToast('Meta removida!'); 
+  } 
+}
+
+// Meta Global
+function openMetaGlobalModal() { 
+  document.getElementById('global-adesao').value = db.metaGlobal.adesao; 
+  document.getElementById('global-mensalidade').value = db.metaGlobal.mensalidade; 
+  document.getElementById('global-periodo').value = db.metaGlobal.periodo; 
+  document.getElementById('global-distribuir').value = db.metaGlobal.distribuir; 
+  openModal('modal-meta-global'); 
+}
+function saveMetaGlobal() { 
+  db.metaGlobal = { 
+    adesao: parseFloat(document.getElementById('global-adesao').value) || 0, 
+    mensalidade: parseFloat(document.getElementById('global-mensalidade').value) || 0, 
+    periodo: document.getElementById('global-periodo').value,
+    distribuir: document.getElementById('global-distribuir').value
+  }; 
+  
+  // Se distribuir automaticamente, criar metas para cada vendedor
+  if(db.metaGlobal.distribuir === 'sim') {
+    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    let metaPorVendedor = db.metaGlobal.adesao / (vendedores.length || 1);
+    let metaMensPorVendedor = db.metaGlobal.mensalidade / (vendedores.length || 1);
+    
+    // Remove metas antigas do período
+    db.metasVendedor = db.metasVendedor.filter(m => m.mes !== db.metaGlobal.periodo);
+    
+    // Adiciona novas metas
+    vendedores.forEach(v => {
+      db.metasVendedor.push({
+        id: uid(),
+        vendedor: v,
+        produto: 'todos',
+        adesao: metaPorVendedor,
+        mensalidade: metaMensPorVendedor,
+        mes: db.metaGlobal.periodo
+      });
+    });
+    showToast(`Meta distribuída para ${vendedores.length} vendedores!`);
+  }
+  
+  saveData(); 
+  closeModal('modal-meta-global'); 
+  renderDashboard(); 
+  renderMetas(); 
+  showToast('Meta global salva!'); 
+}
 
 // ==================== FORECAST ====================
 function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado no forecast</td></tr>'; return; }
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado no forecast</span></tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor || '—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -588,7 +776,7 @@ function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filt
 function renderRemarketing() {
   let tb = document.getElementById('remarketing-table');
   if(!tb) return;
-  if(db.remarketing.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead em remarketing</td></tr>'; return; }
+  if(db.remarketing.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead em remarketing</span></tr>'; return; }
   tb.innerHTML = db.remarketing.map(r => `<tr>
     <td><strong>${r.empresa}</strong></td>
     <td>${r.contato || '—'}</td>
@@ -608,14 +796,14 @@ function renderCampanhas() {
   if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha</div>'; return; }
   list.innerHTML = db.campanhas.map(c => `<div class="content-card"><div><strong>${c.nome}</strong><br><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div><div>Meta: R$ ${(c.meta || 0).toLocaleString('pt-BR')}</div></div>`).join('');
 }
-function openCampanhaModal() { let sel = document.getElementById('camp-produto'); sel.innerHTML = db.produtos.map(p => `<option value="${p.nome}">${p.nome}</option>`).join(''); openModal('modal-campanha'); }
+function openCampanhaModal() { updateProdutoSelects(); openModal('modal-campanha'); }
 function saveCampanha() { let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, produto: document.getElementById('camp-produto').value, meta: parseFloat(document.getElementById('camp-meta').value) || 0, createdAt: new Date().toISOString() }; if(!camp.nome){ showToast('Informe o nome!'); return; } db.campanhas.push(camp); saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!'); }
 
 // ==================== PRODUTOS ====================
 function renderProdutos() {
   let tb = document.getElementById('produtos-table');
   if(!tb) return;
-  tb.innerHTML = db.produtos.map(p => `<tr>
+  tb.innerHTML = db.produtos.map(p => `<td>
     <td><strong>${p.nome}</strong></td>
     <td>${p.categoria}</span></td>
     <td>R$ ${(p.adesao || 0).toLocaleString('pt-BR')}</span></td>
@@ -625,9 +813,9 @@ function renderProdutos() {
   </tr>`).join('');
 }
 function openProdutoModal() { document.getElementById('produto-nome').value = ''; document.getElementById('produto-adesao').value = ''; document.getElementById('produto-mensalidade').value = ''; openModal('modal-produto'); }
-function saveProduto() { let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0 }; if(!produto.nome){ showToast('Informe o nome!'); return; } db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!'); }
+function saveProduto() { let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0 }; if(!produto.nome){ showToast('Informe o nome!'); return; } db.produtos.push(produto); saveData(); closeModal('modal-produto'); updateProdutoSelects(); renderProdutos(); showToast('Produto criado!'); }
 function editarProduto(id) { let p = db.produtos.find(p => p.id === id); if(p) { document.getElementById('produto-nome').value = p.nome; document.getElementById('produto-adesao').value = p.adesao; document.getElementById('produto-mensalidade').value = p.mensalidade; document.getElementById('modal-produto').dataset.editId = id; openModal('modal-produto'); } }
-function deletarProduto(id) { if(confirm('Remover produto?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); showToast('Produto removido!'); } }
+function deletarProduto(id) { if(confirm('Remover produto?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); updateProdutoSelects(); renderProdutos(); showToast('Produto removido!'); } }
 
 // ==================== IMPORTAR ====================
 function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
@@ -643,7 +831,7 @@ function renderRelatorios() {
   let tb = document.getElementById('relatorio-table');
   if(!tb) return;
   let allData = [...db.vendas, ...db.leads.filter(l => l.pipeline).slice(0, 30)];
-  if(allData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</span></tr>'; return; }
+  if(allData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum dado disponível</span><tr>'; return; }
   tb.innerHTML = allData.map(item => `<tr>
     <td>${item.data || new Date(item.createdAt).toLocaleDateString('pt-BR')}</span><td>${item.vendedor || '—'}</span><td><strong>${item.empresa}</strong></span><td>${item.produto || '—'}</span><td>R$ ${(item.adesao || 0).toLocaleString('pt-BR')}</span><td>R$ ${(item.mensalidade || 0).toLocaleString('pt-BR')}</span><td><span class="tag ${item.status === 'Fechado' ? 'tag-success' : 'tag-warning'}">${item.status || item.pipeline || 'Lead'}</span></span></td>
   </tr>`).join('');
@@ -655,14 +843,14 @@ function exportRelatorioPDF() { let win = window.open('', '_blank'); win.documen
 function renderUsuarios() {
   let tb = document.getElementById('users-table');
   if(!tb) return;
-  if(db.usuarios.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center">Nenhum usuário cadastrado</span></table>'; return; }
+  if(db.usuarios.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center">Nenhum usuário cadastrado</span></td>'; return; }
   tb.innerHTML = db.usuarios.map(u => `<tr>
     <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
     <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
     <td>${u.equipe || '—'}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
           ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</span></td>
-  </tr>`).join('');
+  </td>`).join('');
 }
 function openUserModal() { document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('user-perfil').value = 'Consultor'; document.getElementById('user-equipe').value = 'Comercial'; delete document.getElementById('modal-user').dataset.editId; openModal('modal-user'); }
 function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); } }
@@ -716,12 +904,20 @@ function renderDashboard() {
   if(charts.metas) charts.metas.destroy();
   let ctx = document.getElementById('metas-chart')?.getContext('2d');
   if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#10b981', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
+  
+  // Ranking de Vendedores
+  let ranking = [...new Set(db.vendas.map(v => v.vendedor).filter(Boolean))].map(v => {
+    let total = db.vendas.filter(vd => vd.vendedor === v).reduce((s,vd) => s + vd.adesao, 0);
+    return { vendedor: v, total };
+  }).sort((a,b) => b.total - a.total).slice(0,5);
+  
+  document.getElementById('ranking-vendedores').innerHTML = `<div class="table-container"><table class="data-table"><thead><tr><th>Posição</th><th>Vendedor</th><th>Receita Total</th></tr></thead><tbody>${ranking.map((r,i) => `<tr><td>${i+1}º</td><td><strong>${r.vendedor}</strong></td><td>R$ ${r.total.toLocaleString('pt-BR')}</td></tr>`).join('') || '</table><td colspan="3">Nenhuma venda registrada</td></tr>'}</tbody></table></div>`;
 }
 
 // ==================== UTILIDADES ====================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; }
-function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-meta-vendedor')?.dataset?.editId; delete document.getElementById('modal-meta-produto')?.dataset?.editId; }
+function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
 
 loadData();
 </script>
