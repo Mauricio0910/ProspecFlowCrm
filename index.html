@@ -109,21 +109,23 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
 .step.completed { background: var(--ren-success); color: white; }
 .step.pending { background: #e9ecef; color: #666; }
 .qr-code-container { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; margin-top: 16px; }
-.landing-page-preview { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-top: 16px; }
 </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN - Cores RenSoftware -->
+<!-- TELA DE LOGIN -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-card">
     <div class="auth-icon"><i class="fas fa-cloud-upload-alt"></i></div>
     <h1 class="auth-title">RenSoftware CRM</h1>
     <p class="auth-sub">Sistema profissional de gestão de vendas</p>
     <div id="auth-error" style="display:none; background:#ffebee; color:#dc3545; padding:10px; border-radius:12px; margin-bottom:16px"></div>
-    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
-    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
+    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário">
+    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha">
     <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
+    <div style="margin-top: 16px; font-size: 12px; color: #999;">
+      <i class="fas fa-info-circle"></i> admin / 1234
+    </div>
   </div>
 </div>
 
@@ -174,7 +176,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
@@ -188,7 +190,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
             <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></td></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
@@ -220,7 +222,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- CAMPANHAS com Landing Pages e QR Code -->
+      <!-- CAMPANHAS -->
       <div id="page-campanhas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
@@ -232,7 +234,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></td></thead><tbody id="produtos-table"></tbody><tr></div>
         </div>
       </div>
 
@@ -263,7 +265,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></td></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
@@ -271,7 +273,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody><tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
         </div>
       </div>
     </div>
@@ -302,6 +304,14 @@ let currentPipelineStage = 'Agendamento';
 let charts = {};
 let sidebarCollapsed = false;
 
+// USUÁRIOS PADRÃO - Definidos diretamente para garantir login
+const USUARIOS_PADRAO = [
+  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor' },
+  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor' },
+  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor' },
+  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor' }
+];
+
 // PRODUTOS PADRÃO
 const PRODUTOS_PADRAO = [
   { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
@@ -309,16 +319,7 @@ const PRODUTOS_PADRAO = [
   { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
   { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 },
   { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 3500, mensalidade: 700 },
-  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 4500, mensalidade: 900 },
-  { id: 'p7', nome: 'E-commerce Tray', categoria: 'E-commerce', adesao: 8000, mensalidade: 1500 }
-];
-
-// USUÁRIOS PADRÃO
-const USUARIOS_PADRAO = [
-  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor' },
-  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor' },
-  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor' },
-  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor' }
+  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 4500, mensalidade: 900 }
 ];
 
 // LEADS EXEMPLO
@@ -349,7 +350,21 @@ let db = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function saveData() { localStorage.setItem('rensoftware_data', JSON.stringify(db)); }
-function loadData() { let d = localStorage.getItem('rensoftware_data'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || AGENDA_EXEMPLO; db.metasVendedor = p.metasVendedor || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+function loadData() { 
+  let d = localStorage.getItem('rensoftware_data'); 
+  if(d) { 
+    let p = JSON.parse(d); 
+    db.leads = p.leads || LEADS_EXEMPLO; 
+    db.vendas = p.vendas || []; 
+    db.agenda = p.agenda || AGENDA_EXEMPLO; 
+    db.metasVendedor = p.metasVendedor || []; 
+    db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; 
+    db.produtos = p.produtos || PRODUTOS_PADRAO; 
+    db.campanhas = p.campanhas || []; 
+    db.emailHist = p.emailHist || []; 
+    db.usuarios = p.usuarios || USUARIOS_PADRAO; 
+  } 
+}
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -362,8 +377,18 @@ function toggleSidebar() {
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
+  
+  console.log('Tentando login com:', login, senha);
+  console.log('Usuários disponíveis:', db.usuarios);
+  
   let user = db.usuarios.find(u => u.login === login && u.senha === senha);
-  if (!user) { document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin/1234'; document.getElementById('auth-error').style.display = 'block'; return; }
+  
+  if (!user) { 
+    document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin / 1234';
+    document.getElementById('auth-error').style.display = 'block'; 
+    return; 
+  }
+  
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-main').style.display = 'block';
@@ -372,7 +397,13 @@ function doLogin() {
   renderAll();
   showToast(`Bem-vindo, ${user.nome}!`);
 }
-function doLogout() { currentUser = null; document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('app-main').style.display = 'none'; }
+function doLogout() { 
+  currentUser = null; 
+  document.getElementById('auth-screen').style.display = 'flex'; 
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('auth-user').value = '';
+  document.getElementById('auth-pass').value = '';
+}
 function goToPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   let target = document.getElementById(`page-${page}`);
@@ -419,7 +450,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></td>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
@@ -497,7 +528,7 @@ function renderPipeline() {
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
   if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
-  tb.innerHTML = leads.map(l => `<tr>
+  tb.innerHTML = leads.map(l => `<td>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
@@ -505,7 +536,7 @@ function renderPipeline() {
     <td>${l.vendedor || '—'}</td>
     <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -554,7 +585,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></td>'; return; }
+    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></tr>'; return; }
     tb.innerHTML = db.metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
       let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
@@ -584,7 +615,7 @@ function renderMetas() {
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
         <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </td>`;
+      </tr>`;
     }).join('');
   }
 }
@@ -616,7 +647,7 @@ function renderForecast() {
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ${l.pipeline === 'Fechamento' ? 'tag-success' : 'tag-warning'}">${l.pipeline || 'Lead'}</span></td>
     <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filter(l => l.pipeline).map(l => ({ Vendedor: l.vendedor, Empresa: l.empresa, Produto: l.produto, Adesão: l.adesao, Mensalidade: l.mensalidade, Etapa: l.pipeline }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
 
@@ -670,7 +701,7 @@ function gerarLandingPage(id) {
     <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${camp.nome} - RenSoftware</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,${camp.cor ? adjustColor(camp.cor, -20) : '#003366'} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,${camp.cor ? '#003366' : '#003366'} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
       .landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}
       h1{color:${camp.cor || '#005C99'};margin-bottom:10px;}
       .subtitle{color:#666;margin-bottom:30px;}
@@ -715,10 +746,6 @@ function gerarLandingPage(id) {
   win.document.write(html);
   win.document.close();
 }
-function adjustColor(color, percent) {
-  // Função simples para escurecer a cor
-  return '#003366';
-}
 
 // ==================== PRODUTOS ====================
 function renderProdutos() {
@@ -731,7 +758,7 @@ function renderProdutos() {
     <td>R$ ${(p.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
+  </td>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
 function saveProduto() {
