@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProspectFlow CRM - Sistema Completo com Firebase</title>
+<title>ProspectFlow CRM - Sistema Completo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -45,12 +45,14 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .user-info { display: flex; align-items: center; gap: 12px; }
 .user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-.stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.3s; }
+.stat-card:hover { transform: translateY(-4px); }
 .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
 .stat-icon.blue { background: #eff6ff; color: #3b82f6; }
 .stat-icon.green { background: #ecfdf5; color: #10b981; }
 .stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
 .stat-icon.orange { background: #fff7ed; color: #f59e0b; }
+.stat-icon.red { background: #fef2f2; color: #ef4444; }
 .stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
 .stat-label { font-size: 13px; color: #64748b; }
 .content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -58,7 +60,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .card-title { font-size: 16px; font-weight: 700; }
 .btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.3s; }
 .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-.btn-primary:hover { transform: translateY(-2px); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
 .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #64748b; }
 .btn-outline:hover { border-color: #667eea; color: #667eea; }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
@@ -89,6 +91,14 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 .toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .page { display: none; }
+.pipeline-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
+.pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; }
+.pipeline-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.chart-container { height: 300px; position: relative; }
+.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
+.step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
+.step.completed { background: #10b981; color: white; }
+.step.pending { background: #e2e8f0; color: #64748b; }
 .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; transition: background 0.3s; }
 .sync-dot.syncing { background: #f59e0b; animation: pulse 0.8s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -201,11 +211,11 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast - Oportunidades</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><td><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Previsão Fechamento</th><th>Probabilidade</th><th>Valor Ponderado</th></tr></thead><tbody id="forecast-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Previsão Fechamento</th><th>Probabilidade</th><th>Valor Ponderado</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
         </div>
       </div>
 
-      <!-- GESTÃO DE VENDAS - NOVA PLANILHA -->
+      <!-- GESTÃO DE VENDAS -->
       <div id="page-gestaovendas" class="page">
         <!-- Resumo Executivo -->
         <div class="content-card">
@@ -221,7 +231,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
         <!-- Indicadores Semanais/Mensais -->
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">📈 Indicadores por Período</h3><div><select class="form-select" id="periodo-indicadores" style="width:150px" onchange="renderIndicadoresPeriodo()"><option value="semana">Esta Semana</option><option value="mes">Este Mês</option><option value="trimestre">Este Trimestre</option></select></div></div>
+          <div class="card-header"><h3 class="card-title">📈 Indicadores por Período</h3><div><select class="form-select" id="periodo-indicadores" style="width:150px" onchange="renderIndicadoresPeriodo()"><option value="semana">Esta Semana</option><option value="mes">Este Mês</option><option value="trimestre">Este Trimestre</option><option value="ano">Este Ano</option></select></div></div>
           <div class="stats-grid" id="periodo-indicadores-grid"></div>
         </div>
 
@@ -234,7 +244,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
         <!-- Perdas e Ações Corretivas -->
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">❌ Perdas e Ações Corretivas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Perdido</th><th>Motivo</th><th>Ação Corretiva</th><th>Data</th><th>Ações</th></tr></thead><tbody id="perdas-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Perdido</th><th>Motivo</th><th>Ação Corretiva</th><th>Data</th><th>Ações</th></tr></thead><tbody id="perdas-table"></tbody></table></div>
         </div>
 
         <!-- Performance por Vendedor -->
@@ -252,7 +262,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
         <!-- Problemas Identificados -->
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">⚠️ Problemas Identificados</h3><button class="btn btn-outline btn-sm" onclick="openProblemaModal()">+ Registrar Problema</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Problema</th><th>Impacto</th><th>Data Identificação</th><th>Status</th><th>Solução</th><th>Ações</th></tr></thead><tbody id="problemas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead></tr><th>Problema</th><th>Impacto</th><th>Data Identificação</th><th>Status</th><th>Solução</th><th>Ações</th></tr></thead><tbody id="problemas-table"></tbody></table></div>
         </div>
       </div>
 
@@ -307,7 +317,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th></table></thead><tbody id="relatorio-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
@@ -315,7 +325,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody><tr></div>
         </div>
       </div>
     </div>
@@ -329,7 +339,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
 <div id="modal-oportunidade" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Oportunidade</h3><button onclick="closeModal('modal-oportunidade')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="op-empresa"></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="op-vendedor"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="op-produto"></select></div><div class="form-group"><label>Valor Adesão (R$)</label><input class="form-input" type="number" id="op-adesao"></div><div class="form-group"><label>Valor Mensalidade (R$)</label><input class="form-input" type="number" id="op-mensalidade"></div><div class="form-group"><label>Previsão Fechamento</label><input class="form-input" type="date" id="op-previsao"></div><div class="form-group"><label>Probabilidade (%)</label><select class="form-select" id="op-probabilidade"><option>20</option><option>40</option><option>60</option><option>80</option><option>100</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-oportunidade')">Cancelar</button><button class="btn btn-primary" onclick="saveOportunidade()">Salvar</button></div></div></div>
 
-<div id="modal-perda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Perda</h3><button onclick="closeModal('modal-perda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="perda-empresa"></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="perda-vendedor"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="perda-produto"></select></div><div class="form-group"><label>Valor Perdido (R$)</label><input class="form-input" type="number" id="perda-valor"></div><div class="form-group"><label>Motivo da Perda</label><select class="form-select" id="perda-motivo"><option>Preço</option><option>Concorrência</option><option>Prazo</option><option>Falta de necessidade</option><option>Outro</option></select></div><div class="form-group"><label>Ação Corretiva</label><textarea class="form-textarea" id="perda-acao" rows="2"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-perda')">Cancelar</button><button class="btn btn-primary" onclick="savePerda()">Salvar</button></div></div></div>
+<div id="modal-perda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Perda</h3><button onclick="closeModal('modal-perda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="perda-empresa"></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="perda-vendedor"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="perda-produto"></select></div><div class="form-group"><label>Valor Perdido (R$)</label><input class="form-input" type="number" id="perda-valor"></div><div class="form-group"><label>Motivo da Perda</label><select class="form-select" id="perda-motivo"><option>Preço</option><option>Concorrência</option><option>Prazo</option><option>Falta de necessidade</option><option>Cancelamento</option><option>Outro</option></select></div><div class="form-group"><label>Ação Corretiva</label><textarea class="form-textarea" id="perda-acao" rows="2"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-perda')">Cancelar</button><button class="btn btn-primary" onclick="savePerda()">Salvar</button></div></div></div>
 
 <div id="modal-plano-acao" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Plano de Ação</h3><button onclick="closeModal('modal-plano-acao')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Ação</label><textarea class="form-textarea" id="plano-acao-desc" rows="2"></textarea></div><div class="form-group"><label>Responsável</label><select class="form-select" id="plano-acao-responsavel"></select></div><div class="form-group"><label>Prazo</label><input class="form-input" type="date" id="plano-acao-prazo"></div><div class="form-group"><label>Status</label><select class="form-select" id="plano-acao-status"><option>Pendente</option><option>Em andamento</option><option>Concluído</option><option>Cancelado</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-plano-acao')">Cancelar</button><button class="btn btn-primary" onclick="savePlanoAcao()">Salvar</button></div></div></div>
 
@@ -337,11 +347,11 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
 
 <div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="meta-vendedor-produto"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-vendedor-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-vendedor-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
-<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option></select></div><div class="form-group"><label>Distribuir?</label><select class="form-select" id="global-distribuir"><option value="sim">Sim</option><option value="nao">Não</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
+<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div><div class="form-group"><label>Distribuir automaticamente?</label><select class="form-select" id="global-distribuir"><option value="sim">Sim - Distribuir para todos os vendedores</option><option value="nao">Não - Apenas meta global</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
 <div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Promocional</option><option>Seasonal</option><option>Lançamento</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>Produto</label><select class="form-select" id="camp-produto"></select></div><div class="form-group"><label>Meta (R$)</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
-<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
 <div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login *</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha *</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
@@ -545,7 +555,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? S.leads.filter(l => l.vendedor === currentUser.nome) : S.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></table>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
@@ -617,7 +627,6 @@ function avancarEtapa(leadId) {
 function descartarLead(id) {
   let lead = S.leads.find(l => l.id === id);
   if(!lead) return;
-  let categoria = lead.status === 'Oportunidade' ? 'Não Prospectado' : (lead.pipeline === 'Agendamento' || lead.pipeline === 'Apresentação') ? 'Não Avançou' : 'Desistiu';
   let perda = { id: uid(), empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, valor: lead.adesao, motivo: 'Descartado em ' + (lead.pipeline || lead.status), acaoCorretiva: '', data: new Date().toISOString().split('T')[0] };
   S.perdas.push(perda);
   saveToFirebase('perdas', perda.id, perda);
@@ -641,7 +650,7 @@ function renderPipeline() {
     <td>${l.vendedor || '—'}</td>
     <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </table>`).join('');
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -702,7 +711,7 @@ function renderForecast() {
       <td>${prob}%</span></td>
       <td>R$ ${ponderado.toLocaleString('pt-BR')}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma oportunidade cadastrada</span><tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma oportunidade cadastrada</span></tr>';
 }
 function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(S.oportunidades.map(o => ({ Empresa: o.empresa, Vendedor: o.vendedor, Produto: o.produto, Adesao: o.adesao, Mensalidade: o.mensalidade, Previsao: o.previsao, Probabilidade: o.probabilidade + '%', ValorPonderado: (o.adesao || 0) * (parseInt(o.probabilidade) / 100) }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
 
@@ -710,20 +719,20 @@ function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(S.oportunidad
 function renderGestaoVendas() {
   let vendas = S.vendas;
   let totalContratos = vendas.length;
-  let mrrTotal = vendas.reduce((s,v) => s + v.mensalidade, 0);
-  let entradasTotal = vendas.reduce((s,v) => s + v.adesao, 0);
+  let mrrTotal = vendas.reduce((s,v) => s + (v.mensalidade || 0), 0);
+  let entradasTotal = vendas.reduce((s,v) => s + (v.adesao || 0), 0);
   let totalLeads = S.leads.length;
   let taxaConversao = totalLeads > 0 ? Math.round(vendas.length / totalLeads * 100) : 0;
+  let cancelados = S.perdas.filter(p => p.motivo === 'Cancelamento').length;
+  
   document.getElementById('exec-contratos').innerText = totalContratos;
   document.getElementById('exec-mrr').innerText = `R$ ${mrrTotal.toLocaleString('pt-BR')}`;
   document.getElementById('exec-entradas').innerText = `R$ ${entradasTotal.toLocaleString('pt-BR')}`;
   document.getElementById('exec-taxa').innerText = `${taxaConversao}%`;
-  document.getElementById('exec-cancelados').innerText = S.perdas.filter(p => p.motivo === 'Cancelamento').length || 0;
+  document.getElementById('exec-cancelados').innerText = cancelados;
 
-  // Indicadores por período
   renderIndicadoresPeriodo();
 
-  // Oportunidades
   let tbOportunidades = document.getElementById('oportunidades-table');
   if(tbOportunidades) tbOportunidades.innerHTML = S.oportunidades.map(o => `<tr>
     <td><strong>${o.empresa}</strong></td>
@@ -737,7 +746,6 @@ function renderGestaoVendas() {
         <button class="btn btn-danger btn-sm" onclick="deletarOportunidade('${o.id}')"><i class="fas fa-trash"></i></button></span></td>
   </tr>`).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma oportunidade cadastrada</span></tr>';
 
-  // Perdas
   let tbPerdas = document.getElementById('perdas-table');
   if(tbPerdas) tbPerdas.innerHTML = S.perdas.map(p => `<tr>
     <td><strong>${p.empresa}</strong></td>
@@ -750,7 +758,6 @@ function renderGestaoVendas() {
     <td><button class="btn btn-danger btn-sm" onclick="deletarPerda('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
   </tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhuma perda registrada</span></tr>';
 
-  // Performance por vendedor
   let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
   let tbPerformance = document.getElementById('performance-table');
   if(tbPerformance) tbPerformance.innerHTML = vendedores.map(v => {
@@ -772,10 +779,9 @@ function renderGestaoVendas() {
       <td>${perdasV.length}</span></td>
       <td>${taxaConv}%</span></td>
       <td>R$ ${ticketMedio.toLocaleString('pt-BR')}</span></td>
-    </tr>`;
+    </table>`;
   }).join('') || '<tr><td colspan="7" style="text-align:center">Nenhum vendedor cadastrado</span></tr>';
 
-  // Plano de Ação
   let tbPlano = document.getElementById('plano-acao-table');
   if(tbPlano) tbPlano.innerHTML = S.planoAcao.map(p => `<tr>
     <td>${p.descricao || '—'}</td>
@@ -785,9 +791,8 @@ function renderGestaoVendas() {
     <td>${p.resultado || '—'}</td>
     <td><button class="btn btn-outline btn-sm" onclick="editarPlanoAcao('${p.id}')"><i class="fas fa-edit"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deletarPlanoAcao('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('') || '<table><td colspan="6" style="text-align:center">Nenhum plano de ação cadastrado</span></tr>';
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhum plano de ação cadastrado</span></tr>';
 
-  // Problemas
   let tbProblemas = document.getElementById('problemas-table');
   if(tbProblemas) tbProblemas.innerHTML = S.problemas.map(p => `<tr>
     <td>${p.descricao || '—'}</td>
@@ -806,12 +811,13 @@ function renderIndicadoresPeriodo() {
   let inicio = new Date();
   if(periodo === 'semana') inicio.setDate(now.getDate() - 7);
   else if(periodo === 'mes') inicio.setMonth(now.getMonth() - 1);
-  else inicio.setMonth(now.getMonth() - 3);
+  else if(periodo === 'trimestre') inicio.setMonth(now.getMonth() - 3);
+  else inicio.setFullYear(now.getFullYear() - 1);
   
   let vendasPeriodo = S.vendas.filter(v => new Date(v.data) >= inicio);
   let contratos = vendasPeriodo.length;
-  let mrr = vendasPeriodo.reduce((s,v) => s + v.mensalidade, 0);
-  let entradas = vendasPeriodo.reduce((s,v) => s + v.adesao, 0);
+  let mrr = vendasPeriodo.reduce((s,v) => s + (v.mensalidade || 0), 0);
+  let entradas = vendasPeriodo.reduce((s,v) => s + (v.adesao || 0), 0);
   let leadsPeriodo = S.leads.filter(l => new Date(l.createdAt) >= inicio).length;
   let taxa = leadsPeriodo > 0 ? Math.round(contratos / leadsPeriodo * 100) : 0;
   
@@ -832,7 +838,7 @@ function saveOportunidade() {
   saveToFirebase('oportunidades', oport.id, oport);
   closeModal('modal-oportunidade'); renderGestaoVendas(); renderForecast(); showToast('Oportunidade salva!');
 }
-function editarOportunidade(id) { /* similar */ showToast('Edição disponível em breve'); }
+function editarOportunidade(id) { showToast('Edição disponível em breve'); }
 function deletarOportunidade(id) { if(confirm('Remover oportunidade?')) { S.oportunidades = S.oportunidades.filter(o => o.id !== id); deleteFromFirebase('oportunidades', id); renderGestaoVendas(); renderForecast(); showToast('Removido!'); } }
 
 function openPerdaModal() { updateVendedorSelects(); updateProdutoSelects(); openModal('modal-perda'); }
@@ -853,7 +859,7 @@ function savePlanoAcao() {
   saveToFirebase('planoAcao', plano.id, plano);
   closeModal('modal-plano-acao'); renderGestaoVendas(); showToast('Plano de ação salvo!');
 }
-function editarPlanoAcao(id) { /* similar */ showToast('Edição disponível em breve'); }
+function editarPlanoAcao(id) { showToast('Edição disponível em breve'); }
 function deletarPlanoAcao(id) { if(confirm('Remover ação?')) { S.planoAcao = S.planoAcao.filter(p => p.id !== id); deleteFromFirebase('planoAcao', id); renderGestaoVendas(); showToast('Removido!'); } }
 
 function openProblemaModal() { openModal('modal-problema'); }
@@ -864,7 +870,7 @@ function saveProblema() {
   saveToFirebase('problemas', problema.id, problema);
   closeModal('modal-problema'); renderGestaoVendas(); showToast('Problema registrado!');
 }
-function editarProblema(id) { /* similar */ showToast('Edição disponível em breve'); }
+function editarProblema(id) { showToast('Edição disponível em breve'); }
 function deletarProblema(id) { if(confirm('Remover problema?')) { S.problemas = S.problemas.filter(p => p.id !== id); deleteFromFirebase('problemas', id); renderGestaoVendas(); showToast('Removido!'); } }
 
 function exportGestaoVendas() {
@@ -886,7 +892,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0, mensalidade: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; realizadoPorVendedor[v.vendedor].mensalidade += v.mensalidade; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></td>'; return; }
+    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></tr>'; return; }
     tb.innerHTML = S.metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
       let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
@@ -898,7 +904,7 @@ function renderMetas() {
         <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
         <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
         <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></span></td>
-      </tr>`;
+      </td>`;
     }).join('');
   }
   let prodTb = document.getElementById('produtividade-table');
@@ -944,7 +950,7 @@ function saveMetaGlobal() {
 }
 
 // ==================== DEMAIS FUNÇÕES ====================
-function renderRemarketing() { let tb = document.getElementById('remarketing-table'); if(tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Carregando...</td></tr>'; }
+function renderRemarketing() { let tb = document.getElementById('remarketing-table'); if(tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Carregando...</span></tr>'; }
 function sendMarketingEmail() { showToast('Funcionalidade em desenvolvimento'); }
 function renderCampanhas() { let list = document.getElementById('campanhas-list'); if(list) list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha</div>'; }
 function openCampanhaModal() { showToast('Funcionalidade em desenvolvimento'); }
@@ -961,7 +967,12 @@ function renderEmailHistory() { let el = document.getElementById('email-history'
 function renderRelatorios() { let tb = document.getElementById('relatorio-table'); if(tb) tb.innerHTML = S.vendas.map(v => `<tr><td>${v.data}</td><td>${v.vendedor}</td><td>${v.empresa}</td><td>${v.produto}</td><td>R$ ${v.adesao.toLocaleString('pt-BR')}</td><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</td><td><span class="tag tag-success">Fechado</span></td></tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhuma venda</span></tr>'; }
 function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(S.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
 function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
-function renderUsuarios() { let tb = document.getElementById('users-table'); if(tb) tb.innerHTML = S.usuarios.map(u => `<tr><td><strong>${u.nome}</strong><br><small>${u.login}</small></td><td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td><td>${u.equipe || '—'}</td><td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button> ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`).join(''); }
+function renderUsuarios() { let tb = document.getElementById('users-table'); if(tb) tb.innerHTML = S.usuarios.map(u => `<tr>
+    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
+    <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
+    <td>${u.equipe || '—'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button> ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</td>
+  </table>`).join(''); }
 function openUserModal() { openModal('modal-user'); }
 function editarUsuario(id) { let u = S.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); } }
 function saveUser() { let id = document.getElementById('modal-user').dataset.editId; let nome = document.getElementById('user-nome').value.trim(); let login = document.getElementById('user-login').value.trim(); let perfil = document.getElementById('user-perfil').value; let equipe = document.getElementById('user-equipe').value; let senha = document.getElementById('user-senha').value; let senha2 = document.getElementById('user-senha2').value; if(!nome || !login){ showToast('Preencha nome e login!'); return; } if(id) { let idx = S.usuarios.findIndex(u => u.id === id); if(idx !== -1) { S.usuarios[idx].nome = nome; S.usuarios[idx].login = login; S.usuarios[idx].perfil = perfil; S.usuarios[idx].equipe = equipe; if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } S.usuarios[idx].senha = senha; } } } else { if(!senha){ showToast('Senha obrigatória!'); return; } if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } S.usuarios.push({ id: uid(), nome, login, senha, perfil, equipe }); } saveToFirebase('usuarios', S.usuarios[idx]?.id || S.usuarios[S.usuarios.length-1].id, S.usuarios[idx] || S.usuarios[S.usuarios.length-1]); closeModal('modal-user'); renderUsuarios(); updateVendedorSelects(); showToast('Usuário salvo!'); }
