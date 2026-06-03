@@ -6,6 +6,8 @@
 <title>RenSoftware CRM - Sistema de Gestão de Vendas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
@@ -42,6 +44,9 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 .page-title{font-size:18px;font-weight:700;color:var(--ren-dark);}
 .user-info{display:flex;align-items:center;gap:12px;}
 .user-avatar{width:36px;height:36px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#28a745;display:inline-block;margin-right:5px;transition:background 0.3s;}
+.sync-dot.syncing{background:#ffc107;animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .stat-card{background:white;border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
 .stat-card:hover{transform:translateY(-4px);}
@@ -64,6 +69,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 .btn-sm{padding:5px 10px;font-size:12px;}
 .btn-danger{background:var(--ren-danger);color:white;}
 .btn-success{background:var(--ren-success);color:white;}
+.btn-warning{background:#ffc107;color:#333;}
 .table-container{overflow-x:auto;}
 .data-table{width:100%;border-collapse:collapse;}
 .data-table th{text-align:left;padding:10px 12px;background:#f8f9fa;font-weight:600;color:#666;font-size:12px;}
@@ -137,7 +143,12 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
     <div class="main-content" id="main-content">
       <div class="top-bar">
         <h2 class="page-title" id="page-title">Dashboard</h2>
-        <div class="user-info"><span id="user-name">Admin</span><div class="user-avatar" id="user-avatar">A</div><button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button></div>
+        <div class="user-info">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="user-name">Admin</span>
+          <div class="user-avatar" id="user-avatar">A</div>
+          <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
       </div>
 
       <!-- DASHBOARD -->
@@ -157,7 +168,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom:16px" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
@@ -171,7 +182,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
             <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th><tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
@@ -187,11 +198,11 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></td></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></td></div>
         </div>
       </div>
 
@@ -205,8 +216,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 
       <!-- GESTÃO DE VENDAS -->
       <div id="page-gestaovendas" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">📊 Resumo Executivo</h3><button class="btn btn-outline btn-sm" onclick="exportGestaoVendas()"><i class="fas fa-file-excel"></i> Exportar</button></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">📊 Resumo Executivo</h3><button class="btn btn-outline btn-sm" onclick="exportGestaoVendas()"><i class="fas fa-file-excel"></i> Exportar</button></div>
           <div class="stats-grid">
             <div class="stat-card"><div class="stat-icon green"><i class="fas fa-file-signature"></i></div><div class="stat-value" id="exec-contratos">0</div><div class="stat-label">Contratos</div></div>
             <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-chart-line"></i></div><div class="stat-value" id="exec-mrr">R$ 0</div><div class="stat-label">MRR</div></div>
@@ -215,44 +225,34 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
             <div class="stat-card"><div class="stat-icon red"><i class="fas fa-user-slash"></i></div><div class="stat-value" id="exec-cancelados">0</div><div class="stat-label">Cancelados</div></div>
           </div>
         </div>
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">📈 Performance por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="performance-table"></tbody>｜｜DSML｜｜</div>
-        </div>
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">❌ Perdas Registradas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Motivo</th><th>Valor</th><th>Data</th></tr></thead><tbody id="perdas-table"></tbody></table></div>
-        </div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">📈 Performance por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="performance-table"></tbody></table></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">❌ Perdas Registradas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div><div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Motivo</th><th>Valor</th><th>Data</th></tr></thead><tbody id="perdas-table"></tbody></table></div></div>
       </div>
 
       <!-- REMARKETING -->
       <div id="page-remarketing" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar Email</button></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar Email</button></div>
           <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- CAMPANHAS -->
       <div id="page-campanhas" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
           <div id="campanhas-list"></div>
         </div>
       </div>
 
       <!-- PRODUTOS -->
       <div id="page-produtos" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody>｜｜DSML｜｜</div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></tr></div>
         </div>
       </div>
 
       <!-- IMPORTAR -->
       <div id="page-importar" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Modelo</button></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Modelo</button></div>
           <div class="dz" style="border:2px dashed #ddd;border-radius:16px;padding:40px;text-align:center;cursor:pointer" onclick="document.getElementById('import-file').click()">
             <i class="fas fa-cloud-upload-alt" style="font-size:40px;color:#aaa"></i><p>Clique para importar Excel</p>
           </div>
@@ -263,8 +263,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 
       <!-- E-MAILS -->
       <div id="page-email" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">E-mails</h3></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">E-mails</h3></div>
           <div class="form-group"><label class="form-label">Assunto</label><input type="text" class="form-input" id="email-subject"></div>
           <div class="form-group"><label class="form-label">Mensagem</label><textarea class="form-textarea" id="email-body" rows="4" placeholder="Use {empresa} e {contato}"></textarea></div>
           <button class="btn btn-primary" onclick="sendBulkEmail()">Enviar</button>
@@ -274,17 +273,15 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 
       <!-- RELATÓRIOS -->
       <div id="page-relatorios" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
           <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
       <!-- USUÁRIOS -->
       <div id="page-usuarios" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -296,7 +293,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Digital</option><option>Evento Online</option><option>Workshop</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>URL Landing Page</label><input class="form-input" id="camp-lp"></div><div class="form-group"><label>Meta de Leads</label><input class="form-input" type="number" id="camp-meta"></div><div class="form-group"><label>Cor da Landing Page</label><input class="form-input" type="color" id="camp-cor" value="#005C99"></div><div class="form-group"><label>Campos do Formulário</label><input class="form-input" id="camp-campos" value="nome,email,telefone,empresa"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Digital</option><option>Evento Online</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>URL Landing Page</label><input class="form-input" id="camp-lp"></div><div class="form-group"><label>Meta Leads</label><input class="form-input" type="number" id="camp-meta"></div><div class="form-group"><label>Cor</label><input class="form-input" type="color" id="camp-cor" value="#005C99"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
 <div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="meta-vendedor-produto"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
@@ -304,33 +301,55 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 
 <div id="modal-perda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Perda</h3><button onclick="closeModal('modal-perda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="perda-empresa"></div><div class="form-group"><label>Motivo</label><select class="form-select" id="perda-motivo"><option>Preço</option><option>Concorrência</option><option>Prazo</option><option>Cancelamento</option><option>Outro</option></select></div><div class="form-group"><label>Valor (R$)</label><input class="form-input" type="number" id="perda-valor"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-perda')">Cancelar</button><button class="btn btn-primary" onclick="savePerda()">Salvar</button></div></div></div>
 
-<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
 <div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar Senha</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Status</label><select class="form-select" id="user-status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== DADOS GLOBAIS ====================
+// ==================== FIREBASE CONFIG ====================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
+  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
+  projectId: "prospectflow-crm-5775a",
+  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
+  messagingSenderId: "278911416959",
+  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
+};
+
+let dbFirebase = null;
 let currentUser = null;
 let currentPipelineStage = 'Agendamento';
 let charts = {};
 let sidebarCollapsed = false;
 
-// USUÁRIOS PADRÃO
-const USUARIOS_PADRAO = [
+// Dados locais (fallback)
+let S = {
+  leads: [],
+  vendas: [],
+  agenda: [],
+  remarketing: [],
+  perdas: [],
+  metasVendedor: [],
+  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
+  produtos: [
+    { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
+    { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
+    { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
+    { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
+  ],
+  campanhas: [],
+  emailHist: [],
+  usuarios: []
+};
+
+// USUÁRIOS PADRÃO (criados no Firebase se não existirem)
+const DEFAULT_USERS = [
   { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', status: 'ativo' },
   { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', status: 'ativo' },
   { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', status: 'ativo' },
   { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', status: 'ativo' }
-];
-
-// PRODUTOS PADRÃO
-const PRODUTOS_PADRAO = [
-  { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
-  { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
-  { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
-  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
 ];
 
 // LEADS EXEMPLO
@@ -341,50 +360,126 @@ const LEADS_EXEMPLO = [
   { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
-// AGENDA EXEMPLO
-const AGENDA_EXEMPLO = [
-  { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação Easyren' }
-];
+// ==================== FIREBASE FUNCTIONS ====================
+function setSyncing(on) {
+  let dot = document.getElementById('sync-dot');
+  if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : '');
+}
 
-// REMARKETING EXEMPLO
-const REMARKETING_EXEMPLO = [
-  { id: 'r1', empresa: 'Cliente Perdido A', contato: 'João', email: 'joao@perdido.com', motivo: 'Não demonstrou interesse', data: new Date().toISOString().split('T')[0] }
-];
+async function initFirebase() {
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    dbFirebase = firebase.firestore();
+    console.log('Firebase conectado!');
+    await loadAllData();
+  } catch(e) {
+    console.error('Erro Firebase:', e);
+    showToast('Erro ao conectar ao Firebase. Usando dados locais.', 'err');
+    loadLocalData();
+  }
+}
 
-let db = {
-  leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
-  vendas: [],
-  agenda: JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
-  remarketing: JSON.parse(JSON.stringify(REMARKETING_EXEMPLO)),
-  perdas: [],
-  metasVendedor: [],
-  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
-  produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
-  campanhas: [],
-  emailHist: [],
-  usuarios: JSON.parse(JSON.stringify(USUARIOS_PADRAO))
-};
+async function loadAllData() {
+  if(!dbFirebase) return;
+  setSyncing(true);
+  try {
+    // Carregar leads
+    let leadsSnap = await dbFirebase.collection('leads').get();
+    S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if(S.leads.length === 0) {
+      for(let lead of LEADS_EXEMPLO) await dbFirebase.collection('leads').doc(lead.id).set(lead);
+      S.leads = [...LEADS_EXEMPLO];
+    }
+    
+    // Carregar vendas
+    let vendasSnap = await dbFirebase.collection('vendas').get();
+    S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar agenda
+    let agendaSnap = await dbFirebase.collection('agenda').get();
+    S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar remarketing
+    let remarketingSnap = await dbFirebase.collection('remarketing').get();
+    S.remarketing = remarketingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar perdas
+    let perdasSnap = await dbFirebase.collection('perdas').get();
+    S.perdas = perdasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar metas vendedor
+    let metasSnap = await dbFirebase.collection('metasVendedor').get();
+    S.metasVendedor = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar meta global
+    let metaGSnap = await dbFirebase.collection('config').doc('metaGlobal').get();
+    if(metaGSnap.exists) S.metaGlobal = metaGSnap.data();
+    
+    // Carregar produtos
+    let produtosSnap = await dbFirebase.collection('produtos').get();
+    if(produtosSnap.docs.length > 0) S.produtos = produtosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar campanhas
+    let campanhasSnap = await dbFirebase.collection('campanhas').get();
+    S.campanhas = campanhasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Carregar usuários
+    let usuariosSnap = await dbFirebase.collection('usuarios').get();
+    if(usuariosSnap.docs.length > 0) {
+      S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      for(let user of DEFAULT_USERS) await dbFirebase.collection('usuarios').doc(user.id).set(user);
+      S.usuarios = [...DEFAULT_USERS];
+    }
+    
+  } catch(e) { console.error('Erro ao carregar dados:', e); loadLocalData(); }
+  setSyncing(false);
+  saveLocalData();
+}
+
+async function saveToFirebase(collection, id, data) {
+  if(!dbFirebase) return;
+  setSyncing(true);
+  try {
+    await dbFirebase.collection(collection).doc(id).set(data);
+  } catch(e) { console.error(e); }
+  setSyncing(false);
+  saveLocalData();
+}
+
+async function deleteFromFirebase(collection, id) {
+  if(!dbFirebase) return;
+  setSyncing(true);
+  try {
+    await dbFirebase.collection(collection).doc(id).delete();
+  } catch(e) { console.error(e); }
+  setSyncing(false);
+  saveLocalData();
+}
+
+function saveLocalData() {
+  localStorage.setItem('rensoftware_local_backup', JSON.stringify(S));
+}
+
+function loadLocalData() {
+  let backup = localStorage.getItem('rensoftware_local_backup');
+  if(backup) {
+    let data = JSON.parse(backup);
+    S.leads = data.leads || [];
+    S.vendas = data.vendas || [];
+    S.agenda = data.agenda || [];
+    S.remarketing = data.remarketing || [];
+    S.perdas = data.perdas || [];
+    S.metasVendedor = data.metasVendedor || [];
+    S.metaGlobal = data.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' };
+    S.produtos = data.produtos || [];
+    S.campanhas = data.campanhas || [];
+    S.usuarios = data.usuarios || DEFAULT_USERS;
+  }
+}
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
-function saveData() { localStorage.setItem('rensoftware_data', JSON.stringify(db)); }
-function loadData() { 
-  let d = localStorage.getItem('rensoftware_data'); 
-  if(d) { 
-    let p = JSON.parse(d); 
-    db.leads = p.leads || LEADS_EXEMPLO; 
-    db.vendas = p.vendas || []; 
-    db.agenda = p.agenda || AGENDA_EXEMPLO; 
-    db.remarketing = p.remarketing || REMARKETING_EXEMPLO;
-    db.perdas = p.perdas || [];
-    db.metasVendedor = p.metasVendedor || []; 
-    db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; 
-    db.produtos = p.produtos || PRODUTOS_PADRAO; 
-    db.campanhas = p.campanhas || []; 
-    db.emailHist = p.emailHist || []; 
-    db.usuarios = p.usuarios || USUARIOS_PADRAO; 
-  } 
-}
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -399,7 +494,7 @@ function toggleSidebar() {
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
-  let user = db.usuarios.find(u => u.login === login && u.senha === senha && u.status === 'ativo');
+  let user = S.usuarios.find(u => u.login === login && u.senha === senha && u.status === 'ativo');
   if (!user) { document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin/1234'; document.getElementById('auth-error').style.display = 'block'; return; }
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
@@ -437,14 +532,14 @@ function goToPage(page) {
 
 // ==================== FUNÇÕES AUXILIARES ====================
 function updateVendedorSelects() {
-  let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
+  let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
   let sl = document.getElementById('lead-vendedor');
   if(sl) sl.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
   let sm = document.getElementById('meta-vendedor-nome');
   if(sm) sm.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
 }
 function updateProdutoSelects() {
-  let p = db.produtos.map(p => p.nome);
+  let p = S.produtos.map(p => p.nome);
   let sl = document.getElementById('lead-produto');
   if(sl) sl.innerHTML = '<option value="">Selecione</option>' + p.map(p => `<option value="${p}">${p}</option>`).join('');
   let sp = document.getElementById('meta-vendedor-produto');
@@ -457,10 +552,10 @@ function getPipelineTag(p) { if(!p) return '—'; let m = { Agendamento:'tag-war
 
 function renderLeads() {
   let search = document.getElementById('search-lead')?.value.toLowerCase() || '';
-  let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
+  let leads = (currentUser?.perfil === 'Consultor' ? S.leads.filter(l => l.vendedor === currentUser.nome) : S.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span><tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td>${l.contato||'—'}</td>
@@ -473,28 +568,32 @@ function renderLeads() {
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa(\'${l.id}\')"><i class="fas fa-arrow-right"></i></button>
           <button class="btn btn-outline btn-sm" onclick="openLeadEdit(\'${l.id}\')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="descartarLead(\'${l.id}\')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
+  </td>`).join('');
 }
 function openLeadModal() {
   document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
   updateProdutoSelects(); updateVendedorSelects();
   openModal('modal-lead');
 }
-function saveLead() {
+async function saveLead() {
   let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value)||0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value)||0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
   if(!lead.empresa){ showToast('Informe a empresa!'); return; }
-  db.leads.push(lead); saveData(); closeModal('modal-lead'); renderLeads(); renderDashboard(); renderForecast(); showToast('Lead criado!');
+  S.leads.push(lead);
+  await saveToFirebase('leads', lead.id, lead);
+  closeModal('modal-lead');
+  renderLeads(); renderDashboard(); renderForecast(); showToast('Lead criado!');
 }
 function openLeadEdit(id) {
-  let l = db.leads.find(l => l.id === id); if(!l) return;
+  let l = S.leads.find(l => l.id === id); if(!l) return;
   document.getElementById('lead-empresa').value = l.empresa; document.getElementById('lead-contato').value = l.contato||''; document.getElementById('lead-email').value = l.email||''; document.getElementById('lead-telefone').value = l.telefone||''; document.getElementById('lead-cidade').value = l.cidade||''; document.getElementById('lead-uf').value = l.uf||''; document.getElementById('lead-segmento').value = l.segmento||''; document.getElementById('lead-adesao').value = l.adesao; document.getElementById('lead-mensalidade').value = l.mensalidade;
   updateProdutoSelects(); updateVendedorSelects();
   let sp = document.getElementById('lead-produto'); if(sp && l.produto) sp.value = l.produto;
   let sv = document.getElementById('lead-vendedor'); if(sv && l.vendedor) sv.value = l.vendedor;
-  document.getElementById('modal-lead').dataset.editId = id; openModal('modal-lead');
+  document.getElementById('modal-lead').dataset.editId = id;
+  openModal('modal-lead');
 }
-function avancarEtapa(leadId) {
-  let lead = db.leads.find(l => l.id === leadId); if(!lead) return;
+async function avancarEtapa(leadId) {
+  let lead = S.leads.find(l => l.id === leadId); if(!l) return;
   if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
     lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; showToast('Lead → Agendamento!'); openAgendaModal(leadId);
   } else if(lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; showToast('Apresentação confirmada!');
@@ -502,24 +601,27 @@ function avancarEtapa(leadId) {
   } else if(lead.pipeline === 'Negociação') {
     lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
     let venda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] };
-    db.vendas.push(venda);
+    S.vendas.push(venda);
+    await saveToFirebase('vendas', venda.id, venda);
     showToast('🎉 Venda fechada!');
   }
-  saveData(); renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast(); renderGestaoVendas();
+  await saveToFirebase('leads', lead.id, lead);
+  renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast(); renderGestaoVendas();
 }
-function descartarLead(id) {
-  let lead = db.leads.find(l => l.id === id); if(!lead) return;
+async function descartarLead(id) {
+  let lead = S.leads.find(l => l.id === id); if(!l) return;
   lead.status = 'Descartado'; lead.pipeline = 'Descartado';
-  saveData(); renderLeads(); showToast('Lead descartado');
+  await saveToFirebase('leads', lead.id, lead);
+  renderLeads(); showToast('Lead descartado');
 }
 
 // ==================== PIPELINE ====================
 function renderPipeline() {
-  let leads = db.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado' && l.status !== 'Fechado');
+  let leads = S.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado' && l.status !== 'Fechado');
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<td><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span><tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span><tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td><span class="tag tag-info">${l.produto||'—'}</span></td>
@@ -533,43 +635,45 @@ function setPipelineStage(stage) { currentPipelineStage = stage; document.queryS
 
 // ==================== AGENDA ====================
 function renderAgenda() {
-  let agenda = db.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
+  let agenda = S.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
   let el = document.getElementById('agenda-list');
   if(!el) return;
   if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center;padding:20px">Sem agendamentos</div>'; return; }
   el.innerHTML = agenda.map(a => `<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento(\'${a.id}\')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento(\'${a.id}\')"><i class="fas fa-times"></i></button></div></div>`).join('');
 }
-function confirmarAgendamento(id) {
-  let agenda = db.agenda.find(a => a.id === id);
+async function confirmarAgendamento(id) {
+  let agenda = S.agenda.find(a => a.id === id);
   if(agenda) {
-    let lead = db.leads.find(l => l.id === agenda.leadId);
-    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; saveData(); }
+    let lead = S.leads.find(l => l.id === agenda.leadId);
+    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; await saveToFirebase('leads', lead.id, lead); }
     showToast(`Apresentação confirmada!`);
     renderLeads(); renderPipeline(); renderAgenda();
   }
 }
-function cancelarAgendamento(id) { if(confirm('Cancelar?')) { db.agenda = db.agenda.filter(a => a.id !== id); saveData(); renderAgenda(); showToast('Cancelado!'); } }
+async function cancelarAgendamento(id) { if(confirm('Cancelar?')) { S.agenda = S.agenda.filter(a => a.id !== id); await deleteFromFirebase('agenda', id); renderAgenda(); showToast('Cancelado!'); } }
 function openAgendaModal(leadId) {
-  let leads = db.leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
+  let leads = S.leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
   let sel = document.getElementById('agenda-lead');
   sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa}</option>`).join('');
   document.getElementById('agenda-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('agenda-hora').value = '10:00';
   openModal('modal-agenda');
 }
-function saveAgenda() {
+async function saveAgenda() {
   let leadId = document.getElementById('agenda-lead').value;
-  let lead = db.leads.find(l => l.id === leadId);
+  let lead = S.leads.find(l => l.id === leadId);
   if(!lead){ showToast('Lead não encontrado'); return; }
   let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value, obs: document.getElementById('agenda-obs').value };
-  db.agenda.push(agenda);
-  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; }
-  saveData(); closeModal('modal-agenda'); renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
+  S.agenda.push(agenda);
+  await saveToFirebase('agenda', agenda.id, agenda);
+  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; await saveToFirebase('leads', lead.id, lead); }
+  closeModal('modal-agenda');
+  renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
 }
 
 // ==================== METAS ====================
 function renderMetas() {
-  let vendas = db.vendas;
+  let vendas = S.vendas;
   let realizadoPorVendedorProduto = {};
   vendas.forEach(v => { 
     let key = `${v.vendedor}_${v.produto}`;
@@ -577,11 +681,10 @@ function renderMetas() {
     realizadoPorVendedorProduto[key].adesao += v.adesao;
     realizadoPorVendedorProduto[key].mensalidade += v.mensalidade;
   });
-  
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
-    tb.innerHTML = db.metasVendedor.map(m => {
+    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
+    tb.innerHTML = S.metasVendedor.map(m => {
       let key = `${m.vendedor}_${m.produto === 'todos' ? 'todos' : m.produto}`;
       let realizado = realizadoPorVendedorProduto[key] || { adesao: 0 };
       let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
@@ -596,13 +699,12 @@ function renderMetas() {
       </tr>`;
     }).join('');
   }
-  
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
-    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
+    let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
     prodTb.innerHTML = vendedores.map(v => {
-      let leadsV = db.leads.filter(l => l.vendedor === v);
-      let vendasV = db.vendas.filter(vd => vd.vendedor === v);
+      let leadsV = S.leads.filter(l => l.vendedor === v);
+      let vendasV = S.vendas.filter(vd => vd.vendedor === v);
       let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
       return `<tr>
         <td><strong>${v}</strong></td>
@@ -617,25 +719,27 @@ function renderMetas() {
   }
 }
 function openMetaVendedorModal() { updateVendedorSelects(); updateProdutoSelects(); openModal('modal-meta-vendedor'); }
-function saveMetaVendedor() {
+async function saveMetaVendedor() {
   let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, produto: document.getElementById('meta-vendedor-produto').value, adesao: parseFloat(document.getElementById('meta-adesao').value)||0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value)||0, mes: document.getElementById('meta-mes').value };
   if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
-  db.metasVendedor.push(meta);
-  saveData(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
+  S.metasVendedor.push(meta);
+  await saveToFirebase('metasVendedor', meta.id, meta);
+  closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
 }
-function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { db.metasVendedor = db.metasVendedor.filter(m => m.id !== id); saveData(); renderMetas(); showToast('Meta removida!'); } }
-function openMetaGlobalModal() { document.getElementById('global-adesao').value = db.metaGlobal.adesao; document.getElementById('global-mensalidade').value = db.metaGlobal.mensalidade; document.getElementById('global-periodo').value = db.metaGlobal.periodo; openModal('modal-meta-global'); }
-function saveMetaGlobal() {
-  db.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value)||0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value)||0, periodo: document.getElementById('global-periodo').value };
-  saveData(); closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
+async function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { S.metasVendedor = S.metasVendedor.filter(m => m.id !== id); await deleteFromFirebase('metasVendedor', id); renderMetas(); showToast('Meta removida!'); } }
+function openMetaGlobalModal() { document.getElementById('global-adesao').value = S.metaGlobal.adesao; document.getElementById('global-mensalidade').value = S.metaGlobal.mensalidade; document.getElementById('global-periodo').value = S.metaGlobal.periodo; openModal('modal-meta-global'); }
+async function saveMetaGlobal() {
+  S.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value)||0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value)||0, periodo: document.getElementById('global-periodo').value };
+  await saveToFirebase('config', 'metaGlobal', S.metaGlobal);
+  closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
 }
 
 // ==================== FORECAST ====================
 function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
-  let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
+  let forecastData = S.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
+  if(forecastData.length === 0) { tb.innerHTML = '<td><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor||'—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -646,29 +750,27 @@ function renderForecast() {
     <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
   </tr>`).join('');
 }
-function exportForecastExcel(){let ws=XLSX.utils.json_to_sheet(db.leads.filter(l=>l.pipeline).map(l=>({Vendedor:l.vendedor,Empresa:l.empresa,Produto:l.produto,Adesão:l.adesao,Mensalidade:l.mensalidade,Etapa:l.pipeline})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Forecast');XLSX.writeFile(wb,`forecast_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Forecast exportado!');}
+function exportForecastExcel(){let ws=XLSX.utils.json_to_sheet(S.leads.filter(l=>l.pipeline).map(l=>({Vendedor:l.vendedor,Empresa:l.empresa,Produto:l.produto,Adesão:l.adesao,Mensalidade:l.mensalidade,Etapa:l.pipeline})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Forecast');XLSX.writeFile(wb,`forecast_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Forecast exportado!');}
 
 // ==================== GESTÃO DE VENDAS ====================
 function renderGestaoVendas() {
-  let totalContratos = db.vendas.length;
-  let mrrTotal = db.vendas.reduce((s,v) => s + (v.mensalidade||0), 0);
-  let entradasTotal = db.vendas.reduce((s,v) => s + (v.adesao||0), 0);
-  let totalLeads = db.leads.length;
-  let taxaConversao = totalLeads > 0 ? Math.round(db.vendas.length / totalLeads * 100) : 0;
-  let cancelados = db.perdas.filter(p => p.motivo === 'Cancelamento').length;
-  
+  let totalContratos = S.vendas.length;
+  let mrrTotal = S.vendas.reduce((s,v) => s + (v.mensalidade||0), 0);
+  let entradasTotal = S.vendas.reduce((s,v) => s + (v.adesao||0), 0);
+  let totalLeads = S.leads.length;
+  let taxaConversao = totalLeads > 0 ? Math.round(S.vendas.length / totalLeads * 100) : 0;
+  let cancelados = S.perdas.filter(p => p.motivo === 'Cancelamento').length;
   document.getElementById('exec-contratos').innerText = totalContratos;
   document.getElementById('exec-mrr').innerText = `R$ ${mrrTotal.toLocaleString('pt-BR')}`;
   document.getElementById('exec-entradas').innerText = `R$ ${entradasTotal.toLocaleString('pt-BR')}`;
   document.getElementById('exec-taxa').innerText = `${taxaConversao}%`;
   document.getElementById('exec-cancelados').innerText = cancelados;
-  
   let tbPerformance = document.getElementById('performance-table');
   if(tbPerformance) {
-    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
+    let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
     tbPerformance.innerHTML = vendedores.map(v => {
-      let leadsV = db.leads.filter(l => l.vendedor === v);
-      let vendasV = db.vendas.filter(vd => vd.vendedor === v);
+      let leadsV = S.leads.filter(l => l.vendedor === v);
+      let vendasV = S.vendas.filter(vd => vd.vendedor === v);
       let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
       let taxa = leadsV.length > 0 ? Math.round(vendasV.length / leadsV.length * 100) : 0;
       return `<tr>
@@ -677,30 +779,31 @@ function renderGestaoVendas() {
         <td>${vendasV.length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
         <td>${taxa}%</span></td>
-      </tr>`;
+      <tr>`;
     }).join('');
   }
-  
   let tbPerdas = document.getElementById('perdas-table');
-  if(tbPerdas) tbPerdas.innerHTML = db.perdas.map(p => `<tr>
+  if(tbPerdas) tbPerdas.innerHTML = S.perdas.map(p => `<tr>
     <td><strong>${p.empresa}</strong></td>
     <td>${p.motivo||'—'}</td>
     <td>R$ ${(p.valor||0).toLocaleString('pt-BR')}</td>
     <td>${p.data||'—'}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deletarPerda('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhuma perda registrada</span></td>';
+  </tr>`).join('') || '</table><td colspan="5" style="text-align:center">Nenhuma perda registrada</span></tr>';
 }
 function openPerdaModal() { openModal('modal-perda'); }
-function savePerda() {
+async function savePerda() {
   let perda = { id: uid(), empresa: document.getElementById('perda-empresa').value.trim(), motivo: document.getElementById('perda-motivo').value, valor: parseFloat(document.getElementById('perda-valor').value)||0, data: new Date().toISOString().split('T')[0] };
   if(!perda.empresa) { showToast('Informe a empresa!'); return; }
-  db.perdas.push(perda); saveData(); closeModal('modal-perda'); renderGestaoVendas(); showToast('Perda registrada!');
+  S.perdas.push(perda);
+  await saveToFirebase('perdas', perda.id, perda);
+  closeModal('modal-perda'); renderGestaoVendas(); showToast('Perda registrada!');
 }
-function deletarPerda(id) { if(confirm('Remover?')) { db.perdas = db.perdas.filter(p => p.id !== id); saveData(); renderGestaoVendas(); showToast('Removido!'); } }
+async function deletarPerda(id) { if(confirm('Remover?')) { S.perdas = S.perdas.filter(p => p.id !== id); await deleteFromFirebase('perdas', id); renderGestaoVendas(); showToast('Removido!'); } }
 function exportGestaoVendas() {
   let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade}))), 'Vendas');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(db.perdas), 'Perdas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade}))), 'Vendas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.perdas), 'Perdas');
   XLSX.writeFile(wb, `gestao_vendas_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('Planilha exportada!');
 }
@@ -709,7 +812,7 @@ function exportGestaoVendas() {
 function renderRemarketing() {
   let tb = document.getElementById('remarketing-table');
   if(!tb) return;
-  tb.innerHTML = db.remarketing.map(r => `<tr>
+  tb.innerHTML = S.remarketing.map(r => `<tr>
     <td><strong>${r.empresa}</strong></td>
     <td>${r.contato||'—'}</td>
     <td>${r.email||'—'}</td>
@@ -717,15 +820,15 @@ function renderRemarketing() {
     <td><button class="btn btn-primary btn-sm" onclick="enviarEmailRemarketing('${r.id}')"><i class="fas fa-envelope"></i> Enviar</button></td>
   </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhum lead em remarketing</span></tr>';
 }
-function enviarEmailRemarketing(id) { let r = db.remarketing.find(r => r.id === id); if(r && r.email) { showToast(`Email enviado para ${r.empresa}`); } }
+function enviarEmailRemarketing(id) { let r = S.remarketing.find(r => r.id === id); if(r && r.email) { showToast(`Email enviado para ${r.empresa}`); } }
 function sendMarketingEmail() { showToast('Funcionalidade em desenvolvimento'); }
 
 // ==================== CAMPANHAS ====================
 function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   if(!list) return;
-  if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center;padding:40px">Nenhuma campanha cadastrada</div>'; return; }
-  list.innerHTML = db.campanhas.map(c => `
+  if(S.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center;padding:40px">Nenhuma campanha cadastrada</div>'; return; }
+  list.innerHTML = S.campanhas.map(c => `
     <div class="content-card" style="border-left:4px solid ${c.cor||'#005C99'}">
       <div class="card-header">
         <div><h4 class="card-title">${c.nome}</h4><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div>
@@ -736,23 +839,25 @@ function renderCampanhas() {
         </div>
       </div>
       <div class="stats-grid" style="margin-top:12px">
-        <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${db.leads.filter(l=>l.campanha===c.id).length}</div><div class="stat-label">Leads</div></div>
+        <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${S.leads.filter(l=>l.campanha===c.id).length}</div><div class="stat-label">Leads</div></div>
         <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${c.meta||0}</div><div class="stat-label">Meta</div></div>
-        <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${c.meta?Math.round(db.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div><div class="stat-label">%</div></div>
+        <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${c.meta?Math.round(S.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div><div class="stat-label">%</div></div>
       </div>
       <div id="qr-${c.id}" style="display:none;margin-top:16px"></div>
     </div>
   `).join('');
 }
 function openCampanhaModal() { openModal('modal-campanha'); }
-function saveCampanha() {
-  let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, meta: parseFloat(document.getElementById('camp-meta').value)||0, cor: document.getElementById('camp-cor').value, campos: document.getElementById('camp-campos').value, createdAt: new Date().toISOString() };
+async function saveCampanha() {
+  let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, meta: parseFloat(document.getElementById('camp-meta').value)||0, cor: document.getElementById('camp-cor').value, createdAt: new Date().toISOString() };
   if(!camp.nome){ showToast('Informe o nome!'); return; }
-  db.campanhas.push(camp); saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!');
+  S.campanhas.push(camp);
+  await saveToFirebase('campanhas', camp.id, camp);
+  closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!');
 }
-function deletarCampanha(id) { if(confirm('Remover campanha?')) { db.campanhas = db.campanhas.filter(c=>c.id!==id); saveData(); renderCampanhas(); showToast('Campanha removida!'); } }
+async function deletarCampanha(id) { if(confirm('Remover campanha?')) { S.campanhas = S.campanhas.filter(c=>c.id!==id); await deleteFromFirebase('campanhas', id); renderCampanhas(); showToast('Campanha removida!'); } }
 function gerarQRCode(id) {
-  let camp = db.campanhas.find(c=>c.id===id); if(!camp) return;
+  let camp = S.campanhas.find(c=>c.id===id); if(!camp) return;
   let url = camp.lp || `https://rensoftware.com.br/campanha/${camp.id}`;
   let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
   let div = document.getElementById(`qr-${id}`);
@@ -760,10 +865,8 @@ function gerarQRCode(id) {
   div.style.display = 'block';
 }
 function gerarLandingPage(id) {
-  let camp = db.campanhas.find(c=>c.id===id); if(!camp) return;
-  let campos = camp.campos.split(',');
-  let formHtml = campos.map(campo => `<div class="form-group"><label>${campo.charAt(0).toUpperCase()+campo.slice(1)}</label><input type="${campo==='email'?'email':'text'}" name="${campo}" required></div>`).join('');
-  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${camp.nome} - RenSoftware</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor||'#005C99'} 0%,#003366 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}.landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}h1{color:${camp.cor||'#005C99'};margin-bottom:10px;}.subtitle{color:#666;margin-bottom:30px;}.form-group{margin-bottom:20px;}label{display:block;margin-bottom:5px;color:#555;font-weight:500;}input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}input:focus{outline:none;border-color:${camp.cor||'#005C99'};}button{width:100%;padding:14px;background:${camp.cor||'#005C99'};color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;}.success{background:#d4edda;color:#155724;padding:12px;border-radius:10px;margin-top:20px;display:none;}</style></head><body><div class="landing-container"><h1>${camp.nome}</h1><p class="subtitle">Preencha o formulário para participar</p><form id="leadForm">${formHtml}<button type="submit">Enviar Cadastro</button></form><div id="successMsg" class="success">✅ Cadastro realizado com sucesso! Entraremos em contato.</div></div><script>document.getElementById('leadForm').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${camp.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('successMsg').style.display='block';this.reset();setTimeout(()=>{window.close();},2000);});<\/script></body></html>`;
+  let camp = S.campanhas.find(c=>c.id===id); if(!camp) return;
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${camp.nome} - RenSoftware</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor||'#005C99'} 0%,#003366 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}.landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}h1{color:${camp.cor||'#005C99'};margin-bottom:10px;}.subtitle{color:#666;margin-bottom:30px;}.form-group{margin-bottom:20px;}label{display:block;margin-bottom:5px;color:#555;font-weight:500;}input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}input:focus{outline:none;border-color:${camp.cor||'#005C99'};}button{width:100%;padding:14px;background:${camp.cor||'#005C99'};color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;}.success{background:#d4edda;color:#155724;padding:12px;border-radius:10px;margin-top:20px;display:none;}</style></head><body><div class="landing-container"><h1>${camp.nome}</h1><p class="subtitle">Preencha o formulário para participar</p><form id="leadForm"><div class="form-group"><label>Nome</label><input type="text" name="nome" required></div><div class="form-group"><label>E-mail</label><input type="email" name="email" required></div><div class="form-group"><label>Telefone</label><input type="tel" name="telefone" required></div><div class="form-group"><label>Empresa</label><input type="text" name="empresa" required></div><button type="submit">Enviar Cadastro</button></form><div id="successMsg" class="success">✅ Cadastro realizado com sucesso! Entraremos em contato.</div></div><script>document.getElementById('leadForm').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${camp.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('successMsg').style.display='block';this.reset();setTimeout(()=>{window.close();},2000);});<\/script></body></html>`;
   let win = window.open('', '_blank', 'width=550,height=700');
   win.document.write(html);
   win.document.close();
@@ -773,84 +876,75 @@ function gerarLandingPage(id) {
 function renderProdutos() {
   let tb = document.getElementById('produtos-table');
   if(!tb) return;
-  tb.innerHTML = db.produtos.map(p => `<tr>
+  tb.innerHTML = S.produtos.map(p => `<tr>
     <td><strong>${p.nome}</strong></td>
     <td>${p.categoria}</span></td>
     <td>R$ ${(p.adesao||0).toLocaleString('pt-BR')}</span></td>
     <td>R$ ${(p.mensalidade||0).toLocaleString('pt-BR')}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
+  <td>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
-function saveProduto() {
+async function saveProduto() {
   let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value)||0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value)||0 };
   if(!produto.nome){ showToast('Informe o nome!'); return; }
-  db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); updateProdutoSelects(); showToast('Produto criado!');
+  S.produtos.push(produto);
+  await saveToFirebase('produtos', produto.id, produto);
+  closeModal('modal-produto'); renderProdutos(); updateProdutoSelects(); showToast('Produto criado!');
 }
-function editarProduto(id) { let p=db.produtos.find(p=>p.id===id); if(p){ document.getElementById('produto-nome').value=p.nome; document.getElementById('produto-adesao').value=p.adesao; document.getElementById('produto-mensalidade').value=p.mensalidade; document.getElementById('modal-produto').dataset.editId=id; openModal('modal-produto'); } }
-function deletarProduto(id) { if(confirm('Remover?')) { db.produtos=db.produtos.filter(p=>p.id!==id); saveData(); renderProdutos(); updateProdutoSelects(); showToast('Produto removido!'); } }
+function editarProduto(id) { let p=S.produtos.find(p=>p.id===id); if(p){ document.getElementById('produto-nome').value=p.nome; document.getElementById('produto-adesao').value=p.adesao; document.getElementById('produto-mensalidade').value=p.mensalidade; document.getElementById('modal-produto').dataset.editId=id; openModal('modal-produto'); } }
+async function deletarProduto(id) { if(confirm('Remover?')) { S.produtos=S.produtos.filter(p=>p.id!==id); await deleteFromFirebase('produtos', id); renderProdutos(); updateProdutoSelects(); showToast('Produto removido!'); } }
 
 // ==================== IMPORTAR ====================
 function downloadTemplate(){let ws=XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Modelo');XLSX.writeFile(wb,'modelo_leads.xlsx');showToast('Modelo baixado!');}
-function handleImport(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=function(ev){let wb=XLSX.read(ev.target.result,{type:'binary'});let ws=wb.Sheets[wb.SheetNames[0]];let rows=XLSX.utils.sheet_to_json(ws);let imported=0;for(let row of rows){let empresa=row.empresa||row.Empresa;if(empresa&&!db.leads.find(l=>l.empresa===empresa)){db.leads.push({id:uid(),empresa,contato:row.contato||'',email:row.email||'',telefone:row.telefone||'',cidade:row.cidade||'',uf:row.uf||'',segmento:row.segmento||'',produto:row.produto||'',vendedor:row.vendedor||'',adesao:parseFloat(row.adesao)||0,mensalidade:parseFloat(row.mensalidade)||0,status:'Oportunidade',pipeline:'',createdAt:new Date().toISOString()});imported++;}}saveData();renderLeads();renderDashboard();document.getElementById('import-preview').innerHTML=`<div style="background:#d1fae5;padding:10px;border-radius:10px">✅ ${imported} leads importados!</div>`;showToast(`${imported} leads importados!`);};r.readAsBinaryString(f);}
+function handleImport(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=async function(ev){let wb=XLSX.read(ev.target.result,{type:'binary'});let ws=wb.Sheets[wb.SheetNames[0]];let rows=XLSX.utils.sheet_to_json(ws);let imported=0;for(let row of rows){let empresa=row.empresa||row.Empresa;if(empresa&&!S.leads.find(l=>l.empresa===empresa)){let lead={id:uid(),empresa,contato:row.contato||'',email:row.email||'',telefone:row.telefone||'',cidade:row.cidade||'',uf:row.uf||'',segmento:row.segmento||'',produto:row.produto||'',vendedor:row.vendedor||'',adesao:parseFloat(row.adesao)||0,mensalidade:parseFloat(row.mensalidade)||0,status:'Oportunidade',pipeline:'',createdAt:new Date().toISOString()};S.leads.push(lead);await saveToFirebase('leads',lead.id,lead);imported++;}}renderLeads();renderDashboard();document.getElementById('import-preview').innerHTML=`<div style="background:#d1fae5;padding:10px;border-radius:10px">✅ ${imported} leads importados!</div>`;showToast(`${imported} leads importados!`);};r.readAsBinaryString(f);}
 
 // ==================== E-MAILS ====================
-function sendBulkEmail(){let subject=document.getElementById('email-subject').value;let body=document.getElementById('email-body').value;if(!subject||!body){showToast('Preencha assunto e mensagem!');return;}let leads=db.leads.filter(l=>l.email&&l.status!=='Descartado');showToast(`Simulação: ${leads.length} e-mails seriam enviados`);}
+function sendBulkEmail(){let subject=document.getElementById('email-subject').value;let body=document.getElementById('email-body').value;if(!subject||!body){showToast('Preencha assunto e mensagem!');return;}let leads=S.leads.filter(l=>l.email&&l.status!=='Descartado');showToast(`Simulação: ${leads.length} e-mails seriam enviados`);}
 function renderEmailHistory(){let el=document.getElementById('email-history');if(el)el.innerHTML='<div style="text-align:center;padding:20px">Nenhum e-mail enviado</div>';}
 
 // ==================== RELATÓRIOS ====================
-function renderRelatorios(){let tb=document.getElementById('relatorio-table');if(!tb)return;tb.innerHTML=db.vendas.map(v=>`<tr><td>${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>`).join('')||'<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';}
-function exportRelatorioExcel(){let ws=XLSX.utils.json_to_sheet(db.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatorio');XLSX.writeFile(wb,`relatorio_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel exportado!');}
+function renderRelatorios(){let tb=document.getElementById('relatorio-table');if(!tb)return;tb.innerHTML=S.vendas.map(v=>`<tr> Whether${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>`).join('')||'<td><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';}
+function exportRelatorioExcel(){let ws=XLSX.utils.json_to_sheet(S.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatorio');XLSX.writeFile(wb,`relatorio_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel exportado!');}
 function exportRelatorioPDF(){let win=window.open('','_blank');win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`);win.document.close();win.print();showToast('PDF gerado!');}
 
 // ==================== USUÁRIOS ====================
 function renderUsuarios() {
   let tb = document.getElementById('users-table');
   if(!tb) return;
-  tb.innerHTML = db.usuarios.map(u => `<tr>
+  tb.innerHTML = S.usuarios.map(u => `<tr>
     <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
     <td><span class="tag ${u.perfil==='Diretor'?'tag-purple':u.perfil==='Gerente'?'tag-info':'tag-success'}">${u.perfil}</span></td>
     <td><span class="tag ${u.status==='ativo'?'tag-success':'tag-danger'}">${u.status==='ativo'?'Ativo':'Inativo'}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-warning btn-sm" onclick="toggleUserStatus('${u.id}')"><i class="fas ${u.status==='ativo'?'fa-ban':'fa-check'}"></i> ${u.status==='ativo'?'Inativar':'Ativar'}</button>
+          <button class="btn btn-warning btn-sm" onclick="toggleUserStatus('${u.id}')"><i class="fas ${u.status==='ativo'?'fa-ban':'fa-check'}"></i></button>
           ${u.id!=='1'?`<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>`:''}</span></td>
   </tr>`).join('');
 }
 function openUserModal() { 
-  document.getElementById('user-nome').value = ''; 
-  document.getElementById('user-login').value = ''; 
-  document.getElementById('user-senha').value = ''; 
-  document.getElementById('user-senha2').value = ''; 
-  document.getElementById('user-perfil').value = 'Consultor'; 
-  document.getElementById('user-status').value = 'ativo';
-  delete document.getElementById('modal-user').dataset.editId; 
-  openModal('modal-user'); 
+  document.getElementById('user-nome').value = ''; document.getElementById('user-login').value = ''; document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; document.getElementById('user-perfil').value = 'Consultor'; document.getElementById('user-status').value = 'ativo';
+  delete document.getElementById('modal-user').dataset.editId; openModal('modal-user'); 
 }
 function editarUsuario(id) { 
-  let u = db.usuarios.find(u => u.id === id); 
-  if(u) { 
-    document.getElementById('user-nome').value = u.nome; 
-    document.getElementById('user-login').value = u.login; 
-    document.getElementById('user-perfil').value = u.perfil; 
-    document.getElementById('user-status').value = u.status || 'ativo';
-    document.getElementById('user-senha').value = ''; 
-    document.getElementById('user-senha2').value = ''; 
-    document.getElementById('modal-user').dataset.editId = id; 
-    openModal('modal-user'); 
+  let u = S.usuarios.find(u => u.id === id); if(u) { 
+    document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; 
+    document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-status').value = u.status || 'ativo';
+    document.getElementById('user-senha').value = ''; document.getElementById('user-senha2').value = ''; 
+    document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); 
   } 
 }
-function toggleUserStatus(id) {
-  let u = db.usuarios.find(u => u.id === id);
+async function toggleUserStatus(id) {
+  let u = S.usuarios.find(u => u.id === id);
   if(u) {
     u.status = u.status === 'ativo' ? 'inativo' : 'ativo';
-    saveData();
+    await saveToFirebase('usuarios', u.id, u);
     renderUsuarios();
     updateVendedorSelects();
     showToast(`Usuário ${u.nome} ${u.status === 'ativo' ? 'ativado' : 'inativado'}!`);
   }
 }
-function saveUser() {
+async function saveUser() {
   let id = document.getElementById('modal-user').dataset.editId;
   let nome = document.getElementById('user-nome').value.trim();
   let login = document.getElementById('user-login').value.trim();
@@ -859,35 +953,50 @@ function saveUser() {
   let senha = document.getElementById('user-senha').value;
   let senha2 = document.getElementById('user-senha2').value;
   if(!nome || !login){ showToast('Preencha nome e login!'); return; }
-  if(db.usuarios.some(u => u.login === login && u.id !== id)) { showToast('Login já existe!'); return; }
+  if(S.usuarios.some(u => u.login === login && u.id !== id)) { showToast('Login já existe!'); return; }
   if(id) {
-    let idx = db.usuarios.findIndex(u => u.id === id);
+    let idx = S.usuarios.findIndex(u => u.id === id);
     if(idx !== -1) {
-      db.usuarios[idx].nome = nome;
-      db.usuarios[idx].login = login;
-      db.usuarios[idx].perfil = perfil;
-      db.usuarios[idx].status = status;
+      S.usuarios[idx].nome = nome;
+      S.usuarios[idx].login = login;
+      S.usuarios[idx].perfil = perfil;
+      S.usuarios[idx].status = status;
       if(senha) {
         if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
         if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
-        db.usuarios[idx].senha = senha;
+        S.usuarios[idx].senha = senha;
       }
+      await saveToFirebase('usuarios', S.usuarios[idx].id, S.usuarios[idx]);
     }
   } else {
     if(!senha){ showToast('Senha obrigatória!'); return; }
     if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
     if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
-    db.usuarios.push({ id: uid(), nome, login, senha, perfil, status, dataCadastro: new Date().toISOString() });
+    let newUser = { id: uid(), nome, login, senha, perfil, status, dataCadastro: new Date().toISOString() };
+    S.usuarios.push(newUser);
+    await saveToFirebase('usuarios', newUser.id, newUser);
   }
-  saveData(); closeModal('modal-user'); renderUsuarios(); updateVendedorSelects(); showToast('Usuário salvo!');
+  saveLocalData();
+  closeModal('modal-user'); 
+  renderUsuarios(); 
+  updateVendedorSelects(); 
+  showToast('Usuário salvo!');
 }
-function deletarUsuario(id) { if(confirm('Remover usuário permanentemente?')) { db.usuarios = db.usuarios.filter(u => u.id !== id); saveData(); renderUsuarios(); updateVendedorSelects(); showToast('Usuário removido!'); } }
+async function deletarUsuario(id) { 
+  if(confirm('Remover usuário permanentemente?')) { 
+    S.usuarios = S.usuarios.filter(u => u.id !== id); 
+    await deleteFromFirebase('usuarios', id);
+    renderUsuarios(); 
+    updateVendedorSelects(); 
+    showToast('Usuário removido!'); 
+  } 
+}
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
-  let totalLeads = db.leads.length;
-  let totalFechamentos = db.vendas.length;
-  let receitaTotal = db.vendas.reduce((s,v) => s + v.adesao + v.mensalidade, 0);
+  let totalLeads = S.leads.length;
+  let totalFechamentos = S.vendas.length;
+  let receitaTotal = S.vendas.reduce((s,v) => s + v.adesao + v.mensalidade, 0);
   let conversao = totalLeads > 0 ? Math.round(totalFechamentos / totalLeads * 100) : 0;
   document.getElementById('stat-total-leads').innerText = totalLeads;
   document.getElementById('stat-fechamentos').innerText = totalFechamentos;
@@ -895,7 +1004,7 @@ function renderDashboard() {
   document.getElementById('stat-conversao').innerText = `${conversao}%`;
   
   let etapasCount = { Captação: 0, Agendamento: 0, Apresentação: 0, Negociação: 0, Fechamento: 0 };
-  db.leads.forEach(l => {
+  S.leads.forEach(l => {
     if(l.status === 'Fechado') etapasCount.Fechamento++;
     else if(l.pipeline === 'Negociação') etapasCount.Negociação++;
     else if(l.pipeline === 'Apresentação') etapasCount.Apresentação++;
@@ -904,8 +1013,8 @@ function renderDashboard() {
   });
   document.getElementById('jornada-steps').innerHTML = ['Captação','Agendamento','Apresentação','Negociação','Fechamento'].map(etapa => `<div class="step ${etapasCount[etapa]>0?'completed':'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join('');
   
-  let totalMeta = db.metaGlobal.adesao;
-  let totalRealizado = db.vendas.reduce((s,v) => s + v.adesao, 0);
+  let totalMeta = S.metaGlobal.adesao;
+  let totalRealizado = S.vendas.reduce((s,v) => s + v.adesao, 0);
   let aRealizar = totalMeta - totalRealizado;
   if(charts.metas) charts.metas.destroy();
   let ctx = document.getElementById('metas-chart')?.getContext('2d');
@@ -917,8 +1026,8 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; doc
 function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
 function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderGestaoVendas(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
 
-loadData();
-saveData();
+// Inicialização
+initFirebase();
 </script>
 </body>
 </html>
