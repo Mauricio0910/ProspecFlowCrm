@@ -85,7 +85,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
 .tag-info { background: #e6f3fa; color: var(--ren-primary); }
 .tag-purple { background: #f3e8ff; color: #9c27b0; }
 .tag-danger { background: #ffebee; color: var(--ren-danger); }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content; center; z-index: 1000; display: none; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
 .modal { background: white; border-radius: 20px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .modal-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
@@ -108,7 +108,6 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
 .step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
 .step.completed { background: var(--ren-success); color: white; }
 .step.pending { background: #e9ecef; color: #666; }
-.qr-code-container { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; margin-top: 16px; }
 </style>
 </head>
 <body>
@@ -173,7 +172,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody><tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
@@ -187,7 +186,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
             <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
@@ -203,7 +202,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
@@ -231,7 +230,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></td></div>
         </div>
       </div>
 
@@ -270,7 +269,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
         </div>
       </div>
     </div>
@@ -301,7 +300,7 @@ let currentPipelineStage = 'Agendamento';
 let charts = {};
 let sidebarCollapsed = false;
 
-// USUÁRIOS PADRÃO - Definidos diretamente
+// USUÁRIOS PADRÃO
 const USUARIOS_PADRAO = [
   { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor' },
   { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor' },
@@ -319,20 +318,15 @@ const PRODUTOS_PADRAO = [
 
 // LEADS EXEMPLO
 const LEADS_EXEMPLO = [
-  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@tocantinsaero.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
-  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@mixjjm.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
-  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@cimefer.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
-  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@gessouniao.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
+  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@email.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
+  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@email.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
+  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@email.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
+  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
 // AGENDA EXEMPLO
 const AGENDA_EXEMPLO = [
   { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação do Easyren' }
-];
-
-// CAMPANHAS EXEMPLO
-const CAMPANHAS_EXEMPLO = [
-  { id: 'c1', nome: 'Feira de Tecnologia 2026', tipo: 'Feira/Exposição', inicio: '2026-03-01', fim: '2026-03-05', lp: 'https://rensoftware.com.br/feira-tech', meta: 50, cor: '#005C99', createdAt: new Date().toISOString() }
 ];
 
 let db = {
@@ -342,7 +336,7 @@ let db = {
   metasVendedor: [],
   metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
   produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
-  campanhas: JSON.parse(JSON.stringify(CAMPANHAS_EXEMPLO)),
+  campanhas: [],
   emailHist: [],
   usuarios: JSON.parse(JSON.stringify(USUARIOS_PADRAO))
 };
@@ -360,7 +354,7 @@ function loadData() {
     db.metasVendedor = p.metasVendedor || []; 
     db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; 
     db.produtos = p.produtos || PRODUTOS_PADRAO; 
-    db.campanhas = p.campanhas || CAMPANHAS_EXEMPLO; 
+    db.campanhas = p.campanhas || []; 
     db.emailHist = p.emailHist || []; 
     db.usuarios = p.usuarios || USUARIOS_PADRAO; 
   } 
@@ -369,19 +363,16 @@ function loadData() {
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
   sidebarCollapsed = !sidebarCollapsed;
-  document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
-  document.getElementById('main-content').classList.toggle('expanded', sidebarCollapsed);
+  let sidebar = document.getElementById('sidebar');
+  let mainContent = document.getElementById('main-content');
+  if(sidebar) sidebar.classList.toggle('collapsed', sidebarCollapsed);
+  if(mainContent) mainContent.classList.toggle('expanded', sidebarCollapsed);
 }
 
 // ==================== AUTENTICAÇÃO ====================
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
-  
-  // Garantir que os usuários estejam carregados
-  if(!db.usuarios || db.usuarios.length === 0) {
-    db.usuarios = JSON.parse(JSON.stringify(USUARIOS_PADRAO));
-  }
   
   let user = db.usuarios.find(u => u.login === login && u.senha === senha);
   
@@ -403,8 +394,6 @@ function doLogout() {
   currentUser = null; 
   document.getElementById('auth-screen').style.display = 'flex'; 
   document.getElementById('app-main').style.display = 'none';
-  document.getElementById('auth-user').value = 'admin';
-  document.getElementById('auth-pass').value = '1234';
 }
 function goToPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -529,14 +518,13 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span><tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor || '—'}</td>
-    <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
   </tr>`).join('');
 }
@@ -548,7 +536,7 @@ function renderAgenda() {
   let el = document.getElementById('agenda-list');
   if(!el) return;
   if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Sem agendamentos</div>'; return; }
-  el.innerHTML = agenda.map(a => `<div class="agenda-item" style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
+  el.innerHTML = agenda.map(a => `<div style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
 }
 function confirmarAgendamento(id) {
   let agenda = db.agenda.find(a => a.id === id);
@@ -587,7 +575,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></tr>'; return; }
+    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
     tb.innerHTML = db.metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
       let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
@@ -597,7 +585,6 @@ function renderMetas() {
         <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
         <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
         <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
-        <td>${m.mes || 'Janeiro/2026'}</td>
         <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></span></td>
       </tr>`;
     }).join('');
@@ -617,7 +604,7 @@ function renderMetas() {
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
         <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </td>`;
+      </tr>`;
     }).join('');
   }
 }
@@ -640,7 +627,7 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span><tr>'; return; }
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor || '—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -673,7 +660,7 @@ function renderCampanhas() {
         <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta || 0}</div><div class="stat-label">Meta</div></div>
         <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta ? Math.round(db.leads.filter(l => l.campanha === c.id).length / c.meta * 100) : 0}%</div><div class="stat-label">Atingimento</div></div>
       </div>
-      <div id="qr-${c.id}" style="display: none; margin-top: 16px;" class="qr-code-container"></div>
+      <div id="qr-${c.id}" style="display: none; margin-top: 16px;"></div>
     </div>
   `).join('');
 }
@@ -786,7 +773,7 @@ function renderRelatorios() {
   if(!tb) return;
   tb.innerHTML = db.vendas.map(v => `<tr>
     <td>${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>
-  </table>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';
+  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';
 }
 function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(db.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
 function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
@@ -858,10 +845,6 @@ function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); rende
 
 // Inicialização
 loadData();
-// Garantir que os dados de exemplo sejam carregados
-if(!db.leads.length) db.leads = LEADS_EXEMPLO;
-if(!db.agenda.length) db.agenda = AGENDA_EXEMPLO;
-if(!db.campanhas.length) db.campanhas = CAMPANHAS_EXEMPLO;
 saveData();
 </script>
 </body>
