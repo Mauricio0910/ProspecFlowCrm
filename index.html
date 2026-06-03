@@ -9,110 +9,97 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden; }
-
-/* Cores RenSoftware */
-:root {
-  --ren-primary: #005C99;
-  --ren-secondary: #0099CC;
-  --ren-accent: #00A3E0;
-  --ren-dark: #003366;
-  --ren-light: #E6F3FA;
-  --ren-success: #28A745;
-  --ren-warning: #FFC107;
-  --ren-danger: #DC3545;
-}
-
-.auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.auth-screen.hidden { display: none; }
-.auth-card { background: white; border-radius: 32px; padding: 48px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-.auth-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: white; }
-.auth-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--ren-dark); }
-.auth-sub { color: #666; margin-bottom: 32px; }
-.auth-input { width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 16px; font-size: 14px; margin-bottom: 16px; transition: all 0.3s; }
-.auth-input:focus { outline: none; border-color: var(--ren-primary); }
-.btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.3s; }
-.btn-auth:hover { transform: translateY(-2px); }
-#app-main { display: none; }
-.app-container { display: flex; min-height: 100vh; }
-.sidebar { width: 260px; background: var(--ren-dark); min-height: 100vh; padding: 24px 16px; position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 100; }
-.sidebar.collapsed { width: 70px; }
-.sidebar.collapsed .logo-text, .sidebar.collapsed .nav-item span { display: none; }
-.sidebar.collapsed .nav-item { justify-content: center; }
-.toggle-sidebar { position: absolute; top: 20px; right: -12px; background: var(--ren-primary); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 101; }
-.main-content { flex: 1; margin-left: 260px; padding: 20px; transition: all 0.3s ease; }
-.main-content.expanded { margin-left: 70px; }
-.logo-area { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-.logo-text { font-size: 18px; font-weight: 700; color: white; }
-.logo-text span { color: var(--ren-accent); }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #a0aec0; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
-.nav-item:hover, .nav-item.active { background: var(--ren-primary); color: white; }
-.nav-item i { width: 20px; }
-.top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.page-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
-.user-info { display: flex; align-items: center; gap: 12px; }
-.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-.stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.3s; }
-.stat-card:hover { transform: translateY(-4px); }
-.stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
-.stat-icon.blue { background: #e6f3fa; color: var(--ren-primary); }
-.stat-icon.green { background: #e8f5e9; color: var(--ren-success); }
-.stat-icon.purple { background: #f3e8ff; color: #9c27b0; }
-.stat-icon.orange { background: #fff3e0; color: #ff9800; }
-.stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: var(--ren-dark); }
-.stat-label { font-size: 13px; color: #666; }
-.content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-.card-title { font-size: 16px; font-weight: 700; color: var(--ren-dark); }
-.btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.3s; }
-.btn-primary { background: var(--ren-primary); color: white; }
-.btn-primary:hover { background: var(--ren-secondary); transform: translateY(-2px); }
-.btn-outline { background: transparent; border: 1px solid #ddd; color: #666; }
-.btn-outline:hover { border-color: var(--ren-primary); color: var(--ren-primary); }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-.btn-danger { background: var(--ren-danger); color: white; }
-.btn-success { background: var(--ren-success); color: white; }
-.table-container { overflow-x: auto; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 10px 12px; background: #f8f9fa; font-weight: 600; color: #666; font-size: 12px; }
-.data-table td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
-.tag { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.tag-success { background: #e8f5e9; color: var(--ren-success); }
-.tag-warning { background: #fff3e0; color: #ff9800; }
-.tag-info { background: #e6f3fa; color: var(--ren-primary); }
-.tag-purple { background: #f3e8ff; color: #9c27b0; }
-.tag-danger { background: #ffebee; color: var(--ren-danger); }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
-.modal { background: white; border-radius: 20px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
-.modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.modal-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
-.modal-body { padding: 20px; }
-.modal-footer { padding: 16px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
-.form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #555; }
-.form-input, .form-select { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; transition: all 0.3s; }
-.form-input:focus, .form-select:focus { outline: none; border-color: var(--ren-primary); }
-.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
-.toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.page { display: none; }
-.page.active { display: block; }
-.pipeline-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #eee; flex-wrap: wrap; }
-.pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.3s; }
-.pipeline-tab.active { background: var(--ren-primary); color: white; }
-.chart-container { height: 300px; position: relative; }
-.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
-.step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
-.step.completed { background: var(--ren-success); color: white; }
-.step.pending { background: #e9ecef; color: #666; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
+:root{--ren-primary:#005C99;--ren-secondary:#0099CC;--ren-accent:#00A3E0;--ren-dark:#003366;--ren-light:#E6F3FA;--ren-success:#28A745;--ren-warning:#FFC107;--ren-danger:#DC3545;}
+.auth-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.auth-screen.hidden{display:none;}
+.auth-card{background:white;border-radius:32px;padding:48px;width:100%;max-width:420px;text-align:center;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);}
+.auth-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:40px;color:white;}
+.auth-title{font-size:28px;font-weight:800;margin-bottom:8px;color:var(--ren-dark);}
+.auth-sub{color:#666;margin-bottom:32px;}
+.auth-input{width:100%;padding:14px 18px;border:2px solid #e0e0e0;border-radius:16px;font-size:14px;margin-bottom:16px;}
+.auth-input:focus{outline:none;border-color:var(--ren-primary);}
+.btn-auth{width:100%;padding:14px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);color:white;border:none;border-radius:16px;font-size:16px;font-weight:600;cursor:pointer;}
+.btn-auth:hover{transform:translateY(-2px);}
+#app-main{display:none;}
+.app-container{display:flex;min-height:100vh;}
+.sidebar{width:260px;background:var(--ren-dark);min-height:100vh;padding:24px 16px;position:fixed;height:100vh;overflow-y:auto;transition:all 0.3s;z-index:100;}
+.sidebar.collapsed{width:70px;}
+.sidebar.collapsed .logo-text,.sidebar.collapsed .nav-item span{display:none;}
+.sidebar.collapsed .nav-item{justify-content:center;}
+.toggle-sidebar{position:absolute;top:20px;right:-12px;background:var(--ren-primary);border:none;color:white;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:101;}
+.main-content{flex:1;margin-left:260px;padding:20px;transition:all 0.3s;}
+.main-content.expanded{margin-left:70px;}
+.logo-area{display:flex;align-items:center;gap:12px;padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.1);}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.logo-text{font-size:18px;font-weight:700;color:white;}
+.logo-text span{color:var(--ren-accent);}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:10px;color:#a0aec0;cursor:pointer;margin-bottom:4px;}
+.nav-item:hover,.nav-item.active{background:var(--ren-primary);color:white;}
+.nav-item i{width:20px;}
+.top-bar{background:white;border-radius:16px;padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.page-title{font-size:18px;font-weight:700;color:var(--ren-dark);}
+.user-info{display:flex;align-items:center;gap:12px;}
+.user-avatar{width:36px;height:36px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.stat-card{background:white;border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.stat-card:hover{transform:translateY(-4px);}
+.stat-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
+.stat-icon.blue{background:#e6f3fa;color:var(--ren-primary);}
+.stat-icon.green{background:#e8f5e9;color:var(--ren-success);}
+.stat-icon.purple{background:#f3e8ff;color:#9c27b0;}
+.stat-icon.orange{background:#fff3e0;color:#ff9800;}
+.stat-value{font-size:28px;font-weight:800;margin-bottom:4px;color:var(--ren-dark);}
+.stat-label{font-size:13px;color:#666;}
+.content-card{background:white;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.card-title{font-size:16px;font-weight:700;color:var(--ren-dark);}
+.btn{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:none;}
+.btn-primary{background:var(--ren-primary);color:white;}
+.btn-primary:hover{background:var(--ren-secondary);transform:translateY(-2px);}
+.btn-outline{background:transparent;border:1px solid #ddd;color:#666;}
+.btn-outline:hover{border-color:var(--ren-primary);color:var(--ren-primary);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-danger{background:var(--ren-danger);color:white;}
+.btn-success{background:var(--ren-success);color:white;}
+.table-container{overflow-x:auto;}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{text-align:left;padding:10px 12px;background:#f8f9fa;font-weight:600;color:#666;font-size:12px;}
+.data-table td{padding:10px 12px;border-bottom:1px solid #eee;font-size:13px;}
+.tag{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.tag-success{background:#e8f5e9;color:var(--ren-success);}
+.tag-warning{background:#fff3e0;color:#ff9800;}
+.tag-info{background:#e6f3fa;color:var(--ren-primary);}
+.tag-purple{background:#f3e8ff;color:#9c27b0;}
+.tag-danger{background:#ffebee;color:var(--ren-danger);}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:1000;display:none;}
+.modal{background:white;border-radius:20px;max-width:650px;width:90%;max-height:90vh;overflow-y:auto;}
+.modal-header{padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-size:18px;font-weight:700;color:var(--ren-dark);}
+.modal-body{padding:20px;}
+.modal-footer{padding:16px 20px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:10px;}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:#555;}
+.form-input,.form-select{width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--ren-primary);}
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:1100;}
+.toast{background:white;border-radius:10px;padding:10px 16px;margin-top:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:flex;align-items:center;gap:8px;animation:slideIn 0.3s;}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.page{display:none;}
+.page.active{display:block;}
+.pipeline-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #eee;flex-wrap:wrap;}
+.pipeline-tab{padding:8px 16px;cursor:pointer;border-radius:8px 8px 0 0;}
+.pipeline-tab.active{background:var(--ren-primary);color:white;}
+.chart-container{height:300px;position:relative;}
+.jornada-steps{display:flex;justify-content:space-between;margin-bottom:20px;background:#f8f9fa;padding:15px;border-radius:12px;flex-wrap:wrap;}
+.step{text-align:center;flex:1;padding:10px;border-radius:8px;min-width:80px;}
+.step.completed{background:var(--ren-success);color:white;}
+.step.pending{background:#e9ecef;color:#666;}
 </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-card">
     <div class="auth-icon"><i class="fas fa-cloud-upload-alt"></i></div>
@@ -125,7 +112,6 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
   </div>
 </div>
 
-<!-- APLICATIVO PRINCIPAL -->
 <div id="app-main" style="display:none">
   <div class="app-container">
     <div class="sidebar" id="sidebar">
@@ -148,14 +134,9 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
     <div class="main-content" id="main-content">
       <div class="top-bar">
         <h2 class="page-title" id="page-title">Dashboard</h2>
-        <div class="user-info">
-          <span id="user-name">Admin</span>
-          <div class="user-avatar" id="user-avatar">A</div>
-          <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
-        </div>
+        <div class="user-info"><span id="user-name">Admin</span><div class="user-avatar" id="user-avatar">A</div><button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button></div>
       </div>
 
-      <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
         <div class="stats-grid">
           <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total-leads">0</div><div class="stat-label">Total Leads</div></div>
@@ -167,30 +148,27 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
       </div>
 
-      <!-- LEADS -->
       <div id="page-leads" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
-          <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
+          <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom:16px" oninput="renderLeads()" id="search-lead">
           <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
         </div>
       </div>
 
-      <!-- PIPELINE -->
       <div id="page-pipeline" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3></div>
           <div class="pipeline-tabs">
-            <div class="pipeline-tab active" data-stage="Agendamento" onclick="setPipelineStage('Agendamento')">📅 Agendamento</div>
-            <div class="pipeline-tab" data-stage="Apresentação" onclick="setPipelineStage('Apresentação')">📢 Apresentação</div>
-            <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
-            <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
+            <div class="pipeline-tab active" onclick="setPipelineStage('Agendamento')">📅 Agendamento</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Apresentação')">📢 Apresentação</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
           <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
-      <!-- AGENDA -->
       <div id="page-agenda" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Agenda de Apresentações</h3><button class="btn btn-primary" onclick="openAgendaModal()">+ Agendar</button></div>
@@ -198,11 +176,10 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- METAS -->
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody><tr></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
@@ -210,7 +187,6 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- FORECAST -->
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast - Pipeline de Vendas</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
@@ -218,7 +194,6 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- CAMPANHAS -->
       <div id="page-campanhas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
@@ -226,27 +201,24 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- PRODUTOS -->
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
-      <!-- IMPORTAR -->
       <div id="page-importar" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Modelo</button></div>
-          <div class="dz" style="border: 2px dashed #ddd; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
-            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #aaa;"></i><p>Clique para importar Excel</p>
+          <div class="dz" style="border:2px dashed #ddd;border-radius:16px;padding:40px;text-align:center;cursor:pointer" onclick="document.getElementById('import-file').click()">
+            <i class="fas fa-cloud-upload-alt" style="font-size:40px;color:#aaa"></i><p>Clique para importar Excel</p>
           </div>
           <input type="file" id="import-file" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleImport(event)">
           <div id="import-preview"></div>
         </div>
       </div>
 
-      <!-- E-MAILS -->
       <div id="page-email" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">E-mails</h3></div>
@@ -257,7 +229,6 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         <div class="content-card"><div class="card-header"><h3 class="card-title">Histórico</h3></div><div id="email-history"></div></div>
       </div>
 
-      <!-- RELATÓRIOS -->
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
@@ -265,585 +236,163 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
       </div>
 
-      <!-- USUÁRIOS -->
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></table></thead><tbody id="users-table"></tbody></table></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAIS -->
 <div id="modal-lead" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Lead</h3><button onclick="closeModal('modal-lead')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa *</label><input class="form-input" id="lead-empresa"></div><div class="form-group"><label>Contato</label><input class="form-input" id="lead-contato"></div><div class="form-group"><label>Email</label><input class="form-input" id="lead-email"></div><div class="form-group"><label>Telefone</label><input class="form-input" id="lead-telefone"></div><div class="form-group"><label>Cidade/UF</label><div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><input class="form-input" id="lead-cidade"><input class="form-input" id="lead-uf"></div></div><div class="form-group"><label>Segmento</label><input class="form-input" id="lead-segmento"></div><div class="form-group"><label>Produto</label><select class="form-select" id="lead-produto"></select></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="lead-vendedor"></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="lead-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="lead-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome da Campanha *</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Digital</option><option>Evento Online</option><option>Workshop</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>URL da Landing Page</label><input class="form-input" id="camp-lp" placeholder="https://"></div><div class="form-group"><label>Meta de Leads</label><input class="form-input" type="number" id="camp-meta"></div><div class="form-group"><label>Cor da Landing Page</label><input class="form-input" type="color" id="camp-cor" value="#005C99"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Digital</option><option>Evento Online</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>URL Landing Page</label><input class="form-input" id="camp-lp"></div><div class="form-group"><label>Meta Leads</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
 <div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
 <div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
-<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
 <div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== DADOS GLOBAIS ====================
-let currentUser = null;
-let currentPipelineStage = 'Agendamento';
-let charts = {};
-let sidebarCollapsed = false;
+let currentUser=null;
+let currentPipelineStage='Agendamento';
+let charts={};
+let sidebarCollapsed=false;
 
-// USUÁRIOS PADRÃO
-const USUARIOS_PADRAO = [
-  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor' },
-  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor' },
-  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor' },
-  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor' }
+const USUARIOS_PADRAO=[
+  {id:'1',nome:'Administrador',login:'admin',senha:'1234',perfil:'Diretor'},
+  {id:'2',nome:'Gusthavo',login:'gusthavo',senha:'1234',perfil:'Consultor'},
+  {id:'3',nome:'Israel',login:'israel',senha:'1234',perfil:'Consultor'},
+  {id:'4',nome:'Katia',login:'katia',senha:'1234',perfil:'Consultor'}
 ];
 
-// PRODUTOS PADRÃO
-const PRODUTOS_PADRAO = [
-  { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
-  { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
-  { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
-  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
+const PRODUTOS_PADRAO=[
+  {id:'p1',nome:'SCE',categoria:'ERP',adesao:5000,mensalidade:1000},
+  {id:'p2',nome:'Easyren',categoria:'ERP',adesao:4000,mensalidade:800},
+  {id:'p3',nome:'Renpay',categoria:'Financeiro',adesao:3000,mensalidade:600},
+  {id:'p4',nome:'PDV',categoria:'ERP',adesao:2500,mensalidade:500}
 ];
 
-// LEADS EXEMPLO
-const LEADS_EXEMPLO = [
-  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@email.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
-  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@email.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
-  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@email.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
-  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
+const LEADS_EXEMPLO=[
+  {id:'l1',empresa:'Tocantins Aero Drones',contato:'Carlos',email:'carlos@email.com',telefone:'63999999999',cidade:'Palmas',uf:'TO',segmento:'Tecnologia',produto:'Easyren',vendedor:'Gusthavo',adesao:1000,mensalidade:150,status:'Prospect',pipeline:'Agendamento',createdAt:new Date().toISOString()},
+  {id:'l2',empresa:'Mix JJM Supermercado',contato:'João',email:'joao@email.com',telefone:'63988888888',cidade:'Araguaína',uf:'TO',segmento:'Varejo',produto:'SCE',vendedor:'Israel',adesao:2200,mensalidade:490,status:'Prospect',pipeline:'Negociação',createdAt:new Date().toISOString()},
+  {id:'l3',empresa:'Cimefer',contato:'Renato',email:'renato@email.com',telefone:'63977777777',cidade:'Brasília',uf:'DF',segmento:'Indústria',produto:'SCE',vendedor:'Gusthavo',adesao:1600,mensalidade:220,status:'Fechado',pipeline:'Fechamento',createdAt:new Date().toISOString()},
+  {id:'l4',empresa:'Gesso União',contato:'Maria',email:'maria@email.com',telefone:'63966666666',cidade:'São Paulo',uf:'SP',segmento:'Construção',produto:'SCE',vendedor:'Katia',adesao:1500,mensalidade:220,status:'Prospect',pipeline:'Apresentação',createdAt:new Date().toISOString()}
 ];
 
-// AGENDA EXEMPLO
-const AGENDA_EXEMPLO = [
-  { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação do Easyren' }
+const AGENDA_EXEMPLO=[
+  {id:'a1',leadId:'l1',empresa:'Tocantins Aero Drones',vendedor:'Gusthavo',data:new Date(new Date().setDate(new Date().getDate()+2)).toISOString().split('T')[0],hora:'10:00',obs:'Apresentação Easyren'}
 ];
 
-let db = {
-  leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
-  vendas: [],
-  agenda: JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
-  metasVendedor: [],
-  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
-  produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
-  campanhas: [],
-  emailHist: [],
-  usuarios: JSON.parse(JSON.stringify(USUARIOS_PADRAO))
+let db={
+  leads:JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
+  vendas:[],
+  agenda:JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
+  metasVendedor:[],
+  metaGlobal:{adesao:100000,mensalidade:20000,periodo:'Janeiro/2026'},
+  produtos:JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
+  campanhas:[],
+  emailHist:[],
+  usuarios:JSON.parse(JSON.stringify(USUARIOS_PADRAO))
 };
 
-function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
-function saveData() { localStorage.setItem('rensoftware_data', JSON.stringify(db)); }
-function loadData() { 
-  let d = localStorage.getItem('rensoftware_data'); 
-  if(d) { 
-    let p = JSON.parse(d); 
-    db.leads = p.leads || LEADS_EXEMPLO; 
-    db.vendas = p.vendas || []; 
-    db.agenda = p.agenda || AGENDA_EXEMPLO; 
-    db.metasVendedor = p.metasVendedor || []; 
-    db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; 
-    db.produtos = p.produtos || PRODUTOS_PADRAO; 
-    db.campanhas = p.campanhas || []; 
-    db.emailHist = p.emailHist || []; 
-    db.usuarios = p.usuarios || USUARIOS_PADRAO; 
-  } 
-}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,6);}
+function showToast(msg){let c=document.getElementById('toast-container');let t=document.createElement('div');t.className='toast';t.innerHTML=`<i class="fas fa-check-circle"></i> ${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),3000);}
+function saveData(){localStorage.setItem('rensoftware_data',JSON.stringify(db));}
+function loadData(){let d=localStorage.getItem('rensoftware_data');if(d){let p=JSON.parse(d);db.leads=p.leads||LEADS_EXEMPLO;db.vendas=p.vendas||[];db.agenda=p.agenda||AGENDA_EXEMPLO;db.metasVendedor=p.metasVendedor||[];db.metaGlobal=p.metaGlobal||{adesao:100000,mensalidade:20000,periodo:'Janeiro/2026'};db.produtos=p.produtos||PRODUTOS_PADRAO;db.campanhas=p.campanhas||[];db.emailHist=p.emailHist||[];db.usuarios=p.usuarios||USUARIOS_PADRAO;}}
 
-// ==================== SIDEBAR ====================
-function toggleSidebar() {
-  sidebarCollapsed = !sidebarCollapsed;
-  let sidebar = document.getElementById('sidebar');
-  let mainContent = document.getElementById('main-content');
-  if(sidebar) sidebar.classList.toggle('collapsed', sidebarCollapsed);
-  if(mainContent) mainContent.classList.toggle('expanded', sidebarCollapsed);
-}
+function toggleSidebar(){sidebarCollapsed=!sidebarCollapsed;let s=document.getElementById('sidebar');let m=document.getElementById('main-content');if(s)s.classList.toggle('collapsed',sidebarCollapsed);if(m)m.classList.toggle('expanded',sidebarCollapsed);}
 
-// ==================== AUTENTICAÇÃO ====================
-function doLogin() {
-  let login = document.getElementById('auth-user').value.trim();
-  let senha = document.getElementById('auth-pass').value.trim();
-  
-  let user = db.usuarios.find(u => u.login === login && u.senha === senha);
-  
-  if (!user) { 
-    document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin / 1234';
-    document.getElementById('auth-error').style.display = 'block'; 
-    return; 
-  }
-  
-  currentUser = user;
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app-main').style.display = 'block';
-  document.getElementById('user-name').innerText = user.nome;
-  document.getElementById('user-avatar').innerText = user.nome.charAt(0).toUpperCase();
-  renderAll();
-  showToast(`Bem-vindo, ${user.nome}!`);
-}
-function doLogout() { 
-  currentUser = null; 
-  document.getElementById('auth-screen').style.display = 'flex'; 
-  document.getElementById('app-main').style.display = 'none';
-}
-function goToPage(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  let target = document.getElementById(`page-${page}`);
-  if(target) target.classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  let activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
-  if(activeNav) activeNav.classList.add('active');
-  let titles = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline', agenda:'Agenda', metas:'Metas', forecast:'Forecast', campanhas:'Campanhas', produtos:'Produtos', importar:'Importar', email:'E-mails', relatorios:'Relatórios', usuarios:'Usuários' };
-  let titleEl = document.getElementById('page-title');
-  if(titleEl) titleEl.innerText = titles[page] || page;
-  if(page === 'dashboard') renderDashboard();
-  if(page === 'leads') renderLeads();
-  if(page === 'pipeline') renderPipeline();
-  if(page === 'agenda') renderAgenda();
-  if(page === 'metas') renderMetas();
-  if(page === 'forecast') renderForecast();
-  if(page === 'campanhas') renderCampanhas();
-  if(page === 'produtos') renderProdutos();
-  if(page === 'relatorios') renderRelatorios();
-  if(page === 'usuarios') renderUsuarios();
-  if(page === 'email') renderEmailHistory();
-}
+function doLogin(){let login=document.getElementById('auth-user').value.trim();let senha=document.getElementById('auth-pass').value.trim();let user=db.usuarios.find(u=>u.login===login&&u.senha===senha);if(!user){document.getElementById('auth-error').innerHTML='Usuário ou senha inválidos! Use admin/1234';document.getElementById('auth-error').style.display='block';return;}
+currentUser=user;document.getElementById('auth-screen').style.display='none';document.getElementById('app-main').style.display='block';document.getElementById('user-name').innerText=user.nome;document.getElementById('user-avatar').innerText=user.nome.charAt(0).toUpperCase();renderAll();showToast(`Bem-vindo, ${user.nome}!`);}
+function doLogout(){currentUser=null;document.getElementById('auth-screen').style.display='flex';document.getElementById('app-main').style.display='none';}
+function goToPage(page){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));let t=document.getElementById(`page-${page}`);if(t)t.classList.add('active');document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));let a=document.querySelector(`.nav-item[data-page="${page}"]`);if(a)a.classList.add('active');let titles={dashboard:'Dashboard',leads:'Leads',pipeline:'Pipeline',agenda:'Agenda',metas:'Metas',forecast:'Forecast',campanhas:'Campanhas',produtos:'Produtos',importar:'Importar',email:'E-mails',relatorios:'Relatórios',usuarios:'Usuários'};let te=document.getElementById('page-title');if(te)te.innerText=titles[page]||page;if(page==='dashboard')renderDashboard();if(page==='leads')renderLeads();if(page==='pipeline')renderPipeline();if(page==='agenda')renderAgenda();if(page==='metas')renderMetas();if(page==='forecast')renderForecast();if(page==='campanhas')renderCampanhas();if(page==='produtos')renderProdutos();if(page==='relatorios')renderRelatorios();if(page==='usuarios')renderUsuarios();if(page==='email')renderEmailHistory();}
 
-// ==================== FUNÇÕES AUXILIARES ====================
-function updateVendedorSelects() {
-  let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
-  let selLead = document.getElementById('lead-vendedor');
-  if(selLead) selLead.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
-  let selMeta = document.getElementById('meta-vendedor-nome');
-  if(selMeta) selMeta.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
-}
-function updateProdutoSelects() {
-  let produtos = db.produtos.map(p => p.nome);
-  let selLead = document.getElementById('lead-produto');
-  if(selLead) selLead.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
-}
+function updateVendedorSelects(){let v=db.usuarios.filter(u=>u.perfil==='Consultor').map(u=>u.nome);let sl=document.getElementById('lead-vendedor');if(sl)sl.innerHTML='<option value="">Selecione</option>'+v.map(v=>`<option value="${v}">${v}</option>`).join('');let sm=document.getElementById('meta-vendedor-nome');if(sm)sm.innerHTML='<option value="">Selecione</option>'+v.map(v=>`<option value="${v}">${v}</option>`).join('');}
+function updateProdutoSelects(){let p=db.produtos.map(p=>p.nome);let sl=document.getElementById('lead-produto');if(sl)sl.innerHTML='<option value="">Selecione</option>'+p.map(p=>`<option value="${p}">${p}</option>`).join('');}
 
-// ==================== LEADS ====================
-function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purple', Fechado:'tag-success', Descartado:'tag-danger' }; return `<span class="tag ${m[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`; }
-function getPipelineTag(p) { if(!p) return '—'; let m = { Agendamento:'tag-warning', Apresentação:'tag-info', Negociação:'tag-purple', Fechamento:'tag-success' }; return `<span class="tag ${m[p] || 'tag-info'}">${p}</span>`; }
+function getStatusTag(s){let m={Oportunidade:'tag-info',Prospect:'tag-purple',Fechado:'tag-success',Descartado:'tag-danger'};return `<span class="tag ${m[s]||'tag-info'}">${s||'Oportunidade'}</span>`;}
+function getPipelineTag(p){if(!p)return '—';let m={Agendamento:'tag-warning',Apresentação:'tag-info',Negociação:'tag-purple',Fechamento:'tag-success'};return `<span class="tag ${m[p]||'tag-info'}">${p}</span>`;}
 
-function renderLeads() {
-  let search = document.getElementById('search-lead')?.value.toLowerCase() || '';
-  let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
-  let tb = document.getElementById('leads-table');
-  if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span><tr>'; return; }
-  tb.innerHTML = leads.map(l => `<tr>
-    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
-    <td>${l.contato || '—'}</td>
-    <td><span class="tag tag-info">${l.produto || '—'}</span></td>
-    <td>${getStatusTag(l.status)}</span></td>
-    <td>${getPipelineTag(l.pipeline)}</span></td>
-    <td>${l.vendedor || '—'}</td>
-    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')"><i class="fas fa-arrow-right"></i></button>
-          <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
-}
-function openLeadModal() {
-  document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
-  updateProdutoSelects(); updateVendedorSelects();
-  openModal('modal-lead');
-}
-function saveLead() {
-  let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
-  if(!lead.empresa){ showToast('Informe a empresa!'); return; }
-  db.leads.push(lead);
-  saveData();
-  closeModal('modal-lead');
-  renderLeads(); renderDashboard(); renderForecast();
-  showToast('Lead criado!');
-}
-function openLeadEdit(id) {
-  let l = db.leads.find(l => l.id === id);
-  if(!l) return;
-  document.getElementById('lead-empresa').value = l.empresa;
-  document.getElementById('lead-contato').value = l.contato || '';
-  document.getElementById('lead-email').value = l.email || '';
-  document.getElementById('lead-telefone').value = l.telefone || '';
-  document.getElementById('lead-cidade').value = l.cidade || '';
-  document.getElementById('lead-uf').value = l.uf || '';
-  document.getElementById('lead-segmento').value = l.segmento || '';
-  document.getElementById('lead-adesao').value = l.adesao;
-  document.getElementById('lead-mensalidade').value = l.mensalidade;
-  updateProdutoSelects(); updateVendedorSelects();
-  let selProduto = document.getElementById('lead-produto'); if(selProduto && l.produto) selProduto.value = l.produto;
-  let selVendedor = document.getElementById('lead-vendedor'); if(selVendedor && l.vendedor) selVendedor.value = l.vendedor;
-  document.getElementById('modal-lead').dataset.editId = id;
-  openModal('modal-lead');
-}
-function avancarEtapa(leadId) {
-  let lead = db.leads.find(l => l.id === leadId);
-  if(!lead) return;
-  if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
-    lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; showToast('Lead → Agendamento!'); openAgendaModal(leadId);
-  } else if(lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; showToast('Apresentação confirmada!');
-  } else if(lead.pipeline === 'Apresentação') { lead.pipeline = 'Negociação'; showToast('Lead em negociação');
-  } else if(lead.pipeline === 'Negociação') {
-    lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
-    let venda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] };
-    db.vendas.push(venda);
-    showToast('🎉 Venda fechada!');
-  }
-  saveData();
-  renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast();
-}
-function descartarLead(id) {
-  let lead = db.leads.find(l => l.id === id);
-  if(!lead) return;
-  lead.status = 'Descartado'; lead.pipeline = 'Descartado';
-  saveData();
-  renderLeads(); showToast('Lead descartado');
-}
+function renderLeads(){let search=document.getElementById('search-lead')?.value.toLowerCase()||'';let leads=(currentUser?.perfil==='Consultor'?db.leads.filter(l=>l.vendedor===currentUser.nome):db.leads).filter(l=>l.empresa?.toLowerCase().includes(search)&&l.status!=='Descartado');let tb=document.getElementById('leads-table');if(!tb)return;if(leads.length===0){tb.innerHTML='<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</td></tr>';return;}
+tb.innerHTML=leads.map(l=>`<tr><td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td><td>${l.contato||'—'}</td><td><span class="tag tag-info">${l.produto||'—'}</span></td><td>${getStatusTag(l.status)}</td><td>${getPipelineTag(l.pipeline)}</td><td>${l.vendedor||'—'}</td><td>R$ ${(l.adesao||0).toLocaleString('pt-BR')}</td><td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td><td><button class="btn btn-primary btn-sm" onclick="avancarEtapa(\'${l.id}\')"><i class="fas fa-arrow-right"></i></button> <button class="btn btn-outline btn-sm" onclick="openLeadEdit(\'${l.id}\')"><i class="fas fa-edit"></i></button> <button class="btn btn-danger btn-sm" onclick="descartarLead(\'${l.id}\')"><i class="fas fa-trash"></i></button></td></tr>`).join('');}
+function openLeadModal(){document.getElementById('lead-empresa').value='';document.getElementById('lead-contato').value='';document.getElementById('lead-email').value='';document.getElementById('lead-telefone').value='';document.getElementById('lead-cidade').value='';document.getElementById('lead-uf').value='';document.getElementById('lead-segmento').value='';document.getElementById('lead-adesao').value='';document.getElementById('lead-mensalidade').value='';updateProdutoSelects();updateVendedorSelects();openModal('modal-lead');}
+function saveLead(){let lead={id:uid(),empresa:document.getElementById('lead-empresa').value.trim(),contato:document.getElementById('lead-contato').value.trim(),email:document.getElementById('lead-email').value.trim(),telefone:document.getElementById('lead-telefone').value.trim(),cidade:document.getElementById('lead-cidade').value.trim(),uf:document.getElementById('lead-uf').value.trim(),segmento:document.getElementById('lead-segmento').value.trim(),produto:document.getElementById('lead-produto').value,vendedor:document.getElementById('lead-vendedor').value,adesao:parseFloat(document.getElementById('lead-adesao').value)||0,mensalidade:parseFloat(document.getElementById('lead-mensalidade').value)||0,status:'Oportunidade',pipeline:'',createdAt:new Date().toISOString()};if(!lead.empresa){showToast('Informe a empresa!');return;}db.leads.push(lead);saveData();closeModal('modal-lead');renderLeads();renderDashboard();renderForecast();showToast('Lead criado!');}
+function openLeadEdit(id){let l=db.leads.find(l=>l.id===id);if(!l)return;document.getElementById('lead-empresa').value=l.empresa;document.getElementById('lead-contato').value=l.contato||'';document.getElementById('lead-email').value=l.email||'';document.getElementById('lead-telefone').value=l.telefone||'';document.getElementById('lead-cidade').value=l.cidade||'';document.getElementById('lead-uf').value=l.uf||'';document.getElementById('lead-segmento').value=l.segmento||'';document.getElementById('lead-adesao').value=l.adesao;document.getElementById('lead-mensalidade').value=l.mensalidade;updateProdutoSelects();updateVendedorSelects();let sp=document.getElementById('lead-produto');if(sp&&l.produto)sp.value=l.produto;let sv=document.getElementById('lead-vendedor');if(sv&&l.vendedor)sv.value=l.vendedor;document.getElementById('modal-lead').dataset.editId=id;openModal('modal-lead');}
+function avancarEtapa(leadId){let lead=db.leads.find(l=>l.id===leadId);if(!lead)return;if(lead.status==='Oportunidade'||(!lead.pipeline&&lead.status!=='Fechado')){lead.status='Prospect';lead.pipeline='Agendamento';showToast('Lead → Agendamento!');openAgendaModal(leadId);}else if(lead.pipeline==='Agendamento'){lead.pipeline='Apresentação';showToast('Apresentação confirmada!');}else if(lead.pipeline==='Apresentação'){lead.pipeline='Negociação';showToast('Lead em negociação');}else if(lead.pipeline==='Negociação'){lead.status='Fechado';lead.pipeline='Fechamento';let venda={id:uid(),leadId:lead.id,empresa:lead.empresa,vendedor:lead.vendedor,produto:lead.produto,adesao:lead.adesao,mensalidade:lead.mensalidade,data:new Date().toISOString().split('T')[0]};db.vendas.push(venda);showToast('🎉 Venda fechada!');}saveData();renderLeads();renderPipeline();renderDashboard();renderMetas();renderForecast();}
+function descartarLead(id){let lead=db.leads.find(l=>l.id===id);if(!lead)return;lead.status='Descartado';lead.pipeline='Descartado';saveData();renderLeads();showToast('Lead descartado');}
 
-// ==================== PIPELINE ====================
-function renderPipeline() {
-  let leads = db.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado' && l.status !== 'Fechado');
-  if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
-  let tb = document.getElementById('pipeline-table');
-  if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span><tr>'; return; }
-  tb.innerHTML = leads.map(l => `<tr>
-    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
-    <td><span class="tag tag-info">${l.produto || '—'}</span></td>
-    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td>${l.vendedor || '—'}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </tr>`).join('');
-}
-function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
+function renderPipeline(){let leads=db.leads.filter(l=>l.pipeline===currentPipelineStage&&l.status!=='Descartado'&&l.status!=='Fechado');if(currentUser?.perfil==='Consultor')leads=leads.filter(l=>l.vendedor===currentUser.nome);let tb=document.getElementById('pipeline-table');if(!tb)return;if(leads.length===0){tb.innerHTML='<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</td></tr>';return;}
+tb.innerHTML=leads.map(l=>`<tr><td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td><td><span class="tag tag-info">${l.produto||'—'}</span></td><td>R$ ${(l.adesao||0).toLocaleString('pt-BR')}</td><td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td><td>${l.vendedor||'—'}</td><td><button class="btn btn-primary btn-sm" onclick="avancarEtapa(\'${l.id}\')">Avançar</button></td></tr>`).join('');}
+function setPipelineStage(stage){currentPipelineStage=stage;document.querySelectorAll('.pipeline-tab').forEach(t=>t.classList.remove('active'));document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active');renderPipeline();}
 
-// ==================== AGENDA ====================
-function renderAgenda() {
-  let agenda = db.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
-  let el = document.getElementById('agenda-list');
-  if(!el) return;
-  if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Sem agendamentos</div>'; return; }
-  el.innerHTML = agenda.map(a => `<div style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
-}
-function confirmarAgendamento(id) {
-  let agenda = db.agenda.find(a => a.id === id);
-  if(agenda) {
-    let lead = db.leads.find(l => l.id === agenda.leadId);
-    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; saveData(); }
-    showToast(`Apresentação confirmada!`);
-    renderLeads(); renderPipeline(); renderAgenda();
-  }
-}
-function cancelarAgendamento(id) { if(confirm('Cancelar?')) { db.agenda = db.agenda.filter(a => a.id !== id); saveData(); renderAgenda(); showToast('Cancelado!'); } }
-function openAgendaModal(leadId) {
-  let leads = db.leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
-  let sel = document.getElementById('agenda-lead');
-  sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id === leadId ? 'selected' : ''}>${l.empresa}</option>`).join('');
-  document.getElementById('agenda-data').value = new Date().toISOString().split('T')[0];
-  document.getElementById('agenda-hora').value = '10:00';
-  openModal('modal-agenda');
-}
-function saveAgenda() {
-  let leadId = document.getElementById('agenda-lead').value;
-  let lead = db.leads.find(l => l.id === leadId);
-  if(!lead){ showToast('Lead não encontrado'); return; }
-  let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value, obs: document.getElementById('agenda-obs').value };
-  db.agenda.push(agenda);
-  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; }
-  saveData();
-  closeModal('modal-agenda');
-  renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
-}
+function renderAgenda(){let agenda=db.agenda.filter(a=>a.data>=new Date().toISOString().split('T')[0]).sort((a,b)=>a.data.localeCompare(b.data));let el=document.getElementById('agenda-list');if(!el)return;if(agenda.length===0){el.innerHTML='<div style="text-align:center;padding:20px">Sem agendamentos</div>';return;}
+el.innerHTML=agenda.map(a=>`<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento(\'${a.id}\')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento(\'${a.id}\')"><i class="fas fa-times"></i></button></div></div>`).join('');}
+function confirmarAgendamento(id){let agenda=db.agenda.find(a=>a.id===id);if(agenda){let lead=db.leads.find(l=>l.id===agenda.leadId);if(lead&&lead.pipeline==='Agendamento'){lead.pipeline='Apresentação';saveData();}showToast(`Apresentação confirmada!`);renderLeads();renderPipeline();renderAgenda();}}
+function cancelarAgendamento(id){if(confirm('Cancelar?')){db.agenda=db.agenda.filter(a=>a.id!==id);saveData();renderAgenda();showToast('Cancelado!');}}
+function openAgendaModal(leadId){let leads=db.leads.filter(l=>l.status==='Oportunidade'||l.status==='Prospect');let sel=document.getElementById('agenda-lead');sel.innerHTML=leads.map(l=>`<option value="${l.id}" ${l.id===leadId?'selected':''}>${l.empresa}</option>`).join('');document.getElementById('agenda-data').value=new Date().toISOString().split('T')[0];document.getElementById('agenda-hora').value='10:00';openModal('modal-agenda');}
+function saveAgenda(){let leadId=document.getElementById('agenda-lead').value;let lead=db.leads.find(l=>l.id===leadId);if(!lead){showToast('Lead não encontrado');return;}let agenda={id:uid(),leadId:lead.id,empresa:lead.empresa,vendedor:lead.vendedor,data:document.getElementById('agenda-data').value,hora:document.getElementById('agenda-hora').value,obs:document.getElementById('agenda-obs').value};db.agenda.push(agenda);if(lead.status==='Oportunidade'){lead.status='Prospect';lead.pipeline='Agendamento';}saveData();closeModal('modal-agenda');renderAgenda();renderLeads();renderPipeline();showToast('Agendamento salvo!');}
 
-// ==================== METAS ====================
-function renderMetas() {
-  let vendas = db.vendas;
-  let realizadoPorVendedor = {};
-  vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; });
-  let tb = document.getElementById('metas-table');
-  if(tb) {
-    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
-    tb.innerHTML = db.metasVendedor.map(m => {
-      let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
-      let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
-      return `<tr>
-        <td><strong>${m.vendedor}</strong></td>
-        <td>R$ ${m.adesao.toLocaleString('pt-BR')}</td>
-        <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
-        <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
-        <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
-        <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></span></td>
-      </tr>`;
-    }).join('');
-  }
-  let prodTb = document.getElementById('produtividade-table');
-  if(prodTb) {
-    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
-    prodTb.innerHTML = vendedores.map(v => {
-      let leadsV = db.leads.filter(l => l.vendedor === v);
-      let vendasV = db.vendas.filter(vd => vd.vendedor === v);
-      let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
-      return `<tr>
-        <td><strong>${v}</strong></td>
-        <td>${leadsV.length}</span></td>
-        <td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</span></td>
-        <td>${leadsV.filter(l => l.pipeline === 'Apresentação').length}</span></td>
-        <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
-        <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
-        <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </tr>`;
-    }).join('');
-  }
-}
-function openMetaVendedorModal() { updateVendedorSelects(); openModal('modal-meta-vendedor'); }
-function saveMetaVendedor() {
-  let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, mes: document.getElementById('meta-mes').value };
-  if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
-  db.metasVendedor.push(meta);
-  saveData(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
-}
-function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { db.metasVendedor = db.metasVendedor.filter(m => m.id !== id); saveData(); renderMetas(); showToast('Meta removida!'); } }
-function openMetaGlobalModal() { document.getElementById('global-adesao').value = db.metaGlobal.adesao; document.getElementById('global-mensalidade').value = db.metaGlobal.mensalidade; document.getElementById('global-periodo').value = db.metaGlobal.periodo; openModal('modal-meta-global'); }
-function saveMetaGlobal() {
-  db.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value) || 0, periodo: document.getElementById('global-periodo').value };
-  saveData(); closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
-}
+function renderMetas(){let vendas=db.vendas;let realizadoPorVendedor={};vendas.forEach(v=>{if(!realizadoPorVendedor[v.vendedor])realizadoPorVendedor[v.vendedor]={adesao:0};realizadoPorVendedor[v.vendedor].adesao+=v.adesao;});let tb=document.getElementById('metas-table');if(tb){if(db.metasVendedor.length===0){tb.innerHTML='<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</td></tr>';return;}
+tb.innerHTML=db.metasVendedor.map(m=>{let realizado=realizadoPorVendedor[m.vendedor]||{adesao:0};let pct=m.adesao>0?Math.round(realizado.adesao/m.adesao*100):0;return`<tr><td><strong>${m.vendedor}</strong></td><td>R$ ${m.adesao.toLocaleString('pt-BR')}</td><td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td><td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td><td><span class="tag ${pct>=100?'tag-success':pct>=50?'tag-warning':'tag-danger'}">${pct}%</span></td><td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor(\'${m.id}\')"><i class="fas fa-trash"></i></button></td></tr>`;}).join('');}
+let prodTb=document.getElementById('produtividade-table');if(prodTb){let vendedores=db.usuarios.filter(u=>u.perfil==='Consultor').map(u=>u.nome);prodTb.innerHTML=vendedores.map(v=>{let leadsV=db.leads.filter(l=>l.vendedor===v);let vendasV=db.vendas.filter(vd=>vd.vendedor===v);let receita=vendasV.reduce((s,vd)=>s+vd.adesao+vd.mensalidade,0);return`<tr><td><strong>${v}</strong></td><td>${leadsV.length}</td><td>${leadsV.filter(l=>l.pipeline==='Agendamento').length}</td><td>${leadsV.filter(l=>l.pipeline==='Apresentação').length}</td><td>${leadsV.filter(l=>l.pipeline==='Negociação').length}</td><td>${leadsV.filter(l=>l.status==='Fechado'||l.pipeline==='Fechamento').length}</td><td>R$ ${receita.toLocaleString('pt-BR')}</td></tr>`;}).join('');}}
+function openMetaVendedorModal(){updateVendedorSelects();openModal('modal-meta-vendedor');}
+function saveMetaVendedor(){let meta={id:uid(),vendedor:document.getElementById('meta-vendedor-nome').value,adesao:parseFloat(document.getElementById('meta-adesao').value)||0,mensalidade:parseFloat(document.getElementById('meta-mensalidade').value)||0,mes:document.getElementById('meta-mes').value};if(!meta.vendedor){showToast('Selecione um vendedor!');return;}db.metasVendedor.push(meta);saveData();closeModal('modal-meta-vendedor');renderMetas();showToast('Meta salva!');}
+function deletarMetaVendedor(id){if(confirm('Remover meta?')){db.metasVendedor=db.metasVendedor.filter(m=>m.id!==id);saveData();renderMetas();showToast('Meta removida!');}}
+function openMetaGlobalModal(){document.getElementById('global-adesao').value=db.metaGlobal.adesao;document.getElementById('global-mensalidade').value=db.metaGlobal.mensalidade;document.getElementById('global-periodo').value=db.metaGlobal.periodo;openModal('modal-meta-global');}
+function saveMetaGlobal(){db.metaGlobal={adesao:parseFloat(document.getElementById('global-adesao').value)||0,mensalidade:parseFloat(document.getElementById('global-mensalidade').value)||0,periodo:document.getElementById('global-periodo').value};saveData();closeModal('modal-meta-global');renderDashboard();renderMetas();showToast('Meta global salva!');}
 
-// ==================== FORECAST ====================
-function renderForecast() {
-  let tb = document.getElementById('forecast-table');
-  if(!tb) return;
-  let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
-  tb.innerHTML = forecastData.map(l => `<tr>
-    <td>${l.vendedor || '—'}</td>
-    <td><strong>${l.empresa}</strong></td>
-    <td><span class="tag tag-info">${l.produto || '—'}</span></td>
-    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
-    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
-    <td><span class="tag ${l.pipeline === 'Fechamento' ? 'tag-success' : 'tag-warning'}">${l.pipeline || 'Lead'}</span></td>
-    <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </tr>`).join('');
-}
-function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filter(l => l.pipeline).map(l => ({ Vendedor: l.vendedor, Empresa: l.empresa, Produto: l.produto, Adesão: l.adesao, Mensalidade: l.mensalidade, Etapa: l.pipeline }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
+function renderForecast(){let tb=document.getElementById('forecast-table');if(!tb)return;let forecastData=db.leads.filter(l=>l.pipeline&&l.status!=='Fechado'&&l.status!=='Descartado').slice(0,50);if(forecastData.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</td></tr>';return;}
+tb.innerHTML=forecastData.map(l=>`<tr><td>${l.vendedor||'—'}</td><td><strong>${l.empresa}</strong></td><td><span class="tag tag-info">${l.produto||'—'}</span></td><td>R$ ${(l.adesao||0).toLocaleString('pt-BR')}</td><td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td><td><span class="tag ${l.pipeline==='Fechamento'?'tag-success':'tag-warning'}">${l.pipeline||'Lead'}</span></td><td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td></tr>`).join('');}
+function exportForecastExcel(){let ws=XLSX.utils.json_to_sheet(db.leads.filter(l=>l.pipeline).map(l=>({Vendedor:l.vendedor,Empresa:l.empresa,Produto:l.produto,Adesão:l.adesao,Mensalidade:l.mensalidade,Etapa:l.pipeline})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Forecast');XLSX.writeFile(wb,`forecast_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Forecast exportado!');}
 
-// ==================== CAMPANHAS ====================
-function renderCampanhas() {
-  let list = document.getElementById('campanhas-list');
-  if(!list) return;
-  if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha cadastrada</div>'; return; }
-  list.innerHTML = db.campanhas.map(c => `
-    <div class="content-card" style="border-left: 4px solid ${c.cor || '#005C99'}">
-      <div class="card-header">
-        <div><h4 class="card-title">${c.nome}</h4><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div>
-        <div>
-          <button class="btn btn-outline btn-sm" onclick="gerarQRCode('${c.id}')"><i class="fas fa-qrcode"></i> QR Code</button>
-          <button class="btn btn-outline btn-sm" onclick="gerarLandingPage('${c.id}')"><i class="fas fa-file-alt"></i> Landing Page</button>
-          <button class="btn btn-danger btn-sm" onclick="deletarCampanha('${c.id}')"><i class="fas fa-trash"></i></button>
-        </div>
-      </div>
-      <div class="stats-grid" style="margin-top: 12px;">
-        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${db.leads.filter(l => l.campanha === c.id).length}</div><div class="stat-label">Leads Captados</div></div>
-        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta || 0}</div><div class="stat-label">Meta</div></div>
-        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta ? Math.round(db.leads.filter(l => l.campanha === c.id).length / c.meta * 100) : 0}%</div><div class="stat-label">Atingimento</div></div>
-      </div>
-      <div id="qr-${c.id}" style="display: none; margin-top: 16px;"></div>
-    </div>
-  `).join('');
-}
-function openCampanhaModal() { openModal('modal-campanha'); }
-function saveCampanha() {
-  let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, meta: parseFloat(document.getElementById('camp-meta').value) || 0, cor: document.getElementById('camp-cor').value, createdAt: new Date().toISOString() };
-  if(!camp.nome){ showToast('Informe o nome!'); return; }
-  db.campanhas.push(camp);
-  saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!');
-}
-function deletarCampanha(id) { if(confirm('Remover campanha?')) { db.campanhas = db.campanhas.filter(c => c.id !== id); saveData(); renderCampanhas(); showToast('Campanha removida!'); } }
-function gerarQRCode(id) {
-  let camp = db.campanhas.find(c => c.id === id);
-  if(!camp) return;
-  let url = camp.lp || `https://rensoftware.com.br/campanha/${camp.id}`;
-  let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
-  let div = document.getElementById(`qr-${id}`);
-  div.innerHTML = `<img src="${qrUrl}" style="width: 150px;"><br><small>${url}</small><br><button class="btn btn-outline btn-sm" onclick="this.parentElement.style.display='none'">Fechar</button>`;
-  div.style.display = 'block';
-}
-function gerarLandingPage(id) {
-  let camp = db.campanhas.find(c => c.id === id);
-  if(!camp) return;
-  let html = `
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${camp.nome} - RenSoftware</title>
-    <style>
-      *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,#003366 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-      .landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}
-      h1{color:${camp.cor || '#005C99'};margin-bottom:10px;}
-      .subtitle{color:#666;margin-bottom:30px;}
-      .form-group{margin-bottom:20px;}
-      label{display:block;margin-bottom:5px;color:#555;font-weight:500;}
-      input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
-      input:focus{outline:none;border-color:${camp.cor || '#005C99'};}
-      button{width:100%;padding:14px;background:${camp.cor || '#005C99'};color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:transform 0.3s;}
-      button:hover{transform:translateY(-2px);}
-      .success{background:#d4edda;color:#155724;padding:12px;border-radius:10px;margin-top:20px;display:none;}
-    </style>
-    </head>
-    <body>
-    <div class="landing-container">
-      <h1>${camp.nome}</h1>
-      <p class="subtitle">Preencha o formulário para participar</p>
-      <form id="leadForm">
-        <div class="form-group"><label>Nome Completo</label><input type="text" name="nome" required></div>
-        <div class="form-group"><label>E-mail</label><input type="email" name="email" required></div>
-        <div class="form-group"><label>Telefone</label><input type="tel" name="telefone" required></div>
-        <div class="form-group"><label>Empresa</label><input type="text" name="empresa" required></div>
-        <button type="submit">Enviar Cadastro</button>
-      </form>
-      <div id="successMsg" class="success">✅ Cadastro realizado com sucesso! Entraremos em contato.</div>
-    </div>
-    <script>
-      document.getElementById('leadForm').addEventListener('submit', function(e){
-        e.preventDefault();
-        let data = {};
-        for(let[k,v] of new FormData(this)) data[k]=v;
-        data.campanha = '${camp.id}';
-        localStorage.setItem('lead_'+Date.now(), JSON.stringify(data));
-        document.getElementById('successMsg').style.display = 'block';
-        this.reset();
-        setTimeout(()=>{window.close();}, 2000);
-      });
-    </script>
-    </body>
-    </html>
-  `;
-  let win = window.open('', '_blank', 'width=550,height=700');
-  win.document.write(html);
-  win.document.close();
-}
+function renderCampanhas(){let list=document.getElementById('campanhas-list');if(!list)return;if(db.campanhas.length===0){list.innerHTML='<div style="text-align:center;padding:40px">Nenhuma campanha cadastrada</div>';return;}
+list.innerHTML=db.campanhas.map(c=>`<div class="content-card" style="border-left:4px solid ${c.cor||'#005C99'}"><div class="card-header"><div><h4 class="card-title">${c.nome}</h4><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div><div><button class="btn btn-outline btn-sm" onclick="gerarQRCode('${c.id}')">QR Code</button><button class="btn btn-outline btn-sm" onclick="gerarLandingPage('${c.id}')">Landing Page</button><button class="btn btn-danger btn-sm" onclick="deletarCampanha('${c.id}')">Excluir</button></div></div><div class="stats-grid" style="margin-top:12px"><div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${db.leads.filter(l=>l.campanha===c.id).length}</div><div class="stat-label">Leads</div></div><div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${c.meta||0}</div><div class="stat-label">Meta</div></div><div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:20px">${c.meta?Math.round(db.leads.filter(l=>l.campanha===c.id).length/c.meta*100):0}%</div><div class="stat-label">%</div></div></div><div id="qr-${c.id}" style="display:none;margin-top:16px"></div></div>`).join('');}
+function openCampanhaModal(){openModal('modal-campanha');}
+function saveCampanha(){let camp={id:uid(),nome:document.getElementById('camp-nome').value.trim(),tipo:document.getElementById('camp-tipo').value,inicio:document.getElementById('camp-inicio').value,fim:document.getElementById('camp-fim').value,lp:document.getElementById('camp-lp').value,meta:parseFloat(document.getElementById('camp-meta').value)||0,cor:document.getElementById('camp-cor')?.value||'#005C99',createdAt:new Date().toISOString()};if(!camp.nome){showToast('Informe o nome!');return;}db.campanhas.push(camp);saveData();closeModal('modal-campanha');renderCampanhas();showToast('Campanha criada!');}
+function deletarCampanha(id){if(confirm('Remover campanha?')){db.campanhas=db.campanhas.filter(c=>c.id!==id);saveData();renderCampanhas();showToast('Campanha removida!');}}
+function gerarQRCode(id){let camp=db.campanhas.find(c=>c.id===id);if(!camp)return;let url=camp.lp||`https://rensoftware.com.br/campanha/${camp.id}`;let qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;let div=document.getElementById(`qr-${id}`);div.innerHTML=`<img src="${qrUrl}" style="width:150px"><br><small>${url}</small><br><button class="btn btn-outline btn-sm" onclick="this.parentElement.style.display='none'">Fechar</button>`;div.style.display='block';}
+function gerarLandingPage(id){let camp=db.campanhas.find(c=>c.id===id);if(!camp)return;let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${camp.nome} - RenSoftware</title><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor||'#005C99'} 0%,#003366 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}.landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}h1{color:${camp.cor||'#005C99'};margin-bottom:10px;}.subtitle{color:#666;margin-bottom:30px;}.form-group{margin-bottom:20px;}label{display:block;margin-bottom:5px;color:#555;font-weight:500;}input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}input:focus{outline:none;border-color:${camp.cor||'#005C99'};}button{width:100%;padding:14px;background:${camp.cor||'#005C99'};color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;}.success{background:#d4edda;color:#155724;padding:12px;border-radius:10px;margin-top:20px;display:none;}</style></head><body><div class="landing-container"><h1>${camp.nome}</h1><p class="subtitle">Preencha o formulário para participar</p><form id="leadForm"><div class="form-group"><label>Nome Completo</label><input type="text" name="nome" required></div><div class="form-group"><label>E-mail</label><input type="email" name="email" required></div><div class="form-group"><label>Telefone</label><input type="tel" name="telefone" required></div><div class="form-group"><label>Empresa</label><input type="text" name="empresa" required></div><button type="submit">Enviar Cadastro</button></form><div id="successMsg" class="success">✅ Cadastro realizado com sucesso!</div></div><script>document.getElementById('leadForm').addEventListener('submit',function(e){e.preventDefault();let data={};for(let[k,v] of new FormData(this)) data[k]=v;data.campanha='${camp.id}';localStorage.setItem('lead_'+Date.now(),JSON.stringify(data));document.getElementById('successMsg').style.display='block';this.reset();setTimeout(()=>{window.close();},2000);});<\/script></body></html>`;let win=window.open('','_blank','width=550,height=700');win.document.write(html);win.document.close();}
 
-// ==================== PRODUTOS ====================
-function renderProdutos() {
-  let tb = document.getElementById('produtos-table');
-  if(!tb) return;
-  tb.innerHTML = db.produtos.map(p => `<tr>
-    <td><strong>${p.nome}</strong></td>
-    <td>${p.categoria}</span></td>
-    <td>R$ ${(p.adesao || 0).toLocaleString('pt-BR')}</span></td>
-    <td>R$ ${(p.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('');
-}
-function openProdutoModal() { openModal('modal-produto'); }
-function saveProduto() {
-  let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0 };
-  if(!produto.nome){ showToast('Informe o nome!'); return; }
-  db.produtos.push(produto);
-  saveData(); closeModal('modal-produto'); renderProdutos(); updateProdutoSelects(); showToast('Produto criado!');
-}
-function editarProduto(id) { let p = db.produtos.find(p => p.id === id); if(p) { document.getElementById('produto-nome').value = p.nome; document.getElementById('produto-adesao').value = p.adesao; document.getElementById('produto-mensalidade').value = p.mensalidade; document.getElementById('modal-produto').dataset.editId = id; openModal('modal-produto'); } }
-function deletarProduto(id) { if(confirm('Remover?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); updateProdutoSelects(); showToast('Produto removido!'); } }
+function renderProdutos(){let tb=document.getElementById('produtos-table');if(!tb)return;tb.innerHTML=db.produtos.map(p=>`<tr><td><strong>${p.nome}</strong></td><td>${p.categoria}</td><td>R$ ${(p.adesao||0).toLocaleString('pt-BR')}</td><td>R$ ${(p.mensalidade||0).toLocaleString('pt-BR')}</td><td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button> <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('');}
+function openProdutoModal(){openModal('modal-produto');}
+function saveProduto(){let produto={id:uid(),nome:document.getElementById('produto-nome').value.trim(),categoria:document.getElementById('produto-categoria').value,adesao:parseFloat(document.getElementById('produto-adesao').value)||0,mensalidade:parseFloat(document.getElementById('produto-mensalidade').value)||0};if(!produto.nome){showToast('Informe o nome!');return;}db.produtos.push(produto);saveData();closeModal('modal-produto');renderProdutos();updateProdutoSelects();showToast('Produto criado!');}
+function editarProduto(id){let p=db.produtos.find(p=>p.id===id);if(p){document.getElementById('produto-nome').value=p.nome;document.getElementById('produto-adesao').value=p.adesao;document.getElementById('produto-mensalidade').value=p.mensalidade;document.getElementById('modal-produto').dataset.editId=id;openModal('modal-produto');}}
+function deletarProduto(id){if(confirm('Remover?')){db.produtos=db.produtos.filter(p=>p.id!==id);saveData();renderProdutos();updateProdutoSelects();showToast('Produto removido!');}}
 
-// ==================== IMPORTAR ====================
-function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
-function handleImport(e) { let f = e.target.files[0]; if(!f) return; let r = new FileReader(); r.onload = function(ev){ let wb = XLSX.read(ev.target.result, {type:'binary'}); let ws = wb.Sheets[wb.SheetNames[0]]; let rows = XLSX.utils.sheet_to_json(ws); let imported = 0; for(let row of rows){ let empresa = row.empresa || row.Empresa; if(empresa && !db.leads.find(l => l.empresa === empresa)){ db.leads.push({ id: uid(), empresa, contato: row.contato || '', email: row.email || '', telefone: row.telefone || '', cidade: row.cidade || '', uf: row.uf || '', segmento: row.segmento || '', produto: row.produto || '', vendedor: row.vendedor || '', adesao: parseFloat(row.adesao) || 0, mensalidade: parseFloat(row.mensalidade) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() }); imported++; } } saveData(); renderLeads(); renderDashboard(); document.getElementById('import-preview').innerHTML = `<div style="background:#d1fae5; padding:10px; border-radius:10px">✅ ${imported} leads importados!</div>`; showToast(`${imported} leads importados!`); }; r.readAsBinaryString(f); }
+function downloadTemplate(){let ws=XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Modelo');XLSX.writeFile(wb,'modelo_leads.xlsx');showToast('Modelo baixado!');}
+function handleImport(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=function(ev){let wb=XLSX.read(ev.target.result,{type:'binary'});let ws=wb.Sheets[wb.SheetNames[0]];let rows=XLSX.utils.sheet_to_json(ws);let imported=0;for(let row of rows){let empresa=row.empresa||row.Empresa;if(empresa&&!db.leads.find(l=>l.empresa===empresa)){db.leads.push({id:uid(),empresa,contato:row.contato||'',email:row.email||'',telefone:row.telefone||'',cidade:row.cidade||'',uf:row.uf||'',segmento:row.segmento||'',produto:row.produto||'',vendedor:row.vendedor||'',adesao:parseFloat(row.adesao)||0,mensalidade:parseFloat(row.mensalidade)||0,status:'Oportunidade',pipeline:'',createdAt:new Date().toISOString()});imported++;}}saveData();renderLeads();renderDashboard();document.getElementById('import-preview').innerHTML=`<div style="background:#d1fae5;padding:10px;border-radius:10px">✅ ${imported} leads importados!</div>`;showToast(`${imported} leads importados!`);};r.readAsBinaryString(f);}
 
-// ==================== E-MAILS ====================
-function sendBulkEmail() { let subject = document.getElementById('email-subject').value; let body = document.getElementById('email-body').value; if(!subject || !body){ showToast('Preencha assunto e mensagem!'); return; } let leads = db.leads.filter(l => l.email && l.status !== 'Descartado'); showToast(`Simulação: ${leads.length} e-mails seriam enviados`); }
-function renderEmailHistory() { let el = document.getElementById('email-history'); if(el) el.innerHTML = '<div style="text-align:center; padding:20px">Nenhum e-mail enviado</div>'; }
+function sendBulkEmail(){let subject=document.getElementById('email-subject').value;let body=document.getElementById('email-body').value;if(!subject||!body){showToast('Preencha assunto e mensagem!');return;}let leads=db.leads.filter(l=>l.email&&l.status!=='Descartado');showToast(`Simulação: ${leads.length} e-mails seriam enviados`);}
+function renderEmailHistory(){let el=document.getElementById('email-history');if(el)el.innerHTML='<div style="text-align:center;padding:20px">Nenhum e-mail enviado</div>';}
 
-// ==================== RELATÓRIOS ====================
-function renderRelatorios() {
-  let tb = document.getElementById('relatorio-table');
-  if(!tb) return;
-  tb.innerHTML = db.vendas.map(v => `<tr>
-    <td>${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>
-  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';
-}
-function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(db.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
-function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
+function renderRelatorios(){let tb=document.getElementById('relatorio-table');if(!tb)return;tb.innerHTML=db.vendas.map(v=>`<tr><td>${v.data}</td><td>${v.vendedor}</td><td><strong>${v.empresa}</strong></td><td>${v.produto}</td><td>R$ ${v.adesao.toLocaleString('pt-BR')}</td><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';}
+function exportRelatorioExcel(){let ws=XLSX.utils.json_to_sheet(db.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatorio');XLSX.writeFile(wb,`relatorio_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel exportado!');}
+function exportRelatorioPDF(){let win=window.open('','_blank');win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`);win.document.close();win.print();showToast('PDF gerado!');}
 
-// ==================== USUÁRIOS ====================
-function renderUsuarios() {
-  let tb = document.getElementById('users-table');
-  if(!tb) return;
-  tb.innerHTML = db.usuarios.map(u => `<tr>
-    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
-    <td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button>
-          ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</span></td>
-  </tr>`).join('');
-}
-function openUserModal() { openModal('modal-user'); }
-function editarUsuario(id) { let u = db.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); } }
-function saveUser() {
-  let id = document.getElementById('modal-user').dataset.editId;
-  let nome = document.getElementById('user-nome').value.trim();
-  let login = document.getElementById('user-login').value.trim();
-  let perfil = document.getElementById('user-perfil').value;
-  let senha = document.getElementById('user-senha').value;
-  if(!nome || !login){ showToast('Preencha nome e login!'); return; }
-  if(id) {
-    let idx = db.usuarios.findIndex(u => u.id === id);
-    if(idx !== -1) { db.usuarios[idx].nome = nome; db.usuarios[idx].login = login; db.usuarios[idx].perfil = perfil; if(senha) db.usuarios[idx].senha = senha; }
-  } else {
-    if(!senha){ showToast('Senha obrigatória!'); return; }
-    db.usuarios.push({ id: uid(), nome, login, senha, perfil });
-  }
-  saveData(); closeModal('modal-user'); renderUsuarios(); updateVendedorSelects(); showToast('Usuário salvo!');
-}
-function deletarUsuario(id) { if(confirm('Remover?')) { db.usuarios = db.usuarios.filter(u => u.id !== id); saveData(); renderUsuarios(); updateVendedorSelects(); showToast('Usuário removido!'); } }
+function renderUsuarios(){let tb=document.getElementById('users-table');if(!tb)return;tb.innerHTML=db.usuarios.map(u=>`<tr><td><strong>${u.nome}</strong><br><small>${u.login}</small></td><td><span class="tag ${u.perfil==='Diretor'?'tag-purple':u.perfil==='Gerente'?'tag-info':'tag-success'}">${u.perfil}</span></td><td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button> ${u.id!=='1'?`<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>`:''}</td></tr>`).join('');}
+function openUserModal(){openModal('modal-user');}
+function editarUsuario(id){let u=db.usuarios.find(u=>u.id===id);if(u){document.getElementById('user-nome').value=u.nome;document.getElementById('user-login').value=u.login;document.getElementById('user-perfil').value=u.perfil;document.getElementById('modal-user').dataset.editId=id;openModal('modal-user');}}
+function saveUser(){let id=document.getElementById('modal-user').dataset.editId;let nome=document.getElementById('user-nome').value.trim();let login=document.getElementById('user-login').value.trim();let perfil=document.getElementById('user-perfil').value;let senha=document.getElementById('user-senha').value;if(!nome||!login){showToast('Preencha nome e login!');return;}if(id){let idx=db.usuarios.findIndex(u=>u.id===id);if(idx!==-1){db.usuarios[idx].nome=nome;db.usuarios[idx].login=login;db.usuarios[idx].perfil=perfil;if(senha)db.usuarios[idx].senha=senha;}}else{if(!senha){showToast('Senha obrigatória!');return;}db.usuarios.push({id:uid(),nome,login,senha,perfil});}saveData();closeModal('modal-user');renderUsuarios();updateVendedorSelects();showToast('Usuário salvo!');}
+function deletarUsuario(id){if(confirm('Remover?')){db.usuarios=db.usuarios.filter(u=>u.id!==id);saveData();renderUsuarios();updateVendedorSelects();showToast('Usuário removido!');}}
 
-// ==================== DASHBOARD ====================
-function renderDashboard() {
-  let totalLeads = db.leads.length;
-  let totalFechamentos = db.vendas.length;
-  let receitaTotal = db.vendas.reduce((s,v) => s + v.adesao + v.mensalidade, 0);
-  let conversao = totalLeads > 0 ? Math.round(totalFechamentos / totalLeads * 100) : 0;
-  document.getElementById('stat-total-leads').innerText = totalLeads;
-  document.getElementById('stat-fechamentos').innerText = totalFechamentos;
-  document.getElementById('stat-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`;
-  document.getElementById('stat-conversao').innerText = `${conversao}%`;
-  
-  let etapasCount = { Captação: 0, Agendamento: 0, Apresentação: 0, Negociação: 0, Fechamento: 0 };
-  db.leads.forEach(l => {
-    if (l.status === 'Fechado') etapasCount.Fechamento++;
-    else if (l.pipeline === 'Negociação') etapasCount.Negociação++;
-    else if (l.pipeline === 'Apresentação') etapasCount.Apresentação++;
-    else if (l.pipeline === 'Agendamento') etapasCount.Agendamento++;
-    else etapasCount.Captação++;
-  });
-  document.getElementById('jornada-steps').innerHTML = ['Captação', 'Agendamento', 'Apresentação', 'Negociação', 'Fechamento'].map(etapa => `<div class="step ${etapasCount[etapa] > 0 ? 'completed' : 'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join('');
-  
-  let totalMeta = db.metaGlobal.adesao;
-  let totalRealizado = db.vendas.reduce((s,v) => s + v.adesao, 0);
-  let aRealizar = totalMeta - totalRealizado;
-  if(charts.metas) charts.metas.destroy();
-  let ctx = document.getElementById('metas-chart')?.getContext('2d');
-  if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#28A745', '#FFC107'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
-}
+function renderDashboard(){let totalLeads=db.leads.length;let totalFechamentos=db.vendas.length;let receitaTotal=db.vendas.reduce((s,v)=>s+v.adesao+v.mensalidade,0);let conversao=totalLeads>0?Math.round(totalFechamentos/totalLeads*100):0;document.getElementById('stat-total-leads').innerText=totalLeads;document.getElementById('stat-fechamentos').innerText=totalFechamentos;document.getElementById('stat-receita').innerText=`R$ ${receitaTotal.toLocaleString('pt-BR')}`;document.getElementById('stat-conversao').innerText=`${conversao}%`;
+let etapasCount={Captação:0,Agendamento:0,Apresentação:0,Negociação:0,Fechamento:0};db.leads.forEach(l=>{if(l.status==='Fechado')etapasCount.Fechamento++;else if(l.pipeline==='Negociação')etapasCount.Negociação++;else if(l.pipeline==='Apresentação')etapasCount.Apresentação++;else if(l.pipeline==='Agendamento')etapasCount.Agendamento++;else etapasCount.Captação++;});document.getElementById('jornada-steps').innerHTML=['Captação','Agendamento','Apresentação','Negociação','Fechamento'].map(etapa=>`<div class="step ${etapasCount[etapa]>0?'completed':'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join('');
+let totalMeta=db.metaGlobal.adesao;let totalRealizado=db.vendas.reduce((s,v)=>s+v.adesao,0);let aRealizar=totalMeta-totalRealizado;if(charts.metas)charts.metas.destroy();let ctx=document.getElementById('metas-chart')?.getContext('2d');if(ctx)charts.metas=new Chart(ctx,{type:'bar',data:{labels:['Realizado','A Realizar'],datasets:[{data:[totalRealizado,aRealizar>0?aRealizar:0],backgroundColor:['#28A745','#FFC107']}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top'}}}});}
 
-// ==================== UTILIDADES ====================
-function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
-function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
+function openModal(id){document.getElementById(id).style.display='flex';document.body.style.overflow='hidden';}
+function closeModal(id){document.getElementById(id).style.display='none';document.body.style.overflow='';delete document.getElementById('modal-user')?.dataset?.editId;delete document.getElementById('modal-lead')?.dataset?.editId;delete document.getElementById('modal-produto')?.dataset?.editId;}
+function renderAll(){renderDashboard();renderLeads();renderPipeline();renderAgenda();renderMetas();renderForecast();renderCampanhas();renderProdutos();renderRelatorios();renderUsuarios();renderEmailHistory();updateVendedorSelects();updateProdutoSelects();}
 
-// Inicialização
 loadData();
 saveData();
 </script>
