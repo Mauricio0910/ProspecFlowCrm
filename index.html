@@ -24,6 +24,8 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 .auth-input:focus{outline:none;border-color:var(--ren-primary);}
 .btn-auth{width:100%;padding:14px;background:linear-gradient(135deg,var(--ren-primary)0%,var(--ren-secondary)100%);color:white;border:none;border-radius:16px;font-size:16px;font-weight:600;cursor:pointer;}
 .btn-auth:hover{transform:translateY(-2px);}
+.loading{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:2000;color:white;font-size:18px;}
+.loading.hidden{display:none;}
 #app-main{display:none;}
 .app-container{display:flex;min-height:100vh;}
 .sidebar{width:260px;background:var(--ren-dark);min-height:100vh;padding:24px 16px;position:fixed;height:100vh;overflow-y:auto;transition:all 0.3s;z-index:100;}
@@ -107,6 +109,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 </head>
 <body>
 
+<!-- TELA DE LOGIN -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-card">
     <div class="auth-icon"><i class="fas fa-cloud-upload-alt"></i></div>
@@ -116,8 +119,11 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
     <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
     <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
     <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
+    <div style="margin-top:16px; font-size:12px; color:#999;">admin / 1234</div>
   </div>
 </div>
+
+<div class="loading hidden" id="loading"><div><i class="fas fa-spinner fa-spin"></i> Carregando dados...</div></div>
 
 <div id="app-main" style="display:none">
   <div class="app-container">
@@ -168,7 +174,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom:16px" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -182,7 +188,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
             <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th><tr></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -198,11 +204,11 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></td></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody><tr></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><td><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
         </div>
       </div>
 
@@ -210,7 +216,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast - Pipeline de Vendas</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -225,7 +231,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
             <div class="stat-card"><div class="stat-icon red"><i class="fas fa-user-slash"></i></div><div class="stat-value" id="exec-cancelados">0</div><div class="stat-label">Cancelados</div></div>
           </div>
         </div>
-        <div class="content-card"><div class="card-header"><h3 class="card-title">📈 Performance por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="performance-table"></tbody></table></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">📈 Performance por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="performance-table"></tbody></tr></div></div>
         <div class="content-card"><div class="card-header"><h3 class="card-title">❌ Perdas Registradas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div><div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Motivo</th><th>Valor</th><th>Data</th></tr></thead><tbody id="perdas-table"></tbody></table></div></div>
       </div>
 
@@ -246,7 +252,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
       <!-- PRODUTOS -->
       <div id="page-produtos" class="page">
         <div class="content-card"><div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
@@ -281,7 +287,7 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
       <!-- USUÁRIOS -->
       <div id="page-usuarios" class="page">
         <div class="content-card"><div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
         </div>
       </div>
     </div>
@@ -308,48 +314,26 @@ body{font-family:'Inter',sans-serif;background:#f5f5f5;overflow-x:hidden;}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== FIREBASE CONFIG ====================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
-  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
-  projectId: "prospectflow-crm-5775a",
-  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
-  messagingSenderId: "278911416959",
-  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
-};
-
-let dbFirebase = null;
+// ==================== DADOS GLOBAIS ====================
 let currentUser = null;
 let currentPipelineStage = 'Agendamento';
 let charts = {};
 let sidebarCollapsed = false;
 
-// Dados locais (fallback)
-let S = {
-  leads: [],
-  vendas: [],
-  agenda: [],
-  remarketing: [],
-  perdas: [],
-  metasVendedor: [],
-  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
-  produtos: [
-    { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
-    { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
-    { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
-    { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
-  ],
-  campanhas: [],
-  emailHist: [],
-  usuarios: []
-};
-
-// USUÁRIOS PADRÃO (criados no Firebase se não existirem)
+// USUÁRIOS PADRÃO (login imediato)
 const DEFAULT_USERS = [
   { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', status: 'ativo' },
   { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', status: 'ativo' },
   { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', status: 'ativo' },
   { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', status: 'ativo' }
+];
+
+// PRODUTOS PADRÃO
+const PRODUTOS_PADRAO = [
+  { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
+  { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
+  { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
+  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
 ];
 
 // LEADS EXEMPLO
@@ -360,89 +344,116 @@ const LEADS_EXEMPLO = [
   { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
-// ==================== FIREBASE FUNCTIONS ====================
-function setSyncing(on) {
-  let dot = document.getElementById('sync-dot');
-  if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : '');
-}
+// AGENDA EXEMPLO
+const AGENDA_EXEMPLO = [
+  { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação Easyren' }
+];
+
+// REMARKETING EXEMPLO
+const REMARKETING_EXEMPLO = [
+  { id: 'r1', empresa: 'Cliente Perdido A', contato: 'João', email: 'joao@perdido.com', motivo: 'Não demonstrou interesse', data: new Date().toISOString().split('T')[0] }
+];
+
+let dbFirebase = null;
+let S = {
+  leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
+  vendas: [],
+  agenda: JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
+  remarketing: JSON.parse(JSON.stringify(REMARKETING_EXEMPLO)),
+  perdas: [],
+  metasVendedor: [],
+  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
+  produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
+  campanhas: [],
+  emailHist: [],
+  usuarios: JSON.parse(JSON.stringify(DEFAULT_USERS))
+};
+
+function setSyncing(on) { let dot = document.getElementById('sync-dot'); if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : ''); }
+function showLoading(show) { let ld = document.getElementById('loading'); if(ld) ld.classList.toggle('hidden', !show); }
+function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+
+// ==================== FIREBASE ====================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
+  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
+  projectId: "prospectflow-crm-5775a",
+  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
+  messagingSenderId: "278911416959",
+  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
+};
 
 async function initFirebase() {
   try {
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     dbFirebase = firebase.firestore();
     console.log('Firebase conectado!');
-    await loadAllData();
+    await loadFirebaseData();
   } catch(e) {
     console.error('Erro Firebase:', e);
     showToast('Erro ao conectar ao Firebase. Usando dados locais.', 'err');
-    loadLocalData();
   }
+  showLoading(false);
 }
 
-async function loadAllData() {
+async function loadFirebaseData() {
   if(!dbFirebase) return;
   setSyncing(true);
   try {
-    // Carregar leads
-    let leadsSnap = await dbFirebase.collection('leads').get();
-    S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if(S.leads.length === 0) {
-      for(let lead of LEADS_EXEMPLO) await dbFirebase.collection('leads').doc(lead.id).set(lead);
-      S.leads = [...LEADS_EXEMPLO];
-    }
-    
-    // Carregar vendas
-    let vendasSnap = await dbFirebase.collection('vendas').get();
-    S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar agenda
-    let agendaSnap = await dbFirebase.collection('agenda').get();
-    S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar remarketing
-    let remarketingSnap = await dbFirebase.collection('remarketing').get();
-    S.remarketing = remarketingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar perdas
-    let perdasSnap = await dbFirebase.collection('perdas').get();
-    S.perdas = perdasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar metas vendedor
-    let metasSnap = await dbFirebase.collection('metasVendedor').get();
-    S.metasVendedor = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar meta global
-    let metaGSnap = await dbFirebase.collection('config').doc('metaGlobal').get();
-    if(metaGSnap.exists) S.metaGlobal = metaGSnap.data();
-    
-    // Carregar produtos
-    let produtosSnap = await dbFirebase.collection('produtos').get();
-    if(produtosSnap.docs.length > 0) S.produtos = produtosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar campanhas
-    let campanhasSnap = await dbFirebase.collection('campanhas').get();
-    S.campanhas = campanhasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Carregar usuários
+    // Usuários
     let usuariosSnap = await dbFirebase.collection('usuarios').get();
     if(usuariosSnap.docs.length > 0) {
       S.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } else {
-      for(let user of DEFAULT_USERS) await dbFirebase.collection('usuarios').doc(user.id).set(user);
-      S.usuarios = [...DEFAULT_USERS];
+      for(let u of DEFAULT_USERS) await dbFirebase.collection('usuarios').doc(u.id).set(u);
     }
     
-  } catch(e) { console.error('Erro ao carregar dados:', e); loadLocalData(); }
+    // Leads
+    let leadsSnap = await dbFirebase.collection('leads').get();
+    if(leadsSnap.docs.length > 0) S.leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Vendas
+    let vendasSnap = await dbFirebase.collection('vendas').get();
+    if(vendasSnap.docs.length > 0) S.vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Agenda
+    let agendaSnap = await dbFirebase.collection('agenda').get();
+    if(agendaSnap.docs.length > 0) S.agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Remarketing
+    let remarketingSnap = await dbFirebase.collection('remarketing').get();
+    if(remarketingSnap.docs.length > 0) S.remarketing = remarketingSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Perdas
+    let perdasSnap = await dbFirebase.collection('perdas').get();
+    if(perdasSnap.docs.length > 0) S.perdas = perdasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Metas Vendedor
+    let metasSnap = await dbFirebase.collection('metasVendedor').get();
+    if(metasSnap.docs.length > 0) S.metasVendedor = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Meta Global
+    let metaGSnap = await dbFirebase.collection('config').doc('metaGlobal').get();
+    if(metaGSnap.exists) S.metaGlobal = metaGSnap.data();
+    
+    // Produtos
+    let produtosSnap = await dbFirebase.collection('produtos').get();
+    if(produtosSnap.docs.length > 0) S.produtos = produtosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Campanhas
+    let campanhasSnap = await dbFirebase.collection('campanhas').get();
+    if(campanhasSnap.docs.length > 0) S.campanhas = campanhasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    saveLocalData();
+  } catch(e) { console.error('Erro ao carregar dados:', e); }
   setSyncing(false);
-  saveLocalData();
 }
 
 async function saveToFirebase(collection, id, data) {
   if(!dbFirebase) return;
   setSyncing(true);
-  try {
-    await dbFirebase.collection(collection).doc(id).set(data);
-  } catch(e) { console.error(e); }
+  try { await dbFirebase.collection(collection).doc(id).set(data); } catch(e) { console.error(e); }
   setSyncing(false);
   saveLocalData();
 }
@@ -450,36 +461,28 @@ async function saveToFirebase(collection, id, data) {
 async function deleteFromFirebase(collection, id) {
   if(!dbFirebase) return;
   setSyncing(true);
-  try {
-    await dbFirebase.collection(collection).doc(id).delete();
-  } catch(e) { console.error(e); }
+  try { await dbFirebase.collection(collection).doc(id).delete(); } catch(e) { console.error(e); }
   setSyncing(false);
   saveLocalData();
 }
 
-function saveLocalData() {
-  localStorage.setItem('rensoftware_local_backup', JSON.stringify(S));
-}
-
+function saveLocalData() { localStorage.setItem('rensoftware_local_backup', JSON.stringify(S)); }
 function loadLocalData() {
   let backup = localStorage.getItem('rensoftware_local_backup');
   if(backup) {
     let data = JSON.parse(backup);
-    S.leads = data.leads || [];
+    S.leads = data.leads || LEADS_EXEMPLO;
     S.vendas = data.vendas || [];
-    S.agenda = data.agenda || [];
-    S.remarketing = data.remarketing || [];
+    S.agenda = data.agenda || AGENDA_EXEMPLO;
+    S.remarketing = data.remarketing || REMARKETING_EXEMPLO;
     S.perdas = data.perdas || [];
     S.metasVendedor = data.metasVendedor || [];
     S.metaGlobal = data.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' };
-    S.produtos = data.produtos || [];
+    S.produtos = data.produtos || PRODUTOS_PADRAO;
     S.campanhas = data.campanhas || [];
     S.usuarios = data.usuarios || DEFAULT_USERS;
   }
 }
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -494,8 +497,16 @@ function toggleSidebar() {
 function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
+  
+  // Busca usuário ativo
   let user = S.usuarios.find(u => u.login === login && u.senha === senha && u.status === 'ativo');
-  if (!user) { document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin/1234'; document.getElementById('auth-error').style.display = 'block'; return; }
+  
+  if (!user) { 
+    document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos! Use admin / 1234';
+    document.getElementById('auth-error').style.display = 'block'; 
+    return; 
+  }
+  
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-main').style.display = 'block';
@@ -555,7 +566,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? S.leads.filter(l => l.vendedor === currentUser.nome) : S.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span><tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td>${l.contato||'—'}</td>
@@ -568,7 +579,7 @@ function renderLeads() {
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa(\'${l.id}\')"><i class="fas fa-arrow-right"></i></button>
           <button class="btn btn-outline btn-sm" onclick="openLeadEdit(\'${l.id}\')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="descartarLead(\'${l.id}\')"><i class="fas fa-trash"></i></button></span></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function openLeadModal() {
   document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
@@ -621,7 +632,7 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span><tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span></td>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td><span class="tag tag-info">${l.produto||'—'}</span></td>
@@ -629,7 +640,7 @@ function renderPipeline() {
     <td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor||'—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa(\'${l.id}\')">Avançar</button></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -683,7 +694,7 @@ function renderMetas() {
   });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
+    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></tr>'; return; }
     tb.innerHTML = S.metasVendedor.map(m => {
       let key = `${m.vendedor}_${m.produto === 'todos' ? 'todos' : m.produto}`;
       let realizado = realizadoPorVendedorProduto[key] || { adesao: 0 };
@@ -706,7 +717,7 @@ function renderMetas() {
       let leadsV = S.leads.filter(l => l.vendedor === v);
       let vendasV = S.vendas.filter(vd => vd.vendedor === v);
       let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
-      return `<tr>
+      return `</tr>
         <td><strong>${v}</strong></td>
         <td>${leadsV.length}</span></td>
         <td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</span></td>
@@ -739,7 +750,7 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = S.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<td><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
+  if(forecastData.length === 0) { tb.innerHTML = '<table><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></td>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor||'—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -779,7 +790,7 @@ function renderGestaoVendas() {
         <td>${vendasV.length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
         <td>${taxa}%</span></td>
-      <tr>`;
+      </tr>`;
     }).join('');
   }
   let tbPerdas = document.getElementById('perdas-table');
@@ -789,7 +800,7 @@ function renderGestaoVendas() {
     <td>R$ ${(p.valor||0).toLocaleString('pt-BR')}</td>
     <td>${p.data||'—'}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deletarPerda('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('') || '</table><td colspan="5" style="text-align:center">Nenhuma perda registrada</span></tr>';
+  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhuma perda registrada</span></td>';
 }
 function openPerdaModal() { openModal('modal-perda'); }
 async function savePerda() {
@@ -883,7 +894,7 @@ function renderProdutos() {
     <td>R$ ${(p.mensalidade||0).toLocaleString('pt-BR')}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  <td>`).join('');
+  </tr>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
 async function saveProduto() {
@@ -905,7 +916,7 @@ function sendBulkEmail(){let subject=document.getElementById('email-subject').va
 function renderEmailHistory(){let el=document.getElementById('email-history');if(el)el.innerHTML='<div style="text-align:center;padding:20px">Nenhum e-mail enviado</div>';}
 
 // ==================== RELATÓRIOS ====================
-function renderRelatorios(){let tb=document.getElementById('relatorio-table');if(!tb)return;tb.innerHTML=S.vendas.map(v=>`<tr> Whether${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>`).join('')||'<td><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';}
+function renderRelatorios(){let tb=document.getElementById('relatorio-table');if(!tb)return;tb.innerHTML=S.vendas.map(v=>`<tr> Whether${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>`).join('')||'<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';}
 function exportRelatorioExcel(){let ws=XLSX.utils.json_to_sheet(S.vendas.map(v=>({Data:v.data,Vendedor:v.vendedor,Empresa:v.empresa,Produto:v.produto,Adesão:v.adesao,Mensalidade:v.mensalidade})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Relatorio');XLSX.writeFile(wb,`relatorio_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Excel exportado!');}
 function exportRelatorioPDF(){let win=window.open('','_blank');win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`);win.document.close();win.print();showToast('PDF gerado!');}
 
@@ -1026,8 +1037,10 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; doc
 function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
 function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderGestaoVendas(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
 
-// Inicialização
+// Inicialização - Primeiro carrega dados locais, depois conecta Firebase
+loadLocalData();
 initFirebase();
+renderAll();
 </script>
 </body>
 </html>
