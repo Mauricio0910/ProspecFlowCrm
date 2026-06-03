@@ -3,14 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RenSoftware CRM - Sistema</title>
+<title>RenSoftware CRM - Sistema Completo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Inter',sans-serif;background:#f1f5f9;}
+/* Login Screen */
+.login-screen{position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#005C99 0%,#0099CC 100%);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.login-screen.hidden{display:none;}
+.login-card{background:white;border-radius:32px;padding:48px;width:100%;max-width:420px;text-align:center;}
+.login-icon{width:80px;height:80px;background:linear-gradient(135deg,#005C99 0%,#0099CC 100%);border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:40px;color:white;}
+.login-title{font-size:28px;font-weight:800;margin-bottom:8px;color:#003366;}
+.login-sub{color:#666;margin-bottom:32px;}
+.login-input{width:100%;padding:14px 18px;border:2px solid #e0e0e0;border-radius:16px;font-size:14px;margin-bottom:16px;}
+.login-input:focus{outline:none;border-color:#005C99;}
+.btn-auth{width:100%;padding:14px;background:linear-gradient(135deg,#005C99 0%,#0099CC 100%);color:white;border:none;border-radius:16px;font-size:16px;font-weight:600;cursor:pointer;}
+.error-msg{display:none;background:#ffebee;color:#dc3545;padding:10px;border-radius:12px;margin-bottom:16px;}
+/* Main App */
+#app-main{display:none;}
+.app-container{display:flex;}
 .sidebar{width:260px;background:#003366;min-height:100vh;padding:24px 16px;position:fixed;height:100vh;overflow-y:auto;}
 .main-content{flex:1;margin-left:260px;padding:20px;}
 .logo-area{display:flex;align-items:center;gap:12px;padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.1);}
@@ -24,6 +41,9 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
 .page-title{font-size:18px;font-weight:700;color:#003366;}
 .user-info{display:flex;align-items:center;gap:12px;}
 .user-avatar{width:36px;height:36px;background:linear-gradient(135deg,#005C99 0%,#0099CC 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#28a745;display:inline-block;margin-right:5px;}
+.sync-dot.syncing{background:#ffc107;animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .stat-card{background:white;border-radius:16px;padding:16px;}
 .stat-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
@@ -73,113 +93,135 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
 .step{text-align:center;flex:1;padding:10px;border-radius:8px;min-width:80px;}
 .step.completed{background:#28A745;color:white;}
 .step.pending{background:#e9ecef;color:#666;}
-.app-container{display:flex;}
 </style>
 </head>
 <body>
 
-<div class="app-container">
-  <div class="sidebar">
-    <div class="logo-area"><div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="logo-text">Ren<span>Software</span></div></div>
-    <div class="nav-item active" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
-    <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
-    <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
-    <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
-    <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
-    <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
-    <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
-    <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
-    <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
+<!-- TELA DE LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+    <h1 class="login-title">RenSoftware CRM</h1>
+    <p class="login-sub">Sistema de gestão de vendas</p>
+    <div id="errorMsg" class="error-msg"></div>
+    <input type="text" class="login-input" id="login-email" placeholder="E-mail" value="admin@rensoftware.com">
+    <input type="password" class="login-input" id="login-senha" placeholder="Senha" value="123456">
+    <button class="btn-auth" onclick="fazerLogin()">Entrar</button>
+    <div style="margin-top:16px; font-size:12px; color:#999;">
+      <i class="fas fa-info-circle"></i> admin@rensoftware.com / 123456
+    </div>
   </div>
+</div>
 
-  <div class="main-content">
-    <div class="top-bar">
-      <h2 class="page-title" id="page-title">Dashboard</h2>
-      <div class="user-info"><span id="user-name">Carregando...</span><div class="user-avatar" id="user-avatar">A</div><button class="btn btn-outline btn-sm" onclick="sair()">Sair</button></div>
+<!-- APLICATIVO PRINCIPAL -->
+<div id="app-main">
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="logo-area"><div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="logo-text">Ren<span>Software</span></div></div>
+      <div class="nav-item active" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
+      <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
+      <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
+      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
+      <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
+      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
+      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
+      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
+      <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="page-dashboard" class="page active">
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total-leads">0</div><div class="stat-label">Total Leads</div></div>
-        <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-fechamentos">0</div><div class="stat-label">Fechamentos</div></div>
-        <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-receita">R$ 0</div><div class="stat-label">Receita Total</div></div>
-        <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-conversao">0%</div><div class="stat-label">Conversão</div></div>
-      </div>
-      <div class="content-card"><div class="card-header"><h3 class="card-title">Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
-      <div class="content-card"><div class="card-header"><h3 class="card-title">Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
-    </div>
-
-    <!-- LEADS -->
-    <div id="page-leads" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
-        <input type="text" class="form-input" placeholder="Buscar..." style="margin-bottom:16px" oninput="renderLeads()" id="search-lead">
-        <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
-      </div>
-    </div>
-
-    <!-- PIPELINE -->
-    <div id="page-pipeline" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3></div>
-        <div class="pipeline-tabs">
-          <div class="pipeline-tab active" onclick="setPipelineStage('Agendamento')">Agendamento</div>
-          <div class="pipeline-tab" onclick="setPipelineStage('Apresentação')">Apresentação</div>
-          <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">Negociação</div>
-          <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">Fechamento</div>
+    <div class="main-content">
+      <div class="top-bar">
+        <h2 class="page-title" id="page-title">Dashboard</h2>
+        <div class="user-info">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="user-name">Carregando...</span>
+          <div class="user-avatar" id="user-avatar">A</div>
+          <button class="btn btn-outline btn-sm" onclick="fazerLogout()">Sair</button>
         </div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody><tr></div>
       </div>
-    </div>
 
-    <!-- AGENDA -->
-    <div id="page-agenda" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Agenda</h3><button class="btn btn-primary" onclick="openAgendaModal()">+ Agendar</button></div>
-        <div id="agenda-list"></div>
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total-leads">0</div><div class="stat-label">Total Leads</div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-fechamentos">0</div><div class="stat-label">Fechamentos</div></div>
+          <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-receita">R$ 0</div><div class="stat-label">Receita Total</div></div>
+          <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-conversao">0%</div><div class="stat-label">Conversão</div></div>
+        </div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
       </div>
-    </div>
 
-    <!-- METAS -->
-    <div id="page-metas" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+      <!-- LEADS -->
+      <div id="page-leads" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
+          <input type="text" class="form-input" placeholder="Buscar..." style="margin-bottom:16px" oninput="renderLeads()" id="search-lead">
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+        </div>
       </div>
-      <div class="content-card"><div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></tr></div>
-      </div>
-    </div>
 
-    <!-- FORECAST -->
-    <div id="page-forecast" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Forecast</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()">Exportar</button></div></div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
+      <!-- PIPELINE -->
+      <div id="page-pipeline" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3></div>
+          <div class="pipeline-tabs">
+            <div class="pipeline-tab active" onclick="setPipelineStage('Agendamento')">Agendamento</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Apresentação')">Apresentação</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">Negociação</div>
+            <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">Fechamento</div>
+          </div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+        </div>
       </div>
-    </div>
 
-    <!-- PRODUTOS -->
-    <div id="page-produtos" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+      <!-- AGENDA -->
+      <div id="page-agenda" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Agenda</h3><button class="btn btn-primary" onclick="openAgendaModal()">+ Agendar</button></div>
+          <div id="agenda-list"></div>
+        </div>
       </div>
-    </div>
 
-    <!-- RELATÓRIOS -->
-    <div id="page-relatorios" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody><table></div>
+      <!-- METAS -->
+      <div id="page-metas" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+        </div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div><div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
       </div>
-    </div>
 
-    <!-- USUÁRIOS -->
-    <div id="page-usuarios" class="page">
-      <div class="content-card">
-        <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-        <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+      <!-- FORECAST -->
+      <div id="page-forecast" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Forecast</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()">Exportar</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></tr></div>
+        </div>
+      </div>
+
+      <!-- PRODUTOS -->
+      <div id="page-produtos" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div id="page-relatorios" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div id="page-usuarios" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
+        </div>
       </div>
     </div>
   </div>
@@ -190,31 +232,37 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
+<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
 <div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
 <div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
-<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Status</label><select class="form-select" id="user-status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Email</label><input class="form-input" id="user-email"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== DADOS ====================
+// ==================== FIREBASE CONFIG ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
+  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
+  projectId: "prospectflow-crm-5775a",
+  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
+  messagingSenderId: "278911416959",
+  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 let currentUser = null;
 let currentPipelineStage = 'Agendamento';
 let charts = {};
 
-// USUÁRIOS
-let usuarios = [
-  { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', status: 'ativo' },
-  { id: 'u2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', status: 'ativo' },
-  { id: 'u3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', status: 'ativo' },
-  { id: 'u4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', status: 'ativo' }
-];
-
-// PRODUTOS
+// Dados
 let produtos = [
   { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
   { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
@@ -222,42 +270,136 @@ let produtos = [
   { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
 ];
 
-// LEADS
-let leads = [
-  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@email.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
-  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@email.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
-  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@email.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
-  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
-];
-
-let agenda = [];
+let leads = [];
 let vendas = [];
+let agenda = [];
 let metasVendedor = [];
 let metaGlobal = { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' };
+let usuarios = [];
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
-function salvarDados() { localStorage.setItem('ren_data', JSON.stringify({ leads, vendas, agenda, metasVendedor, metaGlobal, produtos, usuarios })); }
-function carregarDados() { let d = localStorage.getItem('ren_data'); if(d) { let p = JSON.parse(d); leads = p.leads || leads; vendas = p.vendas || []; agenda = p.agenda || []; metasVendedor = p.metasVendedor || []; metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; produtos = p.produtos || produtos; usuarios = p.usuarios || usuarios; } }
+function setSyncing(on) { let dot = document.getElementById('sync-dot'); if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : ''); }
+
+// ==================== FUNÇÕES DE BANCO ====================
+async function carregarDadosFirebase() {
+  setSyncing(true);
+  try {
+    const leadsSnap = await db.collection('leads').get();
+    leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const vendasSnap = await db.collection('vendas').get();
+    vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const agendaSnap = await db.collection('agenda').get();
+    agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const metasSnap = await db.collection('metasVendedor').get();
+    metasVendedor = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const metaGSnap = await db.collection('config').doc('metaGlobal').get();
+    if(metaGSnap.exists) metaGlobal = metaGSnap.data();
+    
+    const produtosSnap = await db.collection('produtos').get();
+    if(produtosSnap.docs.length > 0) produtos = produtosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const usuariosSnap = await db.collection('usuarios').get();
+    usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    renderAll();
+  } catch(e) { console.error(e); showToast('Erro ao carregar dados', 'err'); }
+  setSyncing(false);
+}
+
+async function salvarLeadFirebase(lead) {
+  setSyncing(true);
+  try { await db.collection('leads').doc(lead.id).set(lead); } catch(e) { console.error(e); }
+  setSyncing(false);
+}
 
 // ==================== AUTENTICAÇÃO ====================
-function initAuth() {
-  let userSalvo = localStorage.getItem('user_logged');
-  if(!userSalvo) {
-    window.location.href = 'login.html';
+async function criarUsuarioAdmin() {
+  try {
+    await auth.createUserWithEmailAndPassword('admin@rensoftware.com', '123456');
+    await db.collection('usuarios').doc('admin').set({
+      uid: 'admin',
+      nome: 'Administrador',
+      email: 'admin@rensoftware.com',
+      perfil: 'Diretor',
+      status: 'ativo',
+      criadoEm: new Date().toISOString()
+    });
+    console.log('Admin criado');
+  } catch(e) {
+    if(e.code !== 'auth/email-already-in-use') console.error(e);
+  }
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value.trim();
+  const errorDiv = document.getElementById('errorMsg');
+  
+  if(!email || !senha) {
+    errorDiv.innerHTML = 'Preencha e-mail e senha!';
+    errorDiv.style.display = 'block';
     return;
   }
-  currentUser = JSON.parse(userSalvo);
-  document.getElementById('user-name').innerText = currentUser.nome;
-  document.getElementById('user-avatar').innerText = currentUser.nome.charAt(0).toUpperCase();
-  renderAll();
+  
+  errorDiv.style.display = 'none';
+  
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, senha);
+    const userDoc = await db.collection('usuarios').doc(userCred.user.uid).get();
+    
+    if(userDoc.exists) {
+      currentUser = { uid: userCred.user.uid, ...userDoc.data() };
+    } else {
+      currentUser = { uid: userCred.user.uid, email, nome: email.split('@')[0], perfil: 'Consultor' };
+    }
+    
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-main').style.display = 'block';
+    document.getElementById('user-name').innerText = currentUser.nome || currentUser.email;
+    document.getElementById('user-avatar').innerText = (currentUser.nome || currentUser.email).charAt(0).toUpperCase();
+    
+    await carregarDadosFirebase();
+    
+  } catch(error) {
+    if(error.code === 'auth/user-not-found') {
+      errorDiv.innerHTML = 'Usuário não encontrado! Tente admin@rensoftware.com / 123456';
+    } else if(error.code === 'auth/wrong-password') {
+      errorDiv.innerHTML = 'Senha incorreta!';
+    } else {
+      errorDiv.innerHTML = 'Erro: ' + error.message;
+    }
+    errorDiv.style.display = 'block';
+  }
 }
 
-function sair() {
-  localStorage.removeItem('user_logged');
-  window.location.href = 'login.html';
+function fazerLogout() {
+  auth.signOut();
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
 }
 
+auth.onAuthStateChanged(async (user) => {
+  if(user) {
+    const userDoc = await db.collection('usuarios').doc(user.uid).get();
+    if(userDoc.exists) {
+      currentUser = { uid: user.uid, ...userDoc.data() };
+    } else {
+      currentUser = { uid: user.uid, email: user.email, nome: user.email.split('@')[0], perfil: 'Consultor' };
+    }
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-main').style.display = 'block';
+    document.getElementById('user-name').innerText = currentUser.nome || currentUser.email;
+    document.getElementById('user-avatar').innerText = (currentUser.nome || currentUser.email).charAt(0).toUpperCase();
+    await carregarDadosFirebase();
+  }
+});
+
+// ==================== NAVEGAÇÃO ====================
 function goToPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(`page-${page}`).classList.add('active');
@@ -283,7 +425,7 @@ function renderLeads() {
   let filtered = (currentUser?.perfil === 'Consultor' ? leads.filter(l => l.vendedor === currentUser.nome) : leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(filtered.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead</span></tr>'; return; }
+  if(filtered.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead</span></td>'; return; }
   tb.innerHTML = filtered.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td>${l.contato||'—'}</td>
@@ -298,8 +440,9 @@ function renderLeads() {
           <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')">🗑</button></span></td>
   </tr>`).join('');
 }
+
 function updateSelects() {
-  let vendedores = usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
+  let vendedores = [...new Set(leads.map(l => l.vendedor).filter(Boolean))];
   let selV = document.getElementById('lead-vendedor');
   if(selV) selV.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
   let selM = document.getElementById('meta-vendedor-nome');
@@ -307,6 +450,7 @@ function updateSelects() {
   let selP = document.getElementById('lead-produto');
   if(selP) selP.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
 }
+
 function openLeadModal() {
   document.getElementById('lead-empresa').value = '';
   document.getElementById('lead-contato').value = '';
@@ -320,15 +464,17 @@ function openLeadModal() {
   updateSelects();
   openModal('modal-lead');
 }
-function saveLead() {
+
+async function saveLead() {
   let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value)||0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value)||0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
   if(!lead.empresa){ showToast('Informe a empresa!'); return; }
   leads.push(lead);
-  salvarDados();
+  await salvarLeadFirebase(lead);
   closeModal('modal-lead');
   renderLeads(); renderDashboard(); renderForecast();
   showToast('Lead criado!');
 }
+
 function editarLead(id) {
   let l = leads.find(l => l.id === id);
   if(!l) return;
@@ -347,7 +493,8 @@ function editarLead(id) {
   document.getElementById('modal-lead').dataset.editId = id;
   openModal('modal-lead');
 }
-function avancarEtapa(leadId) {
+
+async function avancarEtapa(leadId) {
   let lead = leads.find(l => l.id === leadId);
   if(!lead) return;
   if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
@@ -358,16 +505,18 @@ function avancarEtapa(leadId) {
     lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
     let venda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] };
     vendas.push(venda);
+    await db.collection('vendas').doc(venda.id).set(venda);
     showToast('🎉 Venda fechada!');
   }
-  salvarDados();
+  await salvarLeadFirebase(lead);
   renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast();
 }
-function descartarLead(id) {
+
+async function descartarLead(id) {
   let lead = leads.find(l => l.id === id);
   if(!lead) return;
   lead.status = 'Descartado'; lead.pipeline = 'Descartado';
-  salvarDados();
+  await salvarLeadFirebase(lead);
   renderLeads(); showToast('Lead descartado');
 }
 
@@ -377,7 +526,7 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') filtered = filtered.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(filtered.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead</span></tr>'; return; }
+  if(filtered.length === 0) { tb.innerHTML = '<td><td colspan="6" style="text-align:center">Nenhum lead</span></td>'; return; }
   tb.innerHTML = filtered.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td><span class="tag tag-info">${l.produto||'—'}</span></td>
@@ -385,7 +534,7 @@ function renderPipeline() {
     <td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor||'—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -395,18 +544,18 @@ function renderAgenda() {
   let el = document.getElementById('agenda-list');
   if(!el) return;
   if(filtered.length === 0) { el.innerHTML = '<div style="text-align:center;padding:20px">Sem agendamentos</div>'; return; }
-  el.innerHTML = filtered.map(a => `<div style="padding:12px;border-bottom:1px solid #eee"><div><strong>${a.empresa}</strong><br>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')">✓</button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')">✗</button></div></div>`).join('');
+  el.innerHTML = filtered.map(a => `<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><div><strong>${a.empresa}</strong><br>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')">✓</button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')">✗</button></div></div>`).join('');
 }
-function confirmarAgendamento(id) {
+async function confirmarAgendamento(id) {
   let ag = agenda.find(a => a.id === id);
   if(ag) {
     let lead = leads.find(l => l.id === ag.leadId);
-    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; salvarDados(); }
+    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; await salvarLeadFirebase(lead); }
     showToast(`Apresentação confirmada!`);
     renderLeads(); renderPipeline(); renderAgenda();
   }
 }
-function cancelarAgendamento(id) { if(confirm('Cancelar?')) { agenda = agenda.filter(a => a.id !== id); salvarDados(); renderAgenda(); showToast('Cancelado!'); } }
+async function cancelarAgendamento(id) { if(confirm('Cancelar?')) { agenda = agenda.filter(a => a.id !== id); await db.collection('agenda').doc(id).delete(); renderAgenda(); showToast('Cancelado!'); } }
 function openAgendaModal(leadId) {
   let leadsOpt = leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
   let sel = document.getElementById('agenda-lead');
@@ -415,14 +564,14 @@ function openAgendaModal(leadId) {
   document.getElementById('agenda-hora').value = '10:00';
   openModal('modal-agenda');
 }
-function saveAgenda() {
+async function saveAgenda() {
   let leadId = document.getElementById('agenda-lead').value;
   let lead = leads.find(l => l.id === leadId);
   if(!lead){ showToast('Lead não encontrado'); return; }
   let ag = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value, obs: document.getElementById('agenda-obs').value };
   agenda.push(ag);
-  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; }
-  salvarDados();
+  await db.collection('agenda').doc(ag.id).set(ag);
+  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; await salvarLeadFirebase(lead); }
   closeModal('modal-agenda');
   renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
 }
@@ -433,7 +582,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = 0; realizadoPorVendedor[v.vendedor] += v.adesao; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta</span><tr>'; return; }
+    if(metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta</span></tr>'; return; }
     tb.innerHTML = metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || 0;
       let pct = m.adesao > 0 ? Math.round(realizado / m.adesao * 100) : 0;
@@ -444,12 +593,12 @@ function renderMetas() {
         <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
         <td><span class="tag ${pct>=100?'tag-success':pct>=50?'tag-warning':'tag-danger'}">${pct}%</span></td>
         <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')">🗑</button></span></td>
-      </tr>`;
+      <tr>`;
     }).join('');
   }
   let prodTb = document.getElementById('produtividade-table');
   if(prodTb) {
-    let vendedores = usuarios.filter(u => u.perfil === 'Consultor' && u.status === 'ativo').map(u => u.nome);
+    let vendedores = [...new Set(leads.map(l => l.vendedor).filter(Boolean))];
     prodTb.innerHTML = vendedores.map(v => {
       let leadsV = leads.filter(l => l.vendedor === v);
       let vendasV = vendas.filter(vd => vd.vendedor === v);
@@ -467,17 +616,19 @@ function renderMetas() {
   }
 }
 function openMetaVendedorModal() { updateSelects(); openModal('modal-meta-vendedor'); }
-function saveMetaVendedor() {
+async function saveMetaVendedor() {
   let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, adesao: parseFloat(document.getElementById('meta-adesao').value)||0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value)||0, mes: document.getElementById('meta-mes').value };
   if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
   metasVendedor.push(meta);
-  salvarDados(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
+  await db.collection('metasVendedor').doc(meta.id).set(meta);
+  closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
 }
-function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { metasVendedor = metasVendedor.filter(m => m.id !== id); salvarDados(); renderMetas(); showToast('Meta removida!'); } }
+async function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { metasVendedor = metasVendedor.filter(m => m.id !== id); await db.collection('metasVendedor').doc(id).delete(); renderMetas(); showToast('Meta removida!'); } }
 function openMetaGlobalModal() { document.getElementById('global-adesao').value = metaGlobal.adesao; document.getElementById('global-mensalidade').value = metaGlobal.mensalidade; document.getElementById('global-periodo').value = metaGlobal.periodo; openModal('modal-meta-global'); }
-function saveMetaGlobal() {
+async function saveMetaGlobal() {
   metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value)||0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value)||0, periodo: document.getElementById('global-periodo').value };
-  salvarDados(); closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
+  await db.collection('config').doc('metaGlobal').set(metaGlobal);
+  closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
 }
 
 // ==================== FORECAST ====================
@@ -485,8 +636,8 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '</table><td colspan="7" style="text-align:center">Nenhum lead</span></tr>'; return; }
-  tb.innerHTML = forecastData.map(l => `<td>
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead</span></tr>'; return; }
+  tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor||'—'}</td>
     <td><strong>${l.empresa}</strong></td>
     <td><span class="tag tag-info">${l.produto||'—'}</span></td>
@@ -494,7 +645,7 @@ function renderForecast() {
     <td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ${l.pipeline==='Fechamento'?'tag-success':'tag-warning'}">${l.pipeline||'Lead'}</span></td>
     <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function exportForecastExcel(){let ws=XLSX.utils.json_to_sheet(leads.filter(l=>l.pipeline).map(l=>({Vendedor:l.vendedor,Empresa:l.empresa,Produto:l.produto,Adesão:l.adesao,Mensalidade:l.mensalidade,Etapa:l.pipeline})));let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Forecast');XLSX.writeFile(wb,`forecast_${new Date().toISOString().split('T')[0]}.xlsx`);showToast('Forecast exportado!');}
 
@@ -512,21 +663,22 @@ function renderProdutos() {
   </tr>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
-function saveProduto() {
+async function saveProduto() {
   let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value)||0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value)||0 };
   if(!produto.nome){ showToast('Informe o nome!'); return; }
   produtos.push(produto);
-  salvarDados(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
+  await db.collection('produtos').doc(produto.id).set(produto);
+  closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
 }
 function editarProduto(id) { let p=produtos.find(p=>p.id===id); if(p){ document.getElementById('produto-nome').value=p.nome; document.getElementById('produto-adesao').value=p.adesao; document.getElementById('produto-mensalidade').value=p.mensalidade; document.getElementById('modal-produto').dataset.editId=id; openModal('modal-produto'); } }
-function deletarProduto(id) { if(confirm('Remover?')) { produtos=produtos.filter(p=>p.id!==id); salvarDados(); renderProdutos(); showToast('Produto removido!'); } }
+async function deletarProduto(id) { if(confirm('Remover?')) { produtos=produtos.filter(p=>p.id!==id); await db.collection('produtos').doc(id).delete(); renderProdutos(); showToast('Produto removido!'); } }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
   let tb = document.getElementById('relatorio-table');
   if(!tb) return;
-  if(vendas.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma venda</span></tr>'; return; }
-  tb.innerHTML = vendas.map(v => `<tr>
+  if(vendas.length === 0) { tb.innerHTML = '<td><td colspan="6" style="text-align:center">Nenhuma venda</span><tr>'; return; }
+  tb.innerHTML = vendas.map(v => `<td>
     <td>${v.data || '—'}</span><td>${v.vendedor || '—'}</span><td><strong>${v.empresa || '—'}</strong></span><td>${v.produto || '—'}</span><td>R$ ${(v.adesao || 0).toLocaleString('pt-BR')}</span><td>R$ ${(v.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
   </tr>`).join('');
 }
@@ -537,63 +689,36 @@ function exportRelatorioPDF(){let win=window.open('','_blank');win.document.writ
 function renderUsuarios() {
   let tb = document.getElementById('users-table');
   if(!tb) return;
-  tb.innerHTML = usuarios.map(u => `</tr>
-    <td><strong>${u.nome}</strong><br><small>${u.login}</small></td>
-    <td><span class="tag ${u.perfil==='Diretor'?'tag-purple':u.perfil==='Gerente'?'tag-info':'tag-success'}">${u.perfil}</span></td>
-    <td><span class="tag ${u.status==='ativo'?'tag-success':'tag-danger'}">${u.status==='ativo'?'Ativo':'Inativo'}</span></td>
-    <td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')">✏</button>
-          <button class="btn btn-warning btn-sm" onclick="toggleUserStatus('${u.id}')"><i class="fas ${u.status==='ativo'?'fa-ban':'fa-check'}"></i></button>
-          ${u.id!=='u1'?`<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')">🗑</button>`:''}</span></td>
-  </td>`).join('');
+  tb.innerHTML = usuarios.map(u => `<tr>
+    <td><strong>${u.nome || u.email}</strong><br><small>${u.email}</small></td>
+    <td><span class="tag ${u.perfil==='Diretor'?'tag-purple':u.perfil==='Gerente'?'tag-info':'tag-success'}">${u.perfil||'Consultor'}</span></td>
+    <td><span class="tag ${u.status!=='inativo'?'tag-success':'tag-danger'}">${u.status!=='inativo'?'Ativo':'Inativo'}</span></td>
+    <td><button class="btn btn-danger btn-sm" onclick="deletarUsuarioFirebase('${u.uid}')">🗑</button></span></td>
+  </tr>`).join('');
 }
 function openUserModal() { openModal('modal-user'); }
-function editarUsuario(id) { let u=usuarios.find(u=>u.id===id); if(u){ document.getElementById('user-nome').value=u.nome; document.getElementById('user-login').value=u.login; document.getElementById('user-perfil').value=u.perfil; document.getElementById('user-status').value=u.status; document.getElementById('modal-user').dataset.editId=id; openModal('modal-user'); } }
-function toggleUserStatus(id) {
-  let u = usuarios.find(u => u.id === id);
-  if(u) {
-    u.status = u.status === 'ativo' ? 'inativo' : 'ativo';
-    salvarDados();
-    renderUsuarios();
-    updateSelects();
-    showToast(`Usuário ${u.nome} ${u.status === 'ativo' ? 'ativado' : 'inativado'}!`);
-  }
-}
-function saveUser() {
-  let id = document.getElementById('modal-user').dataset.editId;
+async function saveUser() {
+  let email = document.getElementById('user-email').value.trim();
   let nome = document.getElementById('user-nome').value.trim();
-  let login = document.getElementById('user-login').value.trim();
   let perfil = document.getElementById('user-perfil').value;
-  let status = document.getElementById('user-status').value;
   let senha = document.getElementById('user-senha').value;
-  let senha2 = document.getElementById('user-senha2').value;
-  if(!nome || !login){ showToast('Preencha nome e login!'); return; }
-  if(usuarios.some(u => u.login === login && u.id !== id)) { showToast('Login já existe!'); return; }
-  if(id) {
-    let idx = usuarios.findIndex(u => u.id === id);
-    if(idx !== -1) {
-      usuarios[idx].nome = nome;
-      usuarios[idx].login = login;
-      usuarios[idx].perfil = perfil;
-      usuarios[idx].status = status;
-      if(senha) {
-        if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
-        if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
-        usuarios[idx].senha = senha;
-      }
-    }
-  } else {
-    if(!senha){ showToast('Senha obrigatória!'); return; }
-    if(senha !== senha2){ showToast('Senhas não coincidem!'); return; }
-    if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
-    usuarios.push({ id: uid(), nome, login, senha, perfil, status });
-  }
-  salvarDados();
+  if(!email) { showToast('Informe o email!'); return; }
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, senha || '123456');
+    const userData = { uid: userCred.user.uid, email, nome, perfil, status: 'ativo', criadoEm: new Date().toISOString() };
+    await db.collection('usuarios').doc(userCred.user.uid).set(userData);
+    usuarios.push(userData);
+    showToast('Usuário criado!');
+    renderUsuarios();
+  } catch(e) { showToast('Erro: ' + e.message, 'err'); }
   closeModal('modal-user');
-  renderUsuarios();
-  updateSelects();
-  showToast('Usuário salvo!');
 }
-function deletarUsuario(id) { if(confirm('Remover usuário?')) { usuarios = usuarios.filter(u => u.id !== id); salvarDados(); renderUsuarios(); updateSelects(); showToast('Usuário removido!'); } }
+async function deletarUsuarioFirebase(uid) {
+  if(confirm('Remover usuário?')) {
+    try { await db.collection('usuarios').doc(uid).delete(); usuarios = usuarios.filter(u => u.uid !== uid); renderUsuarios(); showToast('Usuário removido!'); } 
+    catch(e) { showToast('Erro ao remover', 'err'); }
+  }
+}
 
 // ==================== DASHBOARD ====================
 function renderDashboard() {
@@ -625,11 +750,10 @@ function renderDashboard() {
 }
 
 function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
 function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderProdutos(); renderRelatorios(); renderUsuarios(); updateSelects(); }
 
-carregarDados();
-initAuth();
+criarUsuarioAdmin();
 </script>
 </body>
 </html>
