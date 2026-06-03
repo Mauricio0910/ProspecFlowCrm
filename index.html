@@ -6,8 +6,6 @@
 <title>RenSoftware CRM - Sistema de Gestão de Vendas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
@@ -37,9 +35,6 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
 .page-title{font-size:18px;font-weight:700;color:#003366;}
 .user-info{display:flex;align-items:center;gap:12px;}
 .user-avatar{width:36px;height:36px;background:linear-gradient(135deg,#005C99 0%,#0099CC 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#28a745;display:inline-block;margin-right:5px;}
-.sync-dot.syncing{background:#ffc107;animation:pulse 0.8s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .stat-card{background:white;border-radius:16px;padding:16px;}
 .stat-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;}
@@ -104,7 +99,6 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
     <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
     <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
     <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
-    <div style="margin-top:12px; font-size:12px; color:#999;">admin / 1234</div>
   </div>
 </div>
 
@@ -128,7 +122,6 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
       <div class="top-bar">
         <h2 class="page-title" id="page-title">Dashboard</h2>
         <div class="user-info">
-          <div class="sync-dot" id="sync-dot"></div>
           <span id="user-name">Admin</span>
           <div class="user-avatar" id="user-avatar">A</div>
           <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
@@ -166,7 +159,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
             <div class="pipeline-tab" onclick="setPipelineStage('Negociação')">Negociação</div>
             <div class="pipeline-tab" onclick="setPipelineStage('Fechamento')">Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></tr></div>
         </div>
       </div>
 
@@ -186,7 +179,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
         </div>
       </div>
 
@@ -194,7 +187,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
       <div id="page-forecast" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Forecast</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()">Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead></td><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
         </div>
       </div>
 
@@ -210,7 +203,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody><tr></div>
         </div>
       </div>
 
@@ -218,7 +211,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th><tr></thead><tbody id="users-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody><table></div>
         </div>
       </div>
     </div>
@@ -241,22 +234,12 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ==================== FIREBASE CONFIG ====================
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
-  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
-  projectId: "prospectflow-crm-5775a",
-  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
-  messagingSenderId: "278911416959",
-  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
-};
-
-let db = null;
+// ==================== DADOS GLOBAIS ====================
 let currentUser = null;
 let currentPipelineStage = 'Agendamento';
 let charts = {};
 
-// DADOS LOCAIS PARA LOGIN IMEDIATO (FALLBACK)
+// USUÁRIOS PADRÃO (LOGIN IMEDIATO)
 let usuarios = [
   { id: 'u1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', status: 'ativo' },
   { id: 'u2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', status: 'ativo' },
@@ -264,6 +247,7 @@ let usuarios = [
   { id: 'u4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', status: 'ativo' }
 ];
 
+// PRODUTOS PADRÃO
 let produtos = [
   { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
   { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
@@ -271,6 +255,7 @@ let produtos = [
   { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
 ];
 
+// LEADS EXEMPLO
 let leads = [
   { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@email.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
   { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@email.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
@@ -278,6 +263,7 @@ let leads = [
   { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
+// AGENDA EXEMPLO
 let agenda = [
   { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação Easyren' }
 ];
@@ -286,84 +272,27 @@ let vendas = [];
 let metasVendedor = [];
 let metaGlobal = { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' };
 
-let isFirebaseReady = false;
-
-function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
-function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
-function setSyncing(on) { let dot = document.getElementById('sync-dot'); if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : ''); }
-
-// ==================== FIREBASE ====================
-async function initFirebase() {
-  try {
-    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    console.log('Firebase conectado!');
-    await syncFromFirebase();
-  } catch(e) {
-    console.error('Erro Firebase:', e);
-    showToast('Modo offline - usando dados locais', 'err');
+// ==================== SALVAR/CARREGAR ====================
+function salvarDados() {
+  let dados = { usuarios, leads, vendas, agenda, metasVendedor, metaGlobal, produtos };
+  localStorage.setItem('rensoftware_data', JSON.stringify(dados));
+}
+function carregarDados() {
+  let salvos = localStorage.getItem('rensoftware_data');
+  if(salvos) {
+    let dados = JSON.parse(salvos);
+    usuarios = dados.usuarios || usuarios;
+    leads = dados.leads || leads;
+    vendas = dados.vendas || [];
+    agenda = dados.agenda || agenda;
+    metasVendedor = dados.metasVendedor || [];
+    metaGlobal = dados.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' };
+    produtos = dados.produtos || produtos;
   }
 }
 
-async function syncFromFirebase() {
-  if(!db) return;
-  setSyncing(true);
-  try {
-    // Usuários
-    let usuariosSnap = await db.collection('usuarios').get();
-    if(usuariosSnap.docs.length > 0) {
-      usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } else {
-      for(let u of usuarios) await db.collection('usuarios').doc(u.id).set(u);
-    }
-    
-    // Leads
-    let leadsSnap = await db.collection('leads').get();
-    if(leadsSnap.docs.length > 0) {
-      leads = leadsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } else {
-      for(let l of leads) await db.collection('leads').doc(l.id).set(l);
-    }
-    
-    // Vendas
-    let vendasSnap = await db.collection('vendas').get();
-    if(vendasSnap.docs.length > 0) vendas = vendasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Agenda
-    let agendaSnap = await db.collection('agenda').get();
-    if(agendaSnap.docs.length > 0) agenda = agendaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Metas
-    let metasSnap = await db.collection('metasVendedor').get();
-    if(metasSnap.docs.length > 0) metasVendedor = metasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    // Meta Global
-    let metaGSnap = await db.collection('config').doc('metaGlobal').get();
-    if(metaGSnap.exists) metaGlobal = metaGSnap.data();
-    
-    // Produtos
-    let produtosSnap = await db.collection('produtos').get();
-    if(produtosSnap.docs.length > 0) produtos = produtosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    
-    isFirebaseReady = true;
-    renderAll();
-  } catch(e) { console.error('Erro ao sincronizar:', e); }
-  setSyncing(false);
-}
-
-async function saveToFirebase(collection, id, data) {
-  if(!db) return;
-  setSyncing(true);
-  try { await db.collection(collection).doc(id).set(data); } catch(e) { console.error(e); }
-  setSyncing(false);
-}
-
-async function deleteFromFirebase(collection, id) {
-  if(!db) return;
-  setSyncing(true);
-  try { await db.collection(collection).doc(id).delete(); } catch(e) { console.error(e); }
-  setSyncing(false);
-}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
 
 // ==================== AUTENTICAÇÃO ====================
 function doLogin() {
@@ -431,7 +360,7 @@ function renderLeads() {
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">→</button>
           <button class="btn btn-outline btn-sm" onclick="editarLead('${l.id}')">✏</button>
           <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')">🗑</button></span></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function updateProdutoSelects() {
   let sel = document.getElementById('lead-produto');
@@ -458,11 +387,11 @@ function openLeadModal() {
   updateVendedorSelects();
   openModal('modal-lead');
 }
-async function saveLead() {
+function saveLead() {
   let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value)||0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value)||0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
   if(!lead.empresa){ showToast('Informe a empresa!'); return; }
   leads.push(lead);
-  await saveToFirebase('leads', lead.id, lead);
+  salvarDados();
   closeModal('modal-lead');
   renderLeads(); renderDashboard(); renderForecast();
   showToast('Lead criado!');
@@ -486,7 +415,7 @@ function editarLead(id) {
   document.getElementById('modal-lead').dataset.editId = id;
   openModal('modal-lead');
 }
-async function avancarEtapa(leadId) {
+function avancarEtapa(leadId) {
   let lead = leads.find(l => l.id === leadId);
   if(!lead) return;
   if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
@@ -497,17 +426,16 @@ async function avancarEtapa(leadId) {
     lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
     let venda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] };
     vendas.push(venda);
-    await saveToFirebase('vendas', venda.id, venda);
     showToast('🎉 Venda fechada!');
   }
-  await saveToFirebase('leads', lead.id, lead);
+  salvarDados();
   renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast();
 }
-async function descartarLead(id) {
+function descartarLead(id) {
   let lead = leads.find(l => l.id === id);
   if(!lead) return;
   lead.status = 'Descartado'; lead.pipeline = 'Descartado';
-  await saveToFirebase('leads', lead.id, lead);
+  salvarDados();
   renderLeads(); showToast('Lead descartado');
 }
 
@@ -517,7 +445,7 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') filtered = filtered.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(filtered.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead</span><tr>'; return; }
+  if(filtered.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead</span></td>'; return; }
   tb.innerHTML = filtered.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato||''}</small></td>
     <td><span class="tag tag-info">${l.produto||'—'}</span></td>
@@ -525,7 +453,7 @@ function renderPipeline() {
     <td>R$ ${(l.mensalidade||0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor||'—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  <tr>`).join('');
+  </tr>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -537,16 +465,16 @@ function renderAgenda() {
   if(filtered.length === 0) { el.innerHTML = '<div style="text-align:center;padding:20px">Sem agendamentos</div>'; return; }
   el.innerHTML = filtered.map(a => `<div style="padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
 }
-async function confirmarAgendamento(id) {
+function confirmarAgendamento(id) {
   let ag = agenda.find(a => a.id === id);
   if(ag) {
     let lead = leads.find(l => l.id === ag.leadId);
-    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; await saveToFirebase('leads', lead.id, lead); }
+    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; salvarDados(); }
     showToast(`Apresentação confirmada!`);
     renderLeads(); renderPipeline(); renderAgenda();
   }
 }
-async function cancelarAgendamento(id) { if(confirm('Cancelar?')) { agenda = agenda.filter(a => a.id !== id); await deleteFromFirebase('agenda', id); renderAgenda(); showToast('Cancelado!'); } }
+function cancelarAgendamento(id) { if(confirm('Cancelar?')) { agenda = agenda.filter(a => a.id !== id); salvarDados(); renderAgenda(); showToast('Cancelado!'); } }
 function openAgendaModal(leadId) {
   let leadsOpt = leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
   let sel = document.getElementById('agenda-lead');
@@ -555,14 +483,14 @@ function openAgendaModal(leadId) {
   document.getElementById('agenda-hora').value = '10:00';
   openModal('modal-agenda');
 }
-async function saveAgenda() {
+function saveAgenda() {
   let leadId = document.getElementById('agenda-lead').value;
   let lead = leads.find(l => l.id === leadId);
   if(!lead){ showToast('Lead não encontrado'); return; }
   let ag = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value, obs: document.getElementById('agenda-obs').value };
   agenda.push(ag);
-  await saveToFirebase('agenda', ag.id, ag);
-  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; await saveToFirebase('leads', lead.id, lead); }
+  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; }
+  salvarDados();
   closeModal('modal-agenda');
   renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
 }
@@ -573,7 +501,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = 0; realizadoPorVendedor[v.vendedor] += v.adesao; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta</span><tr>'; return; }
+    if(metasVendedor.length === 0) { tb.innerHTML = '<td><td colspan="6" style="text-align:center">Nenhuma meta</span></tr>'; return; }
     tb.innerHTML = metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || 0;
       let pct = m.adesao > 0 ? Math.round(realizado / m.adesao * 100) : 0;
@@ -607,19 +535,17 @@ function renderMetas() {
   }
 }
 function openMetaVendedorModal() { updateVendedorSelects(); openModal('modal-meta-vendedor'); }
-async function saveMetaVendedor() {
+function saveMetaVendedor() {
   let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, adesao: parseFloat(document.getElementById('meta-adesao').value)||0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value)||0, mes: document.getElementById('meta-mes').value };
   if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
   metasVendedor.push(meta);
-  await saveToFirebase('metasVendedor', meta.id, meta);
-  closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
+  salvarDados(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
 }
-async function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { metasVendedor = metasVendedor.filter(m => m.id !== id); await deleteFromFirebase('metasVendedor', id); renderMetas(); showToast('Meta removida!'); } }
+function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { metasVendedor = metasVendedor.filter(m => m.id !== id); salvarDados(); renderMetas(); showToast('Meta removida!'); } }
 function openMetaGlobalModal() { document.getElementById('global-adesao').value = metaGlobal.adesao; document.getElementById('global-mensalidade').value = metaGlobal.mensalidade; document.getElementById('global-periodo').value = metaGlobal.periodo; openModal('modal-meta-global'); }
-async function saveMetaGlobal() {
+function saveMetaGlobal() {
   metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value)||0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value)||0, periodo: document.getElementById('global-periodo').value };
-  await saveToFirebase('config', 'metaGlobal', metaGlobal);
-  closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
+  salvarDados(); closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
 }
 
 // ==================== FORECAST ====================
@@ -627,7 +553,7 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead</span></td>'; return; }
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead</span></tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor||'—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -654,22 +580,21 @@ function renderProdutos() {
   </tr>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
-async function saveProduto() {
+function saveProduto() {
   let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value)||0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value)||0 };
   if(!produto.nome){ showToast('Informe o nome!'); return; }
   produtos.push(produto);
-  await saveToFirebase('produtos', produto.id, produto);
-  closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
+  salvarDados(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
 }
 function editarProduto(id) { let p=produtos.find(p=>p.id===id); if(p){ document.getElementById('produto-nome').value=p.nome; document.getElementById('produto-adesao').value=p.adesao; document.getElementById('produto-mensalidade').value=p.mensalidade; document.getElementById('modal-produto').dataset.editId=id; openModal('modal-produto'); } }
-async function deletarProduto(id) { if(confirm('Remover?')) { produtos=produtos.filter(p=>p.id!==id); await deleteFromFirebase('produtos', id); renderProdutos(); showToast('Produto removido!'); } }
+function deletarProduto(id) { if(confirm('Remover?')) { produtos=produtos.filter(p=>p.id!==id); salvarDados(); renderProdutos(); showToast('Produto removido!'); } }
 
 // ==================== RELATÓRIOS ====================
 function renderRelatorios() {
   let tb = document.getElementById('relatorio-table');
   if(!tb) return;
   if(vendas.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma venda</span></tr>'; return; }
-  tb.innerHTML = vendas.map(v => `<td>
+  tb.innerHTML = vendas.map(v => `<tr>
     <td>${v.data || '—'}</span><td>${v.vendedor || '—'}</span><td><strong>${v.empresa || '—'}</strong></span><td>${v.produto || '—'}</span><td>R$ ${(v.adesao || 0).toLocaleString('pt-BR')}</span><td>R$ ${(v.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
   </tr>`).join('');
 }
@@ -701,17 +626,17 @@ function editarUsuario(id) {
     document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); 
   } 
 }
-async function toggleUserStatus(id) {
+function toggleUserStatus(id) {
   let u = usuarios.find(u => u.id === id);
   if(u) {
     u.status = u.status === 'ativo' ? 'inativo' : 'ativo';
-    await saveToFirebase('usuarios', u.id, u);
+    salvarDados();
     renderUsuarios();
     updateVendedorSelects();
     showToast(`Usuário ${u.nome} ${u.status === 'ativo' ? 'ativado' : 'inativado'}!`);
   }
 }
-async function saveUser() {
+function saveUser() {
   let id = document.getElementById('modal-user').dataset.editId;
   let nome = document.getElementById('user-nome').value.trim();
   let login = document.getElementById('user-login').value.trim();
@@ -733,7 +658,6 @@ async function saveUser() {
         if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
         usuarios[idx].senha = senha;
       }
-      await saveToFirebase('usuarios', usuarios[idx].id, usuarios[idx]);
     }
   } else {
     if(!senha){ showToast('Senha obrigatória!'); return; }
@@ -741,17 +665,17 @@ async function saveUser() {
     if(senha.length < 4){ showToast('Mínimo 4 caracteres!'); return; }
     let newUser = { id: uid(), nome, login, senha, perfil, status, dataCadastro: new Date().toISOString() };
     usuarios.push(newUser);
-    await saveToFirebase('usuarios', newUser.id, newUser);
   }
+  salvarDados();
   closeModal('modal-user'); 
   renderUsuarios(); 
   updateVendedorSelects(); 
   showToast('Usuário salvo!');
 }
-async function deletarUsuario(id) { 
+function deletarUsuario(id) { 
   if(confirm('Remover usuário permanentemente?')) { 
     usuarios = usuarios.filter(u => u.id !== id); 
-    await deleteFromFirebase('usuarios', id);
+    salvarDados();
     renderUsuarios(); 
     updateVendedorSelects(); 
     showToast('Usuário removido!'); 
@@ -791,8 +715,8 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; doc
 function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
 function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderProdutos(); renderRelatorios(); renderUsuarios(); updateVendedorSelects(); updateProdutoSelects(); }
 
-// Inicialização - Login imediato com dados locais, depois sincroniza com Firebase
-initFirebase();
+// Inicialização
+carregarDados();
 </script>
 </body>
 </html>
