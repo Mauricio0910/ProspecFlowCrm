@@ -85,7 +85,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
 .tag-info { background: #e6f3fa; color: var(--ren-primary); }
 .tag-purple { background: #f3e8ff; color: #9c27b0; }
 .tag-danger { background: #ffebee; color: var(--ren-danger); }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content; center; z-index: 1000; display: none; }
 .modal { background: white; border-radius: 20px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .modal-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
@@ -120,17 +120,14 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
     <h1 class="auth-title">RenSoftware CRM</h1>
     <p class="auth-sub">Sistema profissional de gestão de vendas</p>
     <div id="auth-error" style="display:none; background:#ffebee; color:#dc3545; padding:10px; border-radius:12px; margin-bottom:16px"></div>
-    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário">
-    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha">
+    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
+    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
     <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
-    <div style="margin-top: 16px; font-size: 12px; color: #999;">
-      <i class="fas fa-info-circle"></i> admin / 1234
-    </div>
   </div>
 </div>
 
 <!-- APLICATIVO PRINCIPAL -->
-<div id="app-main">
+<div id="app-main" style="display:none">
   <div class="app-container">
     <div class="sidebar" id="sidebar">
       <button class="toggle-sidebar" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
@@ -160,7 +157,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       </div>
 
       <!-- DASHBOARD -->
-      <div id="page-dashboard" class="page">
+      <div id="page-dashboard" class="page active">
         <div class="stats-grid">
           <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total-leads">0</div><div class="stat-label">Total Leads</div></div>
           <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-fechamentos">0</div><div class="stat-label">Fechamentos</div></div>
@@ -176,7 +173,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody><tr></div>
         </div>
       </div>
 
@@ -210,7 +207,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
         </div>
       </div>
 
@@ -234,7 +231,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></td></thead><tbody id="produtos-table"></tbody><tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
@@ -265,7 +262,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden
       <div id="page-relatorios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></td></thead><tbody id="relatorio-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th></tr></thead><tbody id="relatorio-table"></tbody></table></div>
         </div>
       </div>
 
@@ -304,7 +301,7 @@ let currentPipelineStage = 'Agendamento';
 let charts = {};
 let sidebarCollapsed = false;
 
-// USUÁRIOS PADRÃO - Definidos diretamente para garantir login
+// USUÁRIOS PADRÃO - Definidos diretamente
 const USUARIOS_PADRAO = [
   { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor' },
   { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor' },
@@ -317,9 +314,7 @@ const PRODUTOS_PADRAO = [
   { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
   { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
   { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
-  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 },
-  { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 3500, mensalidade: 700 },
-  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 4500, mensalidade: 900 }
+  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
 ];
 
 // LEADS EXEMPLO
@@ -335,6 +330,11 @@ const AGENDA_EXEMPLO = [
   { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação do Easyren' }
 ];
 
+// CAMPANHAS EXEMPLO
+const CAMPANHAS_EXEMPLO = [
+  { id: 'c1', nome: 'Feira de Tecnologia 2026', tipo: 'Feira/Exposição', inicio: '2026-03-01', fim: '2026-03-05', lp: 'https://rensoftware.com.br/feira-tech', meta: 50, cor: '#005C99', createdAt: new Date().toISOString() }
+];
+
 let db = {
   leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
   vendas: [],
@@ -342,7 +342,7 @@ let db = {
   metasVendedor: [],
   metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
   produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
-  campanhas: [],
+  campanhas: JSON.parse(JSON.stringify(CAMPANHAS_EXEMPLO)),
   emailHist: [],
   usuarios: JSON.parse(JSON.stringify(USUARIOS_PADRAO))
 };
@@ -360,7 +360,7 @@ function loadData() {
     db.metasVendedor = p.metasVendedor || []; 
     db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; 
     db.produtos = p.produtos || PRODUTOS_PADRAO; 
-    db.campanhas = p.campanhas || []; 
+    db.campanhas = p.campanhas || CAMPANHAS_EXEMPLO; 
     db.emailHist = p.emailHist || []; 
     db.usuarios = p.usuarios || USUARIOS_PADRAO; 
   } 
@@ -378,8 +378,10 @@ function doLogin() {
   let login = document.getElementById('auth-user').value.trim();
   let senha = document.getElementById('auth-pass').value.trim();
   
-  console.log('Tentando login com:', login, senha);
-  console.log('Usuários disponíveis:', db.usuarios);
+  // Garantir que os usuários estejam carregados
+  if(!db.usuarios || db.usuarios.length === 0) {
+    db.usuarios = JSON.parse(JSON.stringify(USUARIOS_PADRAO));
+  }
   
   let user = db.usuarios.find(u => u.login === login && u.senha === senha);
   
@@ -401,8 +403,8 @@ function doLogout() {
   currentUser = null; 
   document.getElementById('auth-screen').style.display = 'flex'; 
   document.getElementById('app-main').style.display = 'none';
-  document.getElementById('auth-user').value = '';
-  document.getElementById('auth-pass').value = '';
+  document.getElementById('auth-user').value = 'admin';
+  document.getElementById('auth-pass').value = '1234';
 }
 function goToPage(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -450,7 +452,7 @@ function renderLeads() {
   let leads = (currentUser?.perfil === 'Consultor' ? db.leads.filter(l => l.vendedor === currentUser.nome) : db.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
   let tb = document.getElementById('leads-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span><tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td>${l.contato || '—'}</td>
@@ -528,7 +530,7 @@ function renderPipeline() {
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
   if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
-  tb.innerHTML = leads.map(l => `<td>
+  tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
@@ -615,7 +617,7 @@ function renderMetas() {
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
         <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </tr>`;
+      </td>`;
     }).join('');
   }
 }
@@ -638,7 +640,7 @@ function renderForecast() {
   let tb = document.getElementById('forecast-table');
   if(!tb) return;
   let forecastData = db.leads.filter(l => l.pipeline && l.status !== 'Fechado' && l.status !== 'Descartado').slice(0, 50);
-  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span></tr>'; return; }
+  if(forecastData.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead em pipeline</span><tr>'; return; }
   tb.innerHTML = forecastData.map(l => `<tr>
     <td>${l.vendedor || '—'}</td>
     <td><strong>${l.empresa}</strong></td>
@@ -701,7 +703,7 @@ function gerarLandingPage(id) {
     <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${camp.nome} - RenSoftware</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,${camp.cor ? '#003366' : '#003366'} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,#003366 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
       .landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}
       h1{color:${camp.cor || '#005C99'};margin-bottom:10px;}
       .subtitle{color:#666;margin-bottom:30px;}
@@ -758,7 +760,7 @@ function renderProdutos() {
     <td>R$ ${(p.mensalidade || 0).toLocaleString('pt-BR')}</span></td>
     <td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button>
           <button class="btn btn-danger btn-sm" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </td>`).join('');
+  </tr>`).join('');
 }
 function openProdutoModal() { openModal('modal-produto'); }
 function saveProduto() {
@@ -784,7 +786,7 @@ function renderRelatorios() {
   if(!tb) return;
   tb.innerHTML = db.vendas.map(v => `<tr>
     <td>${v.data}</span><td>${v.vendedor}</span><td><strong>${v.empresa}</strong></span><td>${v.produto}</span><td>R$ ${v.adesao.toLocaleString('pt-BR')}</span><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</span></td>
-  </tr>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';
+  </table>`).join('') || '<tr><td colspan="6" style="text-align:center">Nenhuma venda registrada</span></tr>';
 }
 function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(db.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
 function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
@@ -854,7 +856,13 @@ function openModal(id) { document.getElementById(id).style.display = 'flex'; doc
 function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
 function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
 
+// Inicialização
 loadData();
+// Garantir que os dados de exemplo sejam carregados
+if(!db.leads.length) db.leads = LEADS_EXEMPLO;
+if(!db.agenda.length) db.agenda = AGENDA_EXEMPLO;
+if(!db.campanhas.length) db.campanhas = CAMPANHAS_EXEMPLO;
+saveData();
 </script>
 </body>
 </html>
