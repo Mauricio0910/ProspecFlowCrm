@@ -3,111 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProspectFlow CRM - Sistema Completo</title>
+<title>RenSoftware CRM - Sistema de Gestão de Vendas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden; }
-.auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+body { font-family: 'Inter', sans-serif; background: #f5f5f5; overflow-x: hidden; }
+
+/* Cores RenSoftware */
+:root {
+  --ren-primary: #005C99;
+  --ren-secondary: #0099CC;
+  --ren-accent: #00A3E0;
+  --ren-dark: #003366;
+  --ren-light: #E6F3FA;
+  --ren-success: #28A745;
+  --ren-warning: #FFC107;
+  --ren-danger: #DC3545;
+}
+
+.auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .auth-screen.hidden { display: none; }
-.auth-card { background: white; border-radius: 32px; padding: 48px; width: 100%; max-width: 420px; text-align: center; }
-.auth-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: white; }
-.auth-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: #1e293b; }
-.auth-sub { color: #64748b; margin-bottom: 32px; }
-.auth-input { width: 100%; padding: 14px 18px; border: 2px solid #e2e8f0; border-radius: 16px; font-size: 14px; margin-bottom: 16px; }
-.auth-input:focus { outline: none; border-color: #667eea; }
-.btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
+.auth-card { background: white; border-radius: 32px; padding: 48px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+.auth-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: white; }
+.auth-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: var(--ren-dark); }
+.auth-sub { color: #666; margin-bottom: 32px; }
+.auth-input { width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 16px; font-size: 14px; margin-bottom: 16px; transition: all 0.3s; }
+.auth-input:focus { outline: none; border-color: var(--ren-primary); }
+.btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.3s; }
+.btn-auth:hover { transform: translateY(-2px); }
 #app-main { display: none; }
 .app-container { display: flex; min-height: 100vh; }
-.sidebar { width: 260px; background: #0f172a; min-height: 100vh; padding: 24px 16px; position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 100; }
+.sidebar { width: 260px; background: var(--ren-dark); min-height: 100vh; padding: 24px 16px; position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 100; }
 .sidebar.collapsed { width: 70px; }
 .sidebar.collapsed .logo-text, .sidebar.collapsed .nav-item span { display: none; }
 .sidebar.collapsed .nav-item { justify-content: center; }
-.toggle-sidebar { position: absolute; top: 20px; right: -12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 101; }
+.toggle-sidebar { position: absolute; top: 20px; right: -12px; background: var(--ren-primary); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 101; }
 .main-content { flex: 1; margin-left: 260px; padding: 20px; transition: all 0.3s ease; }
 .main-content.expanded { margin-left: 70px; }
 .logo-area { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 .logo-text { font-size: 18px; font-weight: 700; color: white; }
-.logo-text span { color: #a78bfa; }
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #94a3b8; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
-.nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+.logo-text span { color: var(--ren-accent); }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #a0aec0; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
+.nav-item:hover, .nav-item.active { background: var(--ren-primary); color: white; }
 .nav-item i { width: 20px; }
 .top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.page-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+.page-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
 .user-info { display: flex; align-items: center; gap: 12px; }
-.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--ren-primary) 0%, var(--ren-secondary) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
 .stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.3s; }
 .stat-card:hover { transform: translateY(-4px); }
 .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
-.stat-icon.blue { background: #eff6ff; color: #3b82f6; }
-.stat-icon.green { background: #ecfdf5; color: #10b981; }
-.stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
-.stat-icon.orange { background: #fff7ed; color: #f59e0b; }
-.stat-icon.red { background: #fef2f2; color: #ef4444; }
-.stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
-.stat-label { font-size: 13px; color: #64748b; }
+.stat-icon.blue { background: #e6f3fa; color: var(--ren-primary); }
+.stat-icon.green { background: #e8f5e9; color: var(--ren-success); }
+.stat-icon.purple { background: #f3e8ff; color: #9c27b0; }
+.stat-icon.orange { background: #fff3e0; color: #ff9800; }
+.stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; color: var(--ren-dark); }
+.stat-label { font-size: 13px; color: #666; }
 .content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-.card-title { font-size: 16px; font-weight: 700; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--ren-dark); }
 .btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.3s; }
-.btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
-.btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #64748b; }
-.btn-outline:hover { border-color: #667eea; color: #667eea; }
+.btn-primary { background: var(--ren-primary); color: white; }
+.btn-primary:hover { background: var(--ren-secondary); transform: translateY(-2px); }
+.btn-outline { background: transparent; border: 1px solid #ddd; color: #666; }
+.btn-outline:hover { border-color: var(--ren-primary); color: var(--ren-primary); }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
-.btn-danger { background: #ef4444; color: white; }
-.btn-success { background: #10b981; color: white; }
+.btn-danger { background: var(--ren-danger); color: white; }
+.btn-success { background: var(--ren-success); color: white; }
 .table-container { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; }
-.data-table th { text-align: left; padding: 10px 12px; background: #f8fafc; font-weight: 600; color: #64748b; font-size: 12px; }
-.data-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+.data-table th { text-align: left; padding: 10px 12px; background: #f8f9fa; font-weight: 600; color: #666; font-size: 12px; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
 .tag { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-.tag-success { background: #ecfdf5; color: #10b981; }
-.tag-warning { background: #fffbeb; color: #f59e0b; }
-.tag-info { background: #eff6ff; color: #3b82f6; }
-.tag-purple { background: #f5f3ff; color: #8b5cf6; }
-.tag-danger { background: #fef2f2; color: #ef4444; }
+.tag-success { background: #e8f5e9; color: var(--ren-success); }
+.tag-warning { background: #fff3e0; color: #ff9800; }
+.tag-info { background: #e6f3fa; color: var(--ren-primary); }
+.tag-purple { background: #f3e8ff; color: #9c27b0; }
+.tag-danger { background: #ffebee; color: var(--ren-danger); }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
-.modal { background: white; border-radius: 20px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-.modal-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-.modal-title { font-size: 18px; font-weight: 700; }
+.modal { background: white; border-radius: 20px; max-width: 650px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-size: 18px; font-weight: 700; color: var(--ren-dark); }
 .modal-body { padding: 20px; }
-.modal-footer { padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
 .form-group { margin-bottom: 16px; }
-.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
-.form-input, .form-select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; }
-.form-input:focus, .form-select:focus { outline: none; border-color: #667eea; }
+.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #555; }
+.form-input, .form-select { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px; transition: all 0.3s; }
+.form-input:focus, .form-select:focus { outline: none; border-color: var(--ren-primary); }
 .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
-.toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
+.toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
 @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .page { display: none; }
 .page.active { display: block; }
-.pipeline-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; }
-.pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; }
-.pipeline-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.pipeline-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+.pipeline-tab { padding: 8px 16px; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.3s; }
+.pipeline-tab.active { background: var(--ren-primary); color: white; }
 .chart-container { height: 300px; position: relative; }
-.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
+.jornada-steps { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
 .step { text-align: center; flex: 1; padding: 10px; border-radius: 8px; min-width: 80px; }
-.step.completed { background: #10b981; color: white; }
-.step.pending { background: #e2e8f0; color: #64748b; }
-.agenda-item { padding: 12px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-.agenda-item:hover { background: #f8fafc; }
+.step.completed { background: var(--ren-success); color: white; }
+.step.pending { background: #e9ecef; color: #666; }
+.qr-code-container { text-align: center; padding: 20px; background: #f8f9fa; border-radius: 12px; margin-top: 16px; }
+.landing-page-preview { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-top: 16px; }
 </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
+<!-- TELA DE LOGIN - Cores RenSoftware -->
 <div class="auth-screen" id="auth-screen">
   <div class="auth-card">
-    <div class="auth-icon"><i class="fas fa-chart-line"></i></div>
-    <h1 class="auth-title">ProspectFlow CRM</h1>
+    <div class="auth-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+    <h1 class="auth-title">RenSoftware CRM</h1>
     <p class="auth-sub">Sistema profissional de gestão de vendas</p>
-    <div id="auth-error" style="display:none; background:#fef2f2; color:#ef4444; padding:10px; border-radius:12px; margin-bottom:16px"></div>
+    <div id="auth-error" style="display:none; background:#ffebee; color:#dc3545; padding:10px; border-radius:12px; margin-bottom:16px"></div>
     <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
     <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
     <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
@@ -119,15 +132,13 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
   <div class="app-container">
     <div class="sidebar" id="sidebar">
       <button class="toggle-sidebar" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
-      <div class="logo-area"><div class="logo-icon">🎯</div><div class="logo-text">Prospect<span>Flow</span></div></div>
+      <div class="logo-area"><div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="logo-text">Ren<span>Software</span></div></div>
       <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
       <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
       <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
       <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
       <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
       <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
-      <div class="nav-item" data-page="gestaovendas" onclick="goToPage('gestaovendas')"><i class="fas fa-chart-simple"></i> <span>Gestão de Vendas</span></div>
-      <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> <span>Remarketing</span></div>
       <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> <span>Campanhas</span></div>
       <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
       <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> <span>Importar</span></div>
@@ -163,7 +174,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
           <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></td></div>
         </div>
       </div>
 
@@ -177,7 +188,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
             <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
             <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Data Previsão</th><th>Ações</th></td></thead><tbody id="pipeline-table"></tbody></table></div>
         </div>
       </div>
 
@@ -193,52 +204,23 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
       <div id="page-metas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Mês</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
         </div>
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></tr></div>
         </div>
       </div>
 
       <!-- FORECAST -->
       <div id="page-forecast" class="page">
         <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Forecast - Pipeline</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Data</th></tr></thead><tbody id="forecast-table"></tbody></td></div>
+          <div class="card-header"><h3 class="card-title">Forecast - Pipeline de Vendas</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Etapa</th><th>Previsão</th></tr></thead><tbody id="forecast-table"></tbody></table></div>
         </div>
       </div>
 
-      <!-- GESTÃO DE VENDAS -->
-      <div id="page-gestaovendas" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">📊 Resumo Executivo</h3></div>
-          <div class="stats-grid">
-            <div class="stat-card"><div class="stat-icon green"><i class="fas fa-file-signature"></i></div><div class="stat-value" id="exec-contratos">0</div><div class="stat-label">Contratos</div></div>
-            <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-chart-line"></i></div><div class="stat-value" id="exec-mrr">R$ 0</div><div class="stat-label">MRR</div></div>
-            <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-money-bill-wave"></i></div><div class="stat-value" id="exec-entradas">R$ 0</div><div class="stat-label">Entradas</div></div>
-            <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="exec-taxa">0%</div><div class="stat-label">Conversão</div></div>
-          </div>
-        </div>
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">📈 Performance por Vendedor</h3></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Fechamentos</th><th>Receita</th><th>Conversão</th></tr></thead><tbody id="performance-table"></tbody></table></div>
-        </div>
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">❌ Perdas Registradas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Motivo</th><th>Valor</th><th>Data</th></tr></thead><tbody id="perdas-table"></tbody></tr></div>
-        </div>
-      </div>
-
-      <!-- REMARKETING -->
-      <div id="page-remarketing" class="page">
-        <div class="content-card">
-          <div class="card-header"><h3 class="card-title">Remarketing</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar Email</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody><table></div>
-        </div>
-      </div>
-
-      <!-- CAMPANHAS -->
+      <!-- CAMPANHAS com Landing Pages e QR Code -->
       <div id="page-campanhas" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
@@ -250,7 +232,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
       <div id="page-produtos" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></td></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
         </div>
       </div>
 
@@ -258,8 +240,8 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
       <div id="page-importar" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Modelo</button></div>
-          <div class="dz" style="border: 2px dashed #cbd5e1; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
-            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #94a3b8;"></i><p>Clique para importar Excel</p>
+          <div class="dz" style="border: 2px dashed #ddd; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #aaa;"></i><p>Clique para importar Excel</p>
           </div>
           <input type="file" id="import-file" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleImport(event)">
           <div id="import-preview"></div>
@@ -289,7 +271,7 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
       <div id="page-usuarios" class="page">
         <div class="content-card">
           <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></tr></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody><tr></div>
         </div>
       </div>
     </div>
@@ -301,15 +283,13 @@ body { font-family: 'Inter', sans-serif; background: #f1f5f9; overflow-x: hidden
 
 <div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
 
-<div id="modal-perda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Perda</h3><button onclick="closeModal('modal-perda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="perda-empresa"></div><div class="form-group"><label>Motivo</label><select class="form-select" id="perda-motivo"><option>Preço</option><option>Concorrência</option><option>Prazo</option><option>Cancelamento</option><option>Outro</option></select></div><div class="form-group"><label>Valor (R$)</label><input class="form-input" type="number" id="perda-valor"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-perda')">Cancelar</button><button class="btn btn-primary" onclick="savePerda()">Salvar</button></div></div></div>
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome da Campanha *</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Feira/Exposição</option><option>Digital</option><option>Evento Online</option><option>Workshop</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>URL da Landing Page</label><input class="form-input" id="camp-lp" placeholder="https://"></div><div class="form-group"><label>Meta de Leads</label><input class="form-input" type="number" id="camp-meta"></div><div class="form-group"><label>Cor da Landing Page</label><input class="form-input" type="color" id="camp-cor" value="#005C99"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
 
-<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
+<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-mensalidade"></div><div class="form-group"><label>Mês</label><select class="form-select" id="meta-mes"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
 
 <div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option><option>Abril/2026</option><option>Maio/2026</option><option>Junho/2026</option><option>Julho/2026</option><option>Agosto/2026</option><option>Setembro/2026</option><option>Outubro/2026</option><option>Novembro/2026</option><option>Dezembro/2026</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
 
-<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Promocional</option><option>Seasonal</option><option>Lançamento</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>Meta (R$)</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
-
-<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option><option>Financeiro</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
 
 <div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
 
@@ -327,7 +307,10 @@ const PRODUTOS_PADRAO = [
   { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
   { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
   { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
-  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
+  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 },
+  { id: 'p5', nome: 'Força de Vendas', categoria: 'CRM', adesao: 3500, mensalidade: 700 },
+  { id: 'p6', nome: 'Inteligência Fiscal', categoria: 'Fiscal', adesao: 4500, mensalidade: 900 },
+  { id: 'p7', nome: 'E-commerce Tray', categoria: 'E-commerce', adesao: 8000, mensalidade: 1500 }
 ];
 
 // USUÁRIOS PADRÃO
@@ -340,10 +323,10 @@ const USUARIOS_PADRAO = [
 
 // LEADS EXEMPLO
 const LEADS_EXEMPLO = [
-  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@email.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
-  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@email.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
-  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@email.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
-  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@email.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
+  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@tocantinsaero.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
+  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@mixjjm.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
+  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@cimefer.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
+  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@gessouniao.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
 ];
 
 // AGENDA EXEMPLO
@@ -351,17 +334,10 @@ const AGENDA_EXEMPLO = [
   { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação do Easyren' }
 ];
 
-// REMARKETING EXEMPLO
-const REMARKETING_EXEMPLO = [
-  { id: 'r1', empresa: 'Cliente Perdido A', contato: 'João', email: 'joao@perdido.com', motivo: 'Não demonstrou interesse', data: new Date().toISOString().split('T')[0] }
-];
-
 let db = {
   leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
   vendas: [],
   agenda: JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
-  remarketing: JSON.parse(JSON.stringify(REMARKETING_EXEMPLO)),
-  perdas: [],
   metasVendedor: [],
   metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' },
   produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
@@ -372,8 +348,8 @@ let db = {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
 function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
-function saveData() { localStorage.setItem('prospectflow_data', JSON.stringify(db)); }
-function loadData() { let d = localStorage.getItem('prospectflow_data'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || AGENDA_EXEMPLO; db.remarketing = p.remarketing || REMARKETING_EXEMPLO; db.perdas = p.perdas || []; db.metasVendedor = p.metasVendedor || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
+function saveData() { localStorage.setItem('rensoftware_data', JSON.stringify(db)); }
+function loadData() { let d = localStorage.getItem('rensoftware_data'); if(d) { let p = JSON.parse(d); db.leads = p.leads || LEADS_EXEMPLO; db.vendas = p.vendas || []; db.agenda = p.agenda || AGENDA_EXEMPLO; db.metasVendedor = p.metasVendedor || []; db.metaGlobal = p.metaGlobal || { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026' }; db.produtos = p.produtos || PRODUTOS_PADRAO; db.campanhas = p.campanhas || []; db.emailHist = p.emailHist || []; db.usuarios = p.usuarios || USUARIOS_PADRAO; } }
 
 // ==================== SIDEBAR ====================
 function toggleSidebar() {
@@ -404,7 +380,7 @@ function goToPage(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   let activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
   if(activeNav) activeNav.classList.add('active');
-  let titles = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline', agenda:'Agenda', metas:'Metas', forecast:'Forecast', gestaovendas:'Gestão de Vendas', remarketing:'Remarketing', campanhas:'Campanhas', produtos:'Produtos', importar:'Importar', email:'E-mails', relatorios:'Relatórios', usuarios:'Usuários' };
+  let titles = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline', agenda:'Agenda', metas:'Metas', forecast:'Forecast', campanhas:'Campanhas', produtos:'Produtos', importar:'Importar', email:'E-mails', relatorios:'Relatórios', usuarios:'Usuários' };
   let titleEl = document.getElementById('page-title');
   if(titleEl) titleEl.innerText = titles[page] || page;
   if(page === 'dashboard') renderDashboard();
@@ -413,8 +389,6 @@ function goToPage(page) {
   if(page === 'agenda') renderAgenda();
   if(page === 'metas') renderMetas();
   if(page === 'forecast') renderForecast();
-  if(page === 'gestaovendas') renderGestaoVendas();
-  if(page === 'remarketing') renderRemarketing();
   if(page === 'campanhas') renderCampanhas();
   if(page === 'produtos') renderProdutos();
   if(page === 'relatorios') renderRelatorios();
@@ -462,8 +436,7 @@ function renderLeads() {
 }
 function openLeadModal() {
   document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
-  updateProdutoSelects();
-  updateVendedorSelects();
+  updateProdutoSelects(); updateVendedorSelects();
   openModal('modal-lead');
 }
 function saveLead() {
@@ -472,7 +445,7 @@ function saveLead() {
   db.leads.push(lead);
   saveData();
   closeModal('modal-lead');
-  renderLeads(); renderDashboard(); renderForecast(); renderGestaoVendas();
+  renderLeads(); renderDashboard(); renderForecast();
   showToast('Lead criado!');
 }
 function openLeadEdit(id) {
@@ -487,8 +460,7 @@ function openLeadEdit(id) {
   document.getElementById('lead-segmento').value = l.segmento || '';
   document.getElementById('lead-adesao').value = l.adesao;
   document.getElementById('lead-mensalidade').value = l.mensalidade;
-  updateProdutoSelects();
-  updateVendedorSelects();
+  updateProdutoSelects(); updateVendedorSelects();
   let selProduto = document.getElementById('lead-produto'); if(selProduto && l.produto) selProduto.value = l.produto;
   let selVendedor = document.getElementById('lead-vendedor'); if(selVendedor && l.vendedor) selVendedor.value = l.vendedor;
   document.getElementById('modal-lead').dataset.editId = id;
@@ -508,16 +480,14 @@ function avancarEtapa(leadId) {
     showToast('🎉 Venda fechada!');
   }
   saveData();
-  renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast(); renderGestaoVendas();
+  renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast();
 }
 function descartarLead(id) {
   let lead = db.leads.find(l => l.id === id);
   if(!lead) return;
-  let perda = { id: uid(), empresa: lead.empresa, vendedor: lead.vendedor, valor: lead.adesao, motivo: 'Descartado em ' + (lead.pipeline || lead.status), data: new Date().toISOString().split('T')[0] };
-  db.perdas.push(perda);
   lead.status = 'Descartado'; lead.pipeline = 'Descartado';
   saveData();
-  renderLeads(); renderGestaoVendas(); showToast('Lead descartado');
+  renderLeads(); showToast('Lead descartado');
 }
 
 // ==================== PIPELINE ====================
@@ -526,15 +496,16 @@ function renderPipeline() {
   if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
   let tb = document.getElementById('pipeline-table');
   if(!tb) return;
-  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
   tb.innerHTML = leads.map(l => `<tr>
     <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
     <td><span class="tag tag-info">${l.produto || '—'}</span></td>
     <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td>${l.vendedor || '—'}</td>
+    <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
     <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
-  </tr>`).join('');
+  </td>`).join('');
 }
 function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
 
@@ -544,7 +515,7 @@ function renderAgenda() {
   let el = document.getElementById('agenda-list');
   if(!el) return;
   if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Sem agendamentos</div>'; return; }
-  el.innerHTML = agenda.map(a => `<div class="agenda-item"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
+  el.innerHTML = agenda.map(a => `<div class="agenda-item" style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i></button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i></button></div></div>`).join('');
 }
 function confirmarAgendamento(id) {
   let agenda = db.agenda.find(a => a.id === id);
@@ -583,7 +554,7 @@ function renderMetas() {
   vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; });
   let tb = document.getElementById('metas-table');
   if(tb) {
-    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Nenhuma meta cadastrada</span><tr>'; return; }
+    if(db.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></td>'; return; }
     tb.innerHTML = db.metasVendedor.map(m => {
       let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
       let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
@@ -593,6 +564,7 @@ function renderMetas() {
         <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
         <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
         <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
+        <td>${m.mes || 'Janeiro/2026'}</td>
         <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></span></td>
       </tr>`;
     }).join('');
@@ -612,13 +584,13 @@ function renderMetas() {
         <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
         <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
         <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-      </tr>`;
+      </td>`;
     }).join('');
   }
 }
 function openMetaVendedorModal() { updateVendedorSelects(); openModal('modal-meta-vendedor'); }
 function saveMetaVendedor() {
-  let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0 };
+  let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, adesao: parseFloat(document.getElementById('meta-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-mensalidade').value) || 0, mes: document.getElementById('meta-mes').value };
   if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
   db.metasVendedor.push(meta);
   saveData(); closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
@@ -644,85 +616,108 @@ function renderForecast() {
     <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
     <td><span class="tag ${l.pipeline === 'Fechamento' ? 'tag-success' : 'tag-warning'}">${l.pipeline || 'Lead'}</span></td>
     <td>${new Date(l.createdAt).toLocaleDateString('pt-BR')}</td>
-  </tr>`).join('');
+  </td>`).join('');
 }
 function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(db.leads.filter(l => l.pipeline).map(l => ({ Vendedor: l.vendedor, Empresa: l.empresa, Produto: l.produto, Adesão: l.adesao, Mensalidade: l.mensalidade, Etapa: l.pipeline }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
-
-// ==================== GESTÃO DE VENDAS ====================
-function renderGestaoVendas() {
-  let totalContratos = db.vendas.length;
-  let mrrTotal = db.vendas.reduce((s,v) => s + (v.mensalidade || 0), 0);
-  let entradasTotal = db.vendas.reduce((s,v) => s + (v.adesao || 0), 0);
-  let totalLeads = db.leads.length;
-  let taxaConversao = totalLeads > 0 ? Math.round(db.vendas.length / totalLeads * 100) : 0;
-  document.getElementById('exec-contratos').innerText = totalContratos;
-  document.getElementById('exec-mrr').innerText = `R$ ${mrrTotal.toLocaleString('pt-BR')}`;
-  document.getElementById('exec-entradas').innerText = `R$ ${entradasTotal.toLocaleString('pt-BR')}`;
-  document.getElementById('exec-taxa').innerText = `${taxaConversao}%`;
-  
-  let tbPerformance = document.getElementById('performance-table');
-  if(tbPerformance) {
-    let vendedores = db.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
-    tbPerformance.innerHTML = vendedores.map(v => {
-      let leadsV = db.leads.filter(l => l.vendedor === v);
-      let vendasV = db.vendas.filter(vd => vd.vendedor === v);
-      let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
-      let taxa = leadsV.length > 0 ? Math.round(vendasV.length / leadsV.length * 100) : 0;
-      return `<tr>
-        <td><strong>${v}</strong></td>
-        <td>${leadsV.length}</span></td>
-        <td>${vendasV.length}</span></td>
-        <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
-        <td>${taxa}%</span></td>
-      </tr>`;
-    }).join('');
-  }
-  
-  let tbPerdas = document.getElementById('perdas-table');
-  if(tbPerdas) tbPerdas.innerHTML = db.perdas.map(p => `<tr>
-    <td><strong>${p.empresa}</strong></td>
-    <td>${p.motivo || '—'}</td>
-    <td>R$ ${(p.valor || 0).toLocaleString('pt-BR')}</td>
-    <td>${p.data || '—'}</td>
-    <td><button class="btn btn-danger btn-sm" onclick="deletarPerda('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
-  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhuma perda registrada</span></tr>';
-}
-function openPerdaModal() { openModal('modal-perda'); }
-function savePerda() {
-  let perda = { id: uid(), empresa: document.getElementById('perda-empresa').value.trim(), motivo: document.getElementById('perda-motivo').value, valor: parseFloat(document.getElementById('perda-valor').value) || 0, data: new Date().toISOString().split('T')[0] };
-  if(!perda.empresa) { showToast('Informe a empresa!'); return; }
-  db.perdas.push(perda);
-  saveData(); closeModal('modal-perda'); renderGestaoVendas(); showToast('Perda registrada!');
-}
-function deletarPerda(id) { if(confirm('Remover?')) { db.perdas = db.perdas.filter(p => p.id !== id); saveData(); renderGestaoVendas(); showToast('Removido!'); } }
-
-// ==================== REMARKETING ====================
-function renderRemarketing() {
-  let tb = document.getElementById('remarketing-table');
-  if(!tb) return;
-  tb.innerHTML = db.remarketing.map(r => `<tr>
-    <td><strong>${r.empresa}</strong></td>
-    <td>${r.contato || '—'}</td>
-    <td>${r.email || '—'}</td>
-    <td>${r.motivo || '—'}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="enviarEmailRemarketing('${r.id}')"><i class="fas fa-envelope"></i> Enviar</button></td>
-  </tr>`).join('') || '<tr><td colspan="5" style="text-align:center">Nenhum lead em remarketing</span></tr>';
-}
-function enviarEmailRemarketing(id) { let r = db.remarketing.find(r => r.id === id); if(r && r.email) { showToast(`Email enviado para ${r.empresa}`); } }
-function sendMarketingEmail() { showToast('Funcionalidade em desenvolvimento'); }
 
 // ==================== CAMPANHAS ====================
 function renderCampanhas() {
   let list = document.getElementById('campanhas-list');
   if(!list) return;
-  if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha</div>'; return; }
-  list.innerHTML = db.campanhas.map(c => `<div class="content-card"><div><strong>${c.nome}</strong><br><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div><div>Meta: R$ ${(c.meta || 0).toLocaleString('pt-BR')}</div></div>`).join('');
+  if(db.campanhas.length === 0) { list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha cadastrada</div>'; return; }
+  list.innerHTML = db.campanhas.map(c => `
+    <div class="content-card" style="border-left: 4px solid ${c.cor || '#005C99'}">
+      <div class="card-header">
+        <div><h4 class="card-title">${c.nome}</h4><small>${c.tipo} | ${c.inicio} a ${c.fim}</small></div>
+        <div>
+          <button class="btn btn-outline btn-sm" onclick="gerarQRCode('${c.id}')"><i class="fas fa-qrcode"></i> QR Code</button>
+          <button class="btn btn-outline btn-sm" onclick="gerarLandingPage('${c.id}')"><i class="fas fa-file-alt"></i> Landing Page</button>
+          <button class="btn btn-danger btn-sm" onclick="deletarCampanha('${c.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="stats-grid" style="margin-top: 12px;">
+        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${db.leads.filter(l => l.campanha === c.id).length}</div><div class="stat-label">Leads Captados</div></div>
+        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta || 0}</div><div class="stat-label">Meta</div></div>
+        <div class="stat-card" style="padding: 12px;"><div class="stat-value" style="font-size: 20px;">${c.meta ? Math.round(db.leads.filter(l => l.campanha === c.id).length / c.meta * 100) : 0}%</div><div class="stat-label">Atingimento</div></div>
+      </div>
+      <div id="qr-${c.id}" style="display: none; margin-top: 16px;" class="qr-code-container"></div>
+    </div>
+  `).join('');
 }
 function openCampanhaModal() { openModal('modal-campanha'); }
 function saveCampanha() {
-  let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, meta: parseFloat(document.getElementById('camp-meta').value) || 0 };
+  let camp = { id: uid(), nome: document.getElementById('camp-nome').value.trim(), tipo: document.getElementById('camp-tipo').value, inicio: document.getElementById('camp-inicio').value, fim: document.getElementById('camp-fim').value, lp: document.getElementById('camp-lp').value, meta: parseFloat(document.getElementById('camp-meta').value) || 0, cor: document.getElementById('camp-cor').value, createdAt: new Date().toISOString() };
   if(!camp.nome){ showToast('Informe o nome!'); return; }
-  db.campanhas.push(camp); saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!');
+  db.campanhas.push(camp);
+  saveData(); closeModal('modal-campanha'); renderCampanhas(); showToast('Campanha criada!');
+}
+function deletarCampanha(id) { if(confirm('Remover campanha?')) { db.campanhas = db.campanhas.filter(c => c.id !== id); saveData(); renderCampanhas(); showToast('Campanha removida!'); } }
+function gerarQRCode(id) {
+  let camp = db.campanhas.find(c => c.id === id);
+  if(!camp) return;
+  let url = camp.lp || `https://rensoftware.com.br/campanha/${camp.id}`;
+  let qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+  let div = document.getElementById(`qr-${id}`);
+  div.innerHTML = `<img src="${qrUrl}" style="width: 150px;"><br><small>${url}</small><br><button class="btn btn-outline btn-sm" onclick="this.parentElement.style.display='none'">Fechar</button>`;
+  div.style.display = 'block';
+}
+function gerarLandingPage(id) {
+  let camp = db.campanhas.find(c => c.id === id);
+  if(!camp) return;
+  let html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${camp.nome} - RenSoftware</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:Arial,sans-serif;background:linear-gradient(135deg,${camp.cor || '#005C99'} 0%,${camp.cor ? adjustColor(camp.cor, -20) : '#003366'} 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+      .landing-container{background:white;border-radius:20px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.2);}
+      h1{color:${camp.cor || '#005C99'};margin-bottom:10px;}
+      .subtitle{color:#666;margin-bottom:30px;}
+      .form-group{margin-bottom:20px;}
+      label{display:block;margin-bottom:5px;color:#555;font-weight:500;}
+      input{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
+      input:focus{outline:none;border-color:${camp.cor || '#005C99'};}
+      button{width:100%;padding:14px;background:${camp.cor || '#005C99'};color:white;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:transform 0.3s;}
+      button:hover{transform:translateY(-2px);}
+      .success{background:#d4edda;color:#155724;padding:12px;border-radius:10px;margin-top:20px;display:none;}
+    </style>
+    </head>
+    <body>
+    <div class="landing-container">
+      <h1>${camp.nome}</h1>
+      <p class="subtitle">Preencha o formulário para participar</p>
+      <form id="leadForm">
+        <div class="form-group"><label>Nome Completo</label><input type="text" name="nome" required></div>
+        <div class="form-group"><label>E-mail</label><input type="email" name="email" required></div>
+        <div class="form-group"><label>Telefone</label><input type="tel" name="telefone" required></div>
+        <div class="form-group"><label>Empresa</label><input type="text" name="empresa" required></div>
+        <button type="submit">Enviar Cadastro</button>
+      </form>
+      <div id="successMsg" class="success">✅ Cadastro realizado com sucesso! Entraremos em contato.</div>
+    </div>
+    <script>
+      document.getElementById('leadForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        let data = {};
+        for(let[k,v] of new FormData(this)) data[k]=v;
+        data.campanha = '${camp.id}';
+        localStorage.setItem('lead_'+Date.now(), JSON.stringify(data));
+        document.getElementById('successMsg').style.display = 'block';
+        this.reset();
+        setTimeout(()=>{window.close();}, 2000);
+      });
+    </script>
+    </body>
+    </html>
+  `;
+  let win = window.open('', '_blank', 'width=550,height=700');
+  win.document.write(html);
+  win.document.close();
+}
+function adjustColor(color, percent) {
+  // Função simples para escurecer a cor
+  return '#003366';
 }
 
 // ==================== PRODUTOS ====================
@@ -742,10 +737,11 @@ function openProdutoModal() { openModal('modal-produto'); }
 function saveProduto() {
   let produto = { id: uid(), nome: document.getElementById('produto-nome').value.trim(), categoria: document.getElementById('produto-categoria').value, adesao: parseFloat(document.getElementById('produto-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('produto-mensalidade').value) || 0 };
   if(!produto.nome){ showToast('Informe o nome!'); return; }
-  db.produtos.push(produto); saveData(); closeModal('modal-produto'); renderProdutos(); showToast('Produto criado!');
+  db.produtos.push(produto);
+  saveData(); closeModal('modal-produto'); renderProdutos(); updateProdutoSelects(); showToast('Produto criado!');
 }
 function editarProduto(id) { let p = db.produtos.find(p => p.id === id); if(p) { document.getElementById('produto-nome').value = p.nome; document.getElementById('produto-adesao').value = p.adesao; document.getElementById('produto-mensalidade').value = p.mensalidade; document.getElementById('modal-produto').dataset.editId = id; openModal('modal-produto'); } }
-function deletarProduto(id) { if(confirm('Remover?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); showToast('Produto removido!'); } }
+function deletarProduto(id) { if(confirm('Remover?')) { db.produtos = db.produtos.filter(p => p.id !== id); saveData(); renderProdutos(); updateProdutoSelects(); showToast('Produto removido!'); } }
 
 // ==================== IMPORTAR ====================
 function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
@@ -823,13 +819,13 @@ function renderDashboard() {
   let aRealizar = totalMeta - totalRealizado;
   if(charts.metas) charts.metas.destroy();
   let ctx = document.getElementById('metas-chart')?.getContext('2d');
-  if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#10b981', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
+  if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#28A745', '#FFC107'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } });
 }
 
 // ==================== UTILIDADES ====================
 function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; }
-function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderGestaoVendas(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; delete document.getElementById('modal-user')?.dataset?.editId; delete document.getElementById('modal-lead')?.dataset?.editId; delete document.getElementById('modal-produto')?.dataset?.editId; }
+function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
 
 loadData();
 </script>
