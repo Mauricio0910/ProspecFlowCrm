@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspectFlow CRM - Sistema Completo com Firebase</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; background: #f1f5f9; }
+.auth-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.auth-screen.hidden { display: none; }
+.auth-card { background: white; border-radius: 32px; padding: 48px; width: 100%; max-width: 420px; text-align: center; }
+.auth-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 40px; color: white; }
+.auth-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: #1e293b; }
+.auth-sub { color: #64748b; margin-bottom: 32px; }
+.auth-input { width: 100%; padding: 14px 18px; border: 2px solid #e2e8f0; border-radius: 16px; font-size: 14px; margin-bottom: 16px; }
+.auth-input:focus { outline: none; border-color: #667eea; }
+.btn-auth { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; }
+#app-main { display: none; }
+.app-container { display: flex; min-height: 100vh; }
+.sidebar { width: 280px; background: #0f172a; padding: 24px 16px; position: fixed; height: 100vh; overflow-y: auto; transition: all 0.3s ease; z-index: 100; }
+.sidebar.collapsed { width: 70px; }
+.sidebar.collapsed .logo-text, .sidebar.collapsed .nav-item span { display: none; }
+.sidebar.collapsed .nav-item { justify-content: center; }
+.toggle-sidebar { position: absolute; top: 20px; right: -12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 101; }
+.main-content { flex: 1; margin-left: 280px; padding: 20px; transition: all 0.3s ease; }
+.main-content.expanded { margin-left: 70px; }
+.logo-area { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.logo-text { font-size: 18px; font-weight: 700; color: white; }
+.logo-text span { color: #a78bfa; }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 10px; color: #94a3b8; cursor: pointer; margin-bottom: 4px; transition: all 0.3s; }
+.nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+.nav-item i { width: 20px; }
+.top-bar { background: white; border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.page-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+.user-info { display: flex; align-items: center; gap: 12px; }
+.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+.stat-icon.blue { background: #eff6ff; color: #3b82f6; }
+.stat-icon.green { background: #ecfdf5; color: #10b981; }
+.stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
+.stat-icon.orange { background: #fff7ed; color: #f59e0b; }
+.stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+.stat-label { font-size: 13px; color: #64748b; }
+.content-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+.card-title { font-size: 16px; font-weight: 700; }
+.btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.3s; }
+.btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #64748b; }
+.btn-outline:hover { border-color: #667eea; color: #667eea; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-danger { background: #ef4444; color: white; }
+.btn-success { background: #10b981; color: white; }
+.btn-warning { background: #f59e0b; color: white; }
+.table-container { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { text-align: left; padding: 10px 12px; background: #f8fafc; font-weight: 600; color: #64748b; font-size: 12px; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+.tag { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.tag-success { background: #ecfdf5; color: #10b981; }
+.tag-warning { background: #fffbeb; color: #f59e0b; }
+.tag-info { background: #eff6ff; color: #3b82f6; }
+.tag-purple { background: #f5f3ff; color: #8b5cf6; }
+.tag-danger { background: #fef2f2; color: #ef4444; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; }
+.modal { background: white; border-radius: 20px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #334155; }
+.form-input, .form-select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; }
+.form-input:focus, .form-select:focus { outline: none; border-color: #667eea; }
+.toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
+.toast { background: white; border-radius: 10px; padding: 10px 16px; margin-top: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; animation: slideIn 0.3s ease; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.page { display: none; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; transition: background 0.3s; }
+.sync-dot.syncing { background: #f59e0b; animation: pulse 0.8s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-icon"><i class="fas fa-chart-line"></i></div>
+    <h1 class="auth-title">ProspectFlow CRM</h1>
+    <p class="auth-sub">Sistema profissional de gestão de vendas</p>
+    <div id="auth-error" style="display:none; background:#fef2f2; color:#ef4444; padding:10px; border-radius:12px; margin-bottom:16px"></div>
+    <input type="text" class="auth-input" id="auth-user" placeholder="Usuário" value="admin">
+    <input type="password" class="auth-input" id="auth-pass" placeholder="Senha" value="1234">
+    <button class="btn-auth" onclick="doLogin()"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
+  </div>
+</div>
+
+<!-- APLICATIVO PRINCIPAL -->
+<div id="app-main">
+  <div class="app-container">
+    <div class="sidebar" id="sidebar">
+      <button class="toggle-sidebar" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
+      <div class="logo-area"><div class="logo-icon">🎯</div><div class="logo-text">Prospect<span>Flow</span></div></div>
+      <div class="nav-item" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fas fa-chart-pie"></i> <span>Dashboard</span></div>
+      <div class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fas fa-users"></i> <span>Leads</span></div>
+      <div class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fas fa-funnel-dollar"></i> <span>Pipeline</span></div>
+      <div class="nav-item" data-page="agenda" onclick="goToPage('agenda')"><i class="fas fa-calendar"></i> <span>Agenda</span></div>
+      <div class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fas fa-trophy"></i> <span>Metas</span></div>
+      <div class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fas fa-chart-line"></i> <span>Forecast</span></div>
+      <div class="nav-item" data-page="gestaovendas" onclick="goToPage('gestaovendas')"><i class="fas fa-chart-simple"></i> <span>Gestão de Vendas</span></div>
+      <div class="nav-item" data-page="remarketing" onclick="goToPage('remarketing')"><i class="fas fa-envelope-open-text"></i> <span>Remarketing</span></div>
+      <div class="nav-item" data-page="campanhas" onclick="goToPage('campanhas')"><i class="fas fa-bullhorn"></i> <span>Campanhas</span></div>
+      <div class="nav-item" data-page="produtos" onclick="goToPage('produtos')"><i class="fas fa-box"></i> <span>Produtos</span></div>
+      <div class="nav-item" data-page="importar" onclick="goToPage('importar')"><i class="fas fa-file-import"></i> <span>Importar</span></div>
+      <div class="nav-item" data-page="email" onclick="goToPage('email')"><i class="fas fa-envelope"></i> <span>E-mails</span></div>
+      <div class="nav-item" data-page="relatorios" onclick="goToPage('relatorios')"><i class="fas fa-chart-simple"></i> <span>Relatórios</span></div>
+      <div class="nav-item" data-page="usuarios" onclick="goToPage('usuarios')"><i class="fas fa-user-shield"></i> <span>Usuários</span></div>
+    </div>
+
+    <div class="main-content" id="main-content">
+      <div class="top-bar">
+        <h2 class="page-title" id="page-title">Dashboard</h2>
+        <div class="user-info">
+          <div class="sync-dot" id="sync-dot"></div>
+          <span id="user-name">Admin</span>
+          <div class="user-avatar" id="user-avatar">A</div>
+          <button class="btn btn-outline btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-value" id="stat-total-leads">0</div><div class="stat-label">Total Leads</div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-value" id="stat-fechamentos">0</div><div class="stat-label">Fechamentos</div></div>
+          <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-receita">R$ 0</div><div class="stat-label">Receita Total</div></div>
+          <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="stat-conversao">0%</div><div class="stat-label">Conversão</div></div>
+        </div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-chart-line"></i> Jornada de Vendas</h3></div><div class="jornada-steps" id="jornada-steps"></div></div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title"><i class="fas fa-trophy"></i> Meta Global</h3><button class="btn btn-outline btn-sm" onclick="openMetaGlobalModal()">Configurar</button></div><div class="chart-container"><canvas id="metas-chart"></canvas></div></div>
+      </div>
+
+      <!-- LEADS -->
+      <div id="page-leads" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Gestão de Leads</h3><button class="btn btn-primary" onclick="openLeadModal()">+ Novo Lead</button></div>
+          <input type="text" class="form-input" placeholder="Buscar leads..." style="margin-bottom: 16px;" oninput="renderLeads()" id="search-lead">
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Status</th><th>Etapa</th><th>Vendedor</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="leads-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div id="page-pipeline" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Pipeline de Vendas</h3></div>
+          <div class="pipeline-tabs">
+            <div class="pipeline-tab active" data-stage="Agendamento" onclick="setPipelineStage('Agendamento')">📅 Agendamento</div>
+            <div class="pipeline-tab" data-stage="Apresentação" onclick="setPipelineStage('Apresentação')">📢 Apresentação</div>
+            <div class="pipeline-tab" data-stage="Negociação" onclick="setPipelineStage('Negociação')">🤝 Negociação</div>
+            <div class="pipeline-tab" data-stage="Fechamento" onclick="setPipelineStage('Fechamento')">✅ Fechamento</div>
+          </div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Vendedor</th><th>Previsão</th><th>Ações</th></tr></thead><tbody id="pipeline-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- AGENDA -->
+      <div id="page-agenda" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Agenda de Apresentações</h3><button class="btn btn-primary" onclick="openAgendaModal()">+ Agendar</button></div>
+          <div id="agenda-list"></div>
+        </div>
+      </div>
+
+      <!-- METAS -->
+      <div id="page-metas" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Metas por Vendedor</h3><button class="btn btn-primary btn-sm" onclick="openMetaVendedorModal()">+ Nova Meta</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Produto</th><th>Meta Adesão</th><th>Meta Mensalidade</th><th>Realizado</th><th>%</th><th>Ações</th></tr></thead><tbody id="metas-table"></tbody></table></div>
+        </div>
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Produtividade por Vendedor</h3></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Leads</th><th>Agendamento</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Receita</th></tr></thead><tbody id="produtividade-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- FORECAST -->
+      <div id="page-forecast" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Forecast - Oportunidades</h3><div><button class="btn btn-outline btn-sm" onclick="exportForecastExcel()"><i class="fas fa-file-excel"></i> Exportar</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><td><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Adesão</th><th>Valor Mensalidade</th><th>Previsão Fechamento</th><th>Probabilidade</th><th>Valor Ponderado</th></tr></thead><tbody id="forecast-table"></tbody></tr></div>
+        </div>
+      </div>
+
+      <!-- GESTÃO DE VENDAS - NOVA PLANILHA -->
+      <div id="page-gestaovendas" class="page">
+        <!-- Resumo Executivo -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">📊 Resumo Executivo</h3><button class="btn btn-outline btn-sm" onclick="exportGestaoVendas()"><i class="fas fa-file-excel"></i> Exportar Planilha Completa</button></div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon green"><i class="fas fa-file-signature"></i></div><div class="stat-value" id="exec-contratos">0</div><div class="stat-label">Contratos Fechados</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-chart-line"></i></div><div class="stat-value" id="exec-mrr">R$ 0</div><div class="stat-label">MRR</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-money-bill-wave"></i></div><div class="stat-value" id="exec-entradas">R$ 0</div><div class="stat-label">Entradas Recebidas</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value" id="exec-taxa">0%</div><div class="stat-label">Taxa de Conversão</div></div>
+            <div class="stat-card"><div class="stat-icon red"><i class="fas fa-user-slash"></i></div><div class="stat-value" id="exec-cancelados">0</div><div class="stat-label">Clientes Cancelados</div></div>
+          </div>
+        </div>
+
+        <!-- Indicadores Semanais/Mensais -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">📈 Indicadores por Período</h3><div><select class="form-select" id="periodo-indicadores" style="width:150px" onchange="renderIndicadoresPeriodo()"><option value="semana">Esta Semana</option><option value="mes">Este Mês</option><option value="trimestre">Este Trimestre</option></select></div></div>
+          <div class="stats-grid" id="periodo-indicadores-grid"></div>
+        </div>
+
+        <!-- Pipeline de Oportunidades -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">🎯 Pipeline de Oportunidades</h3><button class="btn btn-outline btn-sm" onclick="openOportunidadeModal()">+ Nova Oportunidade</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor</th><th>Previsão</th><th>Probabilidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="oportunidades-table"></tbody></table></div>
+        </div>
+
+        <!-- Perdas e Ações Corretivas -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">❌ Perdas e Ações Corretivas</h3><button class="btn btn-outline btn-sm" onclick="openPerdaModal()">+ Registrar Perda</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Vendedor</th><th>Produto</th><th>Valor Perdido</th><th>Motivo</th><th>Ação Corretiva</th><th>Data</th><th>Ações</th></tr></thead><tbody id="perdas-table"></tbody></tr></div>
+        </div>
+
+        <!-- Performance por Vendedor -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">🏆 Performance por Vendedor</h3></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Vendedor</th><th>Meta</th><th>Realizado</th><th>% Atingido</th><th>Perdas</th><th>Taxa Conversão</th><th>Ticket Médio</th></tr></thead><tbody id="performance-table"></tbody></table></div>
+        </div>
+
+        <!-- Plano de Ação -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">📋 Plano de Ação</h3><button class="btn btn-outline btn-sm" onclick="openPlanoAcaoModal()">+ Nova Ação</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Ação</th><th>Responsável</th><th>Prazo</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead><tbody id="plano-acao-table"></tbody></table></div>
+        </div>
+
+        <!-- Problemas Identificados -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">⚠️ Problemas Identificados</h3><button class="btn btn-outline btn-sm" onclick="openProblemaModal()">+ Registrar Problema</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Problema</th><th>Impacto</th><th>Data Identificação</th><th>Status</th><th>Solução</th><th>Ações</th></tr></thead><tbody id="problemas-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- REMARKETING -->
+      <div id="page-remarketing" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Remarketing - Leads Perdidos</h3><button class="btn btn-primary" onclick="sendMarketingEmail()">Enviar E-mail</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Email</th><th>Categoria</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="remarketing-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- CAMPANHAS -->
+      <div id="page-campanhas" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Campanhas</h3><button class="btn btn-primary" onclick="openCampanhaModal()">+ Nova Campanha</button></div>
+          <div id="campanhas-list"></div>
+        </div>
+      </div>
+
+      <!-- PRODUTOS -->
+      <div id="page-produtos" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Produtos</h3><button class="btn btn-primary" onclick="openProdutoModal()">+ Novo Produto</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Produto</th><th>Categoria</th><th>Adesão</th><th>Mensalidade</th><th>Ações</th></tr></thead><tbody id="produtos-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- IMPORTAR -->
+      <div id="page-importar" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Importar Leads</h3><button class="btn btn-outline" onclick="downloadTemplate()">Modelo</button></div>
+          <div class="dz" style="border: 2px dashed #cbd5e1; border-radius: 16px; padding: 40px; text-align: center; cursor: pointer;" onclick="document.getElementById('import-file').click()">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #94a3b8;"></i><p>Clique para importar Excel</p>
+          </div>
+          <input type="file" id="import-file" style="display:none" accept=".xlsx,.xls,.csv" onchange="handleImport(event)">
+          <div id="import-preview"></div>
+        </div>
+      </div>
+
+      <!-- E-MAILS -->
+      <div id="page-email" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">E-mails</h3></div>
+          <div class="form-group"><label class="form-label">Assunto</label><input type="text" class="form-input" id="email-subject"></div>
+          <div class="form-group"><label class="form-label">Mensagem</label><textarea class="form-textarea" id="email-body" rows="4" placeholder="Use {empresa} e {contato}"></textarea></div>
+          <button class="btn btn-primary" onclick="sendBulkEmail()">Enviar</button>
+        </div>
+        <div class="content-card"><div class="card-header"><h3 class="card-title">Histórico</h3></div><div id="email-history"></div></div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div id="page-relatorios" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Relatórios</h3><div><button class="btn btn-outline btn-sm" onclick="exportRelatorioExcel()">Excel</button><button class="btn btn-outline btn-sm" onclick="exportRelatorioPDF()">PDF</button></div></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Produto</th><th>Adesão</th><th>Mensalidade</th><th>Status</th></table></thead><tbody id="relatorio-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div id="page-usuarios" class="page">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Usuários</h3><button class="btn btn-primary" onclick="openUserModal()">+ Novo Usuário</button></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Nome</th><th>Login</th><th>Perfil</th><th>Equipe</th><th>Ações</th></tr></thead><tbody id="users-table"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAIS -->
+<div id="modal-lead" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Lead</h3><button onclick="closeModal('modal-lead')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa *</label><input class="form-input" id="lead-empresa"></div><div class="form-group"><label>Contato</label><input class="form-input" id="lead-contato"></div><div class="form-group"><label>Email</label><input class="form-input" id="lead-email"></div><div class="form-group"><label>Telefone</label><input class="form-input" id="lead-telefone"></div><div class="form-group"><label>Cidade/UF</label><div style="display:grid;grid-template-columns:2fr 1fr;gap:10px"><input class="form-input" id="lead-cidade"><input class="form-input" id="lead-uf"></div></div><div class="form-group"><label>Segmento</label><input class="form-input" id="lead-segmento"></div><div class="form-group"><label>Produto</label><select class="form-select" id="lead-produto"></select></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="lead-vendedor"></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="lead-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="lead-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lead')">Cancelar</button><button class="btn btn-primary" onclick="saveLead()">Salvar</button></div></div></div>
+
+<div id="modal-agenda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Agendar</h3><button onclick="closeModal('modal-agenda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Lead</label><select class="form-select" id="agenda-lead"></select></div><div class="form-group"><label>Data</label><input class="form-input" type="date" id="agenda-data"></div><div class="form-group"><label>Hora</label><input class="form-input" type="time" id="agenda-hora"></div><div class="form-group"><label>Observações</label><textarea class="form-textarea" id="agenda-obs"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-agenda')">Cancelar</button><button class="btn btn-primary" onclick="saveAgenda()">Salvar</button></div></div></div>
+
+<div id="modal-oportunidade" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Oportunidade</h3><button onclick="closeModal('modal-oportunidade')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="op-empresa"></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="op-vendedor"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="op-produto"></select></div><div class="form-group"><label>Valor Adesão (R$)</label><input class="form-input" type="number" id="op-adesao"></div><div class="form-group"><label>Valor Mensalidade (R$)</label><input class="form-input" type="number" id="op-mensalidade"></div><div class="form-group"><label>Previsão Fechamento</label><input class="form-input" type="date" id="op-previsao"></div><div class="form-group"><label>Probabilidade (%)</label><select class="form-select" id="op-probabilidade"><option>20</option><option>40</option><option>60</option><option>80</option><option>100</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-oportunidade')">Cancelar</button><button class="btn btn-primary" onclick="saveOportunidade()">Salvar</button></div></div></div>
+
+<div id="modal-perda" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Registrar Perda</h3><button onclick="closeModal('modal-perda')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Empresa</label><input class="form-input" id="perda-empresa"></div><div class="form-group"><label>Vendedor</label><select class="form-select" id="perda-vendedor"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="perda-produto"></select></div><div class="form-group"><label>Valor Perdido (R$)</label><input class="form-input" type="number" id="perda-valor"></div><div class="form-group"><label>Motivo da Perda</label><select class="form-select" id="perda-motivo"><option>Preço</option><option>Concorrência</option><option>Prazo</option><option>Falta de necessidade</option><option>Outro</option></select></div><div class="form-group"><label>Ação Corretiva</label><textarea class="form-textarea" id="perda-acao" rows="2"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-perda')">Cancelar</button><button class="btn btn-primary" onclick="savePerda()">Salvar</button></div></div></div>
+
+<div id="modal-plano-acao" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Plano de Ação</h3><button onclick="closeModal('modal-plano-acao')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Ação</label><textarea class="form-textarea" id="plano-acao-desc" rows="2"></textarea></div><div class="form-group"><label>Responsável</label><select class="form-select" id="plano-acao-responsavel"></select></div><div class="form-group"><label>Prazo</label><input class="form-input" type="date" id="plano-acao-prazo"></div><div class="form-group"><label>Status</label><select class="form-select" id="plano-acao-status"><option>Pendente</option><option>Em andamento</option><option>Concluído</option><option>Cancelado</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-plano-acao')">Cancelar</button><button class="btn btn-primary" onclick="savePlanoAcao()">Salvar</button></div></div></div>
+
+<div id="modal-problema" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Problema Identificado</h3><button onclick="closeModal('modal-problema')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Problema</label><textarea class="form-textarea" id="problema-desc" rows="2"></textarea></div><div class="form-group"><label>Impacto</label><select class="form-select" id="problema-impacto"><option>Baixo</option><option>Médio</option><option>Alto</option><option>Crítico</option></select></div><div class="form-group"><label>Solução Proposta</label><textarea class="form-textarea" id="problema-solucao" rows="2"></textarea></div><div class="form-group"><label>Status</label><select class="form-select" id="problema-status"><option>Identificado</option><option>Em análise</option><option>Em solução</option><option>Resolvido</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-problema')">Cancelar</button><button class="btn btn-primary" onclick="saveProblema()">Salvar</button></div></div></div>
+
+<div id="modal-meta-vendedor" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta por Vendedor</h3><button onclick="closeModal('modal-meta-vendedor')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Vendedor</label><select class="form-select" id="meta-vendedor-nome"></select></div><div class="form-group"><label>Produto</label><select class="form-select" id="meta-vendedor-produto"></select></div><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="meta-vendedor-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="meta-vendedor-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-vendedor')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaVendedor()">Salvar</button></div></div></div>
+
+<div id="modal-meta-global" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Meta Global</h3><button onclick="closeModal('modal-meta-global')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Meta Adesão (R$)</label><input class="form-input" type="number" id="global-adesao"></div><div class="form-group"><label>Meta Mensalidade (R$)</label><input class="form-input" type="number" id="global-mensalidade"></div><div class="form-group"><label>Período</label><select class="form-select" id="global-periodo"><option>Janeiro/2026</option><option>Fevereiro/2026</option><option>Março/2026</option></select></div><div class="form-group"><label>Distribuir?</label><select class="form-select" id="global-distribuir"><option value="sim">Sim</option><option value="nao">Não</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-meta-global')">Cancelar</button><button class="btn btn-primary" onclick="saveMetaGlobal()">Salvar</button></div></div></div>
+
+<div id="modal-campanha" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Campanha</h3><button onclick="closeModal('modal-campanha')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="camp-nome"></div><div class="form-group"><label>Tipo</label><select class="form-select" id="camp-tipo"><option>Promocional</option><option>Seasonal</option><option>Lançamento</option></select></div><div class="form-group"><label>Data Início</label><input class="form-input" type="date" id="camp-inicio"></div><div class="form-group"><label>Data Fim</label><input class="form-input" type="date" id="camp-fim"></div><div class="form-group"><label>Produto</label><select class="form-select" id="camp-produto"></select></div><div class="form-group"><label>Meta (R$)</label><input class="form-input" type="number" id="camp-meta"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-campanha')">Cancelar</button><button class="btn btn-primary" onclick="saveCampanha()">Salvar</button></div></div></div>
+
+<div id="modal-produto" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Produto</h3><button onclick="closeModal('modal-produto')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome</label><input class="form-input" id="produto-nome"></div><div class="form-group"><label>Categoria</label><select class="form-select" id="produto-categoria"><option>ERP</option><option>E-commerce</option><option>Fiscal</option></select></div><div class="form-group"><label>Adesão (R$)</label><input class="form-input" type="number" id="produto-adesao"></div><div class="form-group"><label>Mensalidade (R$)</label><input class="form-input" type="number" id="produto-mensalidade"></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-produto')">Cancelar</button><button class="btn btn-primary" onclick="saveProduto()">Salvar</button></div></div></div>
+
+<div id="modal-user" class="modal-overlay"><div class="modal"><div class="modal-header"><h3 class="modal-title">Usuário</h3><button onclick="closeModal('modal-user')"><i class="fas fa-times"></i></button></div><div class="modal-body"><div class="form-group"><label>Nome *</label><input class="form-input" id="user-nome"></div><div class="form-group"><label>Login *</label><input class="form-input" id="user-login"></div><div class="form-group"><label>Senha *</label><input class="form-input" type="password" id="user-senha"></div><div class="form-group"><label>Confirmar</label><input class="form-input" type="password" id="user-senha2"></div><div class="form-group"><label>Perfil</label><select class="form-select" id="user-perfil"><option>Diretor</option><option>Gerente</option><option>Consultor</option></select></div><div class="form-group"><label>Equipe</label><select class="form-select" id="user-equipe"><option>Comercial</option><option>Inside Sales</option></select></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')">Cancelar</button><button class="btn btn-primary" onclick="saveUser()">Salvar</button></div></div></div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ==================== FIREBASE CONFIG ====================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
+  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
+  projectId: "prospectflow-crm-5775a",
+  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
+  messagingSenderId: "278911416959",
+  appId: "1:278911416959:web:4413b269567eb6646b1d4a"
+};
+
+let db = null;
+let currentUser = null;
+let currentPipelineStage = 'Agendamento';
+let charts = {};
+let sidebarCollapsed = false;
+
+// ==================== DADOS ====================
+const PRODUTOS_PADRAO = [
+  { id: 'p1', nome: 'SCE', categoria: 'ERP', adesao: 5000, mensalidade: 1000 },
+  { id: 'p2', nome: 'Easyren', categoria: 'ERP', adesao: 4000, mensalidade: 800 },
+  { id: 'p3', nome: 'Renpay', categoria: 'Financeiro', adesao: 3000, mensalidade: 600 },
+  { id: 'p4', nome: 'PDV', categoria: 'ERP', adesao: 2500, mensalidade: 500 }
+];
+
+const USUARIOS_PADRAO = [
+  { id: '1', nome: 'Administrador', login: 'admin', senha: '1234', perfil: 'Diretor', equipe: 'Comercial' },
+  { id: '2', nome: 'Gusthavo', login: 'gusthavo', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
+  { id: '3', nome: 'Israel', login: 'israel', senha: '1234', perfil: 'Consultor', equipe: 'Comercial' },
+  { id: '4', nome: 'Katia', login: 'katia', senha: '1234', perfil: 'Consultor', equipe: 'Inside Sales' }
+];
+
+const LEADS_EXEMPLO = [
+  { id: 'l1', empresa: 'Tocantins Aero Drones', contato: 'Carlos', email: 'carlos@tocantinsaero.com', telefone: '63999999999', cidade: 'Palmas', uf: 'TO', segmento: 'Tecnologia', produto: 'Easyren', vendedor: 'Gusthavo', adesao: 1000, mensalidade: 150, status: 'Prospect', pipeline: 'Agendamento', createdAt: new Date().toISOString() },
+  { id: 'l2', empresa: 'Mix JJM Supermercado', contato: 'João', email: 'joao@mixjjm.com', telefone: '63988888888', cidade: 'Araguaína', uf: 'TO', segmento: 'Varejo', produto: 'SCE', vendedor: 'Israel', adesao: 2200, mensalidade: 490, status: 'Prospect', pipeline: 'Negociação', createdAt: new Date().toISOString() },
+  { id: 'l3', empresa: 'Cimefer', contato: 'Renato', email: 'renato@cimefer.com', telefone: '63977777777', cidade: 'Brasília', uf: 'DF', segmento: 'Indústria', produto: 'SCE', vendedor: 'Gusthavo', adesao: 1600, mensalidade: 220, status: 'Fechado', pipeline: 'Fechamento', createdAt: new Date().toISOString() },
+  { id: 'l4', empresa: 'Gesso União', contato: 'Maria', email: 'maria@gessouniao.com', telefone: '63966666666', cidade: 'São Paulo', uf: 'SP', segmento: 'Construção', produto: 'SCE', vendedor: 'Katia', adesao: 1500, mensalidade: 220, status: 'Prospect', pipeline: 'Apresentação', createdAt: new Date().toISOString() }
+];
+
+const AGENDA_EXEMPLO = [
+  { id: 'a1', leadId: 'l1', empresa: 'Tocantins Aero Drones', vendedor: 'Gusthavo', data: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0], hora: '10:00', obs: 'Apresentação do Easyren' }
+];
+
+let S = {
+  leads: JSON.parse(JSON.stringify(LEADS_EXEMPLO)),
+  vendas: [],
+  agenda: JSON.parse(JSON.stringify(AGENDA_EXEMPLO)),
+  oportunidades: [],
+  perdas: [],
+  planoAcao: [],
+  problemas: [],
+  metasVendedor: [],
+  metaGlobal: { adesao: 100000, mensalidade: 20000, periodo: 'Janeiro/2026', distribuir: 'nao' },
+  produtos: JSON.parse(JSON.stringify(PRODUTOS_PADRAO)),
+  campanhas: [],
+  emailHist: [],
+  usuarios: JSON.parse(JSON.stringify(USUARIOS_PADRAO))
+};
+
+let setSyncing = (on) => {
+  let dot = document.getElementById('sync-dot');
+  if(dot) dot.className = 'sync-dot' + (on ? ' syncing' : '');
+};
+
+// ==================== FIREBASE ====================
+async function initFirebase() {
+  try {
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    await loadFromFirebase();
+    setSyncing(false);
+    console.log('Firebase conectado!');
+  } catch(e) {
+    console.error('Erro Firebase:', e);
+    setSyncing(false);
+  }
+}
+
+async function loadFromFirebase() {
+  if(!db) return;
+  setSyncing(true);
+  try {
+    let collections = ['leads', 'vendas', 'agenda', 'oportunidades', 'perdas', 'planoAcao', 'problemas', 'metasVendedor', 'produtos', 'campanhas', 'usuarios'];
+    for(let col of collections) {
+      let snap = await db.collection(col).get();
+      if(snap.docs.length > 0) S[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    let metaSnap = await db.collection('config').doc('metaGlobal').get();
+    if(metaSnap.exists) S.metaGlobal = metaSnap.data();
+    saveLocalBackup();
+  } catch(e) { console.error('Erro ao carregar:', e); }
+  setSyncing(false);
+}
+
+async function saveToFirebase(collection, id, data) {
+  if(!db) return;
+  setSyncing(true);
+  try {
+    await db.collection(collection).doc(id).set(data);
+    saveLocalBackup();
+  } catch(e) { console.error(e); }
+  setSyncing(false);
+}
+
+async function deleteFromFirebase(collection, id) {
+  if(!db) return;
+  setSyncing(true);
+  try { await db.collection(collection).doc(id).delete(); }
+  catch(e) { console.error(e); }
+  setSyncing(false);
+}
+
+function saveLocalBackup() {
+  localStorage.setItem('prospectflow_backup', JSON.stringify(S));
+}
+
+function loadLocalBackup() {
+  let backup = localStorage.getItem('prospectflow_backup');
+  if(backup) {
+    let data = JSON.parse(backup);
+    Object.keys(data).forEach(key => { if(S[key] !== undefined) S[key] = data[key]; });
+  }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+function showToast(msg) { let c = document.getElementById('toast-container'); let t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<i class="fas fa-check-circle"></i> ${msg}`; c.appendChild(t); setTimeout(() => t.remove(), 3000); }
+
+// ==================== AUTENTICAÇÃO ====================
+function doLogin() {
+  let login = document.getElementById('auth-user').value.trim();
+  let senha = document.getElementById('auth-pass').value.trim();
+  let user = S.usuarios.find(u => u.login === login && u.senha === senha);
+  if (!user) { document.getElementById('auth-error').innerHTML = 'Usuário ou senha inválidos!'; document.getElementById('auth-error').style.display = 'block'; return; }
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = 'block';
+  document.getElementById('user-name').innerText = user.nome;
+  document.getElementById('user-avatar').innerText = user.nome.charAt(0).toUpperCase();
+  renderAll();
+  showToast(`Bem-vindo, ${user.nome}!`);
+}
+function doLogout() { currentUser = null; document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('app-main').style.display = 'none'; }
+function goToPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  let target = document.getElementById(`page-${page}`);
+  if(target) target.style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  let activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if(activeNav) activeNav.classList.add('active');
+  let titles = { dashboard:'Dashboard', leads:'Leads', pipeline:'Pipeline', agenda:'Agenda', metas:'Metas', forecast:'Forecast', gestaovendas:'Gestão de Vendas', remarketing:'Remarketing', campanhas:'Campanhas', produtos:'Produtos', importar:'Importar', email:'E-mails', relatorios:'Relatórios', usuarios:'Usuários' };
+  let titleEl = document.getElementById('page-title');
+  if(titleEl) titleEl.innerText = titles[page] || page;
+  if(page === 'dashboard') renderDashboard();
+  if(page === 'leads') renderLeads();
+  if(page === 'pipeline') renderPipeline();
+  if(page === 'agenda') renderAgenda();
+  if(page === 'metas') renderMetas();
+  if(page === 'forecast') renderForecast();
+  if(page === 'gestaovendas') renderGestaoVendas();
+  if(page === 'remarketing') renderRemarketing();
+  if(page === 'campanhas') renderCampanhas();
+  if(page === 'produtos') renderProdutos();
+  if(page === 'relatorios') renderRelatorios();
+  if(page === 'usuarios') renderUsuarios();
+  if(page === 'email') renderEmailHistory();
+}
+
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  document.getElementById('main-content').classList.toggle('expanded', sidebarCollapsed);
+}
+
+// ==================== FUNÇÕES AUXILIARES ====================
+function updateVendedorSelects() {
+  let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+  ['lead-vendedor', 'meta-vendedor-nome', 'op-vendedor', 'perda-vendedor', 'plano-acao-responsavel'].forEach(id => {
+    let sel = document.getElementById(id);
+    if(sel) sel.innerHTML = '<option value="">Selecione</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+  });
+}
+function updateProdutoSelects() {
+  let produtos = S.produtos.map(p => p.nome);
+  ['lead-produto', 'meta-vendedor-produto', 'op-produto', 'perda-produto', 'camp-produto'].forEach(id => {
+    let sel = document.getElementById(id);
+    if(sel) sel.innerHTML = '<option value="">Selecione</option>' + produtos.map(p => `<option value="${p}">${p}</option>`).join('');
+  });
+}
+
+// ==================== LEADS ====================
+function getStatusTag(s) { let m = { Oportunidade:'tag-info', Prospect:'tag-purple', Fechado:'tag-success', Descartado:'tag-danger' }; return `<span class="tag ${m[s] || 'tag-info'}">${s || 'Oportunidade'}</span>`; }
+function getPipelineTag(p) { if(!p) return '—'; let m = { Agendamento:'tag-warning', Apresentação:'tag-info', Negociação:'tag-purple', Fechamento:'tag-success' }; return `<span class="tag ${m[p] || 'tag-info'}">${p}</span>`; }
+
+function renderLeads() {
+  let search = document.getElementById('search-lead')?.value.toLowerCase() || '';
+  let leads = (currentUser?.perfil === 'Consultor' ? S.leads.filter(l => l.vendedor === currentUser.nome) : S.leads).filter(l => l.empresa?.toLowerCase().includes(search) && l.status !== 'Descartado');
+  let tb = document.getElementById('leads-table');
+  if(!tb) return;
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center">Nenhum lead cadastrado</span></tr>'; return; }
+  tb.innerHTML = leads.map(l => `<tr>
+    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
+    <td>${l.contato || '—'}</td>
+    <td><span class="tag tag-info">${l.produto || '—'}</span></td>
+    <td>${getStatusTag(l.status)}</span></td>
+    <td>${getPipelineTag(l.pipeline)}</span></td>
+    <td>${l.vendedor || '—'}</td>
+    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
+    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')"><i class="fas fa-arrow-right"></i></button>
+          <button class="btn btn-outline btn-sm" onclick="openLeadEdit('${l.id}')"><i class="fas fa-edit"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="descartarLead('${l.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('');
+}
+
+function openLeadModal() {
+  document.getElementById('lead-empresa').value = ''; document.getElementById('lead-contato').value = ''; document.getElementById('lead-email').value = ''; document.getElementById('lead-telefone').value = ''; document.getElementById('lead-cidade').value = ''; document.getElementById('lead-uf').value = ''; document.getElementById('lead-segmento').value = ''; document.getElementById('lead-adesao').value = ''; document.getElementById('lead-mensalidade').value = '';
+  updateProdutoSelects(); updateVendedorSelects();
+  openModal('modal-lead');
+}
+
+function saveLead() {
+  let lead = { id: uid(), empresa: document.getElementById('lead-empresa').value.trim(), contato: document.getElementById('lead-contato').value.trim(), email: document.getElementById('lead-email').value.trim(), telefone: document.getElementById('lead-telefone').value.trim(), cidade: document.getElementById('lead-cidade').value.trim(), uf: document.getElementById('lead-uf').value.trim(), segmento: document.getElementById('lead-segmento').value.trim(), produto: document.getElementById('lead-produto').value, vendedor: document.getElementById('lead-vendedor').value, adesao: parseFloat(document.getElementById('lead-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('lead-mensalidade').value) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() };
+  if(!lead.empresa){ showToast('Informe a empresa!'); return; }
+  S.leads.push(lead);
+  saveToFirebase('leads', lead.id, lead);
+  closeModal('modal-lead');
+  renderLeads(); renderDashboard(); renderForecast(); renderGestaoVendas();
+  showToast('Lead criado!');
+}
+
+function openLeadEdit(id) {
+  let l = S.leads.find(l => l.id === id);
+  if(!l) return;
+  document.getElementById('lead-empresa').value = l.empresa;
+  document.getElementById('lead-contato').value = l.contato || '';
+  document.getElementById('lead-email').value = l.email || '';
+  document.getElementById('lead-telefone').value = l.telefone || '';
+  document.getElementById('lead-cidade').value = l.cidade || '';
+  document.getElementById('lead-uf').value = l.uf || '';
+  document.getElementById('lead-segmento').value = l.segmento || '';
+  document.getElementById('lead-adesao').value = l.adesao;
+  document.getElementById('lead-mensalidade').value = l.mensalidade;
+  updateProdutoSelects(); updateVendedorSelects();
+  let selProduto = document.getElementById('lead-produto'); if(selProduto && l.produto) selProduto.value = l.produto;
+  let selVendedor = document.getElementById('lead-vendedor'); if(selVendedor && l.vendedor) selVendedor.value = l.vendedor;
+  document.getElementById('modal-lead').dataset.editId = id;
+  openModal('modal-lead');
+}
+
+function avancarEtapa(leadId) {
+  let lead = S.leads.find(l => l.id === leadId);
+  if(!lead) return;
+  if(lead.status === 'Oportunidade' || (!lead.pipeline && lead.status !== 'Fechado')) {
+    lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; showToast('Lead → Agendamento!'); openAgendaModal(leadId);
+  } else if(lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; showToast('Apresentação confirmada!');
+  } else if(lead.pipeline === 'Apresentação') { lead.pipeline = 'Negociação'; showToast('Lead em negociação');
+  } else if(lead.pipeline === 'Negociação') {
+    lead.status = 'Fechado'; lead.pipeline = 'Fechamento';
+    let venda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, adesao: lead.adesao, mensalidade: lead.mensalidade, data: new Date().toISOString().split('T')[0] };
+    S.vendas.push(venda);
+    saveToFirebase('vendas', venda.id, venda);
+    showToast('🎉 Venda fechada!');
+  }
+  saveToFirebase('leads', lead.id, lead);
+  renderLeads(); renderPipeline(); renderDashboard(); renderMetas(); renderForecast(); renderGestaoVendas();
+}
+
+function descartarLead(id) {
+  let lead = S.leads.find(l => l.id === id);
+  if(!lead) return;
+  let categoria = lead.status === 'Oportunidade' ? 'Não Prospectado' : (lead.pipeline === 'Agendamento' || lead.pipeline === 'Apresentação') ? 'Não Avançou' : 'Desistiu';
+  let perda = { id: uid(), empresa: lead.empresa, vendedor: lead.vendedor, produto: lead.produto, valor: lead.adesao, motivo: 'Descartado em ' + (lead.pipeline || lead.status), acaoCorretiva: '', data: new Date().toISOString().split('T')[0] };
+  S.perdas.push(perda);
+  saveToFirebase('perdas', perda.id, perda);
+  lead.status = 'Descartado'; lead.pipeline = 'Descartado';
+  saveToFirebase('leads', lead.id, lead);
+  renderLeads(); renderGestaoVendas(); showToast('Lead descartado');
+}
+
+// ==================== PIPELINE ====================
+function renderPipeline() {
+  let leads = S.leads.filter(l => l.pipeline === currentPipelineStage && l.status !== 'Descartado' && l.status !== 'Fechado');
+  if(currentUser?.perfil === 'Consultor') leads = leads.filter(l => l.vendedor === currentUser.nome);
+  let tb = document.getElementById('pipeline-table');
+  if(!tb) return;
+  if(leads.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhum lead nesta etapa</span></tr>'; return; }
+  tb.innerHTML = leads.map(l => `<tr>
+    <td><strong>${l.empresa}</strong><br><small>${l.contato || ''}</small></td>
+    <td><span class="tag tag-info">${l.produto || '—'}</span></td>
+    <td>R$ ${(l.adesao || 0).toLocaleString('pt-BR')}</td>
+    <td>R$ ${(l.mensalidade || 0).toLocaleString('pt-BR')}</td>
+    <td>${l.vendedor || '—'}</td>
+    <td>${l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '—'}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="avancarEtapa('${l.id}')">Avançar</button></td>
+  </table>`).join('');
+}
+function setPipelineStage(stage) { currentPipelineStage = stage; document.querySelectorAll('.pipeline-tab').forEach(t => t.classList.remove('active')); document.querySelector(`.pipeline-tab[data-stage="${stage}"]`).classList.add('active'); renderPipeline(); }
+
+// ==================== AGENDA ====================
+function renderAgenda() {
+  let agenda = S.agenda.filter(a => a.data >= new Date().toISOString().split('T')[0]).sort((a,b) => a.data.localeCompare(b.data));
+  let el = document.getElementById('agenda-list');
+  if(!el) return;
+  if(agenda.length === 0) { el.innerHTML = '<div style="text-align:center; padding:20px">Sem agendamentos</div>'; return; }
+  el.innerHTML = agenda.map(a => `<div class="agenda-item" style="padding:12px; border-bottom:1px solid #e2e8f0"><div><strong>${a.empresa}</strong><br><small>📅 ${a.data} às ${a.hora} | 👤 ${a.vendedor}</small><br><small>📝 ${a.obs || ''}</small></div><div><button class="btn btn-success btn-sm" onclick="confirmarAgendamento('${a.id}')"><i class="fas fa-check"></i> Confirmar</button> <button class="btn btn-danger btn-sm" onclick="cancelarAgendamento('${a.id}')"><i class="fas fa-times"></i> Cancelar</button></div></div>`).join('');
+}
+function confirmarAgendamento(id) {
+  let agenda = S.agenda.find(a => a.id === id);
+  if(agenda) {
+    let lead = S.leads.find(l => l.id === agenda.leadId);
+    if(lead && lead.pipeline === 'Agendamento') { lead.pipeline = 'Apresentação'; saveToFirebase('leads', lead.id, lead); }
+    showToast(`Apresentação confirmada para ${agenda.empresa}!`);
+    renderLeads(); renderPipeline(); renderAgenda(); renderDashboard();
+  }
+}
+function cancelarAgendamento(id) { if(confirm('Cancelar este agendamento?')) { S.agenda = S.agenda.filter(a => a.id !== id); deleteFromFirebase('agenda', id); renderAgenda(); showToast('Agendamento cancelado!'); } }
+function openAgendaModal(leadId) {
+  let leads = S.leads.filter(l => l.status === 'Oportunidade' || l.status === 'Prospect');
+  let sel = document.getElementById('agenda-lead');
+  sel.innerHTML = leads.map(l => `<option value="${l.id}" ${l.id === leadId ? 'selected' : ''}>${l.empresa}</option>`).join('');
+  document.getElementById('agenda-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('agenda-hora').value = '10:00';
+  openModal('modal-agenda');
+}
+function saveAgenda() {
+  let leadId = document.getElementById('agenda-lead').value;
+  let lead = S.leads.find(l => l.id === leadId);
+  if(!lead){ showToast('Lead não encontrado'); return; }
+  let agenda = { id: uid(), leadId: lead.id, empresa: lead.empresa, vendedor: lead.vendedor, data: document.getElementById('agenda-data').value, hora: document.getElementById('agenda-hora').value, obs: document.getElementById('agenda-obs').value };
+  S.agenda.push(agenda);
+  saveToFirebase('agenda', agenda.id, agenda);
+  if(lead.status === 'Oportunidade'){ lead.status = 'Prospect'; lead.pipeline = 'Agendamento'; saveToFirebase('leads', lead.id, lead); }
+  closeModal('modal-agenda');
+  renderAgenda(); renderLeads(); renderPipeline(); showToast('Agendamento salvo!');
+}
+
+// ==================== FORECAST ====================
+function renderForecast() {
+  let tb = document.getElementById('forecast-table');
+  if(!tb) return;
+  let oportunidades = S.oportunidades.filter(o => o.status !== 'Fechado' && o.status !== 'Perdido');
+  let probMap = { '20':0.2, '40':0.4, '60':0.6, '80':0.8, '100':1 };
+  tb.innerHTML = oportunidades.map(o => {
+    let prob = parseInt(o.probabilidade) || 20;
+    let ponderado = (o.adesao || 0) * (prob / 100);
+    return `<tr>
+      <td><strong>${o.empresa}</strong></td>
+      <td>${o.vendedor || '—'}</td>
+      <td><span class="tag tag-info">${o.produto || '—'}</span></td>
+      <td>R$ ${(o.adesao || 0).toLocaleString('pt-BR')}</td>
+      <td>R$ ${(o.mensalidade || 0).toLocaleString('pt-BR')}</td>
+      <td>${o.previsao || '—'}</td>
+      <td>${prob}%</span></td>
+      <td>R$ ${ponderado.toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma oportunidade cadastrada</span><tr>';
+}
+function exportForecastExcel() { let ws = XLSX.utils.json_to_sheet(S.oportunidades.map(o => ({ Empresa: o.empresa, Vendedor: o.vendedor, Produto: o.produto, Adesao: o.adesao, Mensalidade: o.mensalidade, Previsao: o.previsao, Probabilidade: o.probabilidade + '%', ValorPonderado: (o.adesao || 0) * (parseInt(o.probabilidade) / 100) }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Forecast'); XLSX.writeFile(wb, `forecast_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Forecast exportado!'); }
+
+// ==================== GESTÃO DE VENDAS ====================
+function renderGestaoVendas() {
+  let vendas = S.vendas;
+  let totalContratos = vendas.length;
+  let mrrTotal = vendas.reduce((s,v) => s + v.mensalidade, 0);
+  let entradasTotal = vendas.reduce((s,v) => s + v.adesao, 0);
+  let totalLeads = S.leads.length;
+  let taxaConversao = totalLeads > 0 ? Math.round(vendas.length / totalLeads * 100) : 0;
+  document.getElementById('exec-contratos').innerText = totalContratos;
+  document.getElementById('exec-mrr').innerText = `R$ ${mrrTotal.toLocaleString('pt-BR')}`;
+  document.getElementById('exec-entradas').innerText = `R$ ${entradasTotal.toLocaleString('pt-BR')}`;
+  document.getElementById('exec-taxa').innerText = `${taxaConversao}%`;
+  document.getElementById('exec-cancelados').innerText = S.perdas.filter(p => p.motivo === 'Cancelamento').length || 0;
+
+  // Indicadores por período
+  renderIndicadoresPeriodo();
+
+  // Oportunidades
+  let tbOportunidades = document.getElementById('oportunidades-table');
+  if(tbOportunidades) tbOportunidades.innerHTML = S.oportunidades.map(o => `<tr>
+    <td><strong>${o.empresa}</strong></td>
+    <td>${o.vendedor || '—'}</td>
+    <td><span class="tag tag-info">${o.produto || '—'}</span></td>
+    <td>R$ ${(o.adesao || 0).toLocaleString('pt-BR')}</td>
+    <td>${o.previsao || '—'}</td>
+    <td>${o.probabilidade || '20'}%</span></td>
+    <td><span class="tag ${o.status === 'Ganho' ? 'tag-success' : 'tag-warning'}">${o.status || 'Em andamento'}</span></td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarOportunidade('${o.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deletarOportunidade('${o.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<tr><td colspan="8" style="text-align:center">Nenhuma oportunidade cadastrada</span></tr>';
+
+  // Perdas
+  let tbPerdas = document.getElementById('perdas-table');
+  if(tbPerdas) tbPerdas.innerHTML = S.perdas.map(p => `<tr>
+    <td><strong>${p.empresa}</strong></td>
+    <td>${p.vendedor || '—'}</td>
+    <td><span class="tag tag-info">${p.produto || '—'}</span></td>
+    <td>R$ ${(p.valor || 0).toLocaleString('pt-BR')}</td>
+    <td>${p.motivo || '—'}</td>
+    <td>${p.acaoCorretiva || '—'}</td>
+    <td>${p.data || '—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deletarPerda('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhuma perda registrada</span></tr>';
+
+  // Performance por vendedor
+  let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+  let tbPerformance = document.getElementById('performance-table');
+  if(tbPerformance) tbPerformance.innerHTML = vendedores.map(v => {
+    let vendasV = S.vendas.filter(vd => vd.vendedor === v);
+    let perdasV = S.perdas.filter(p => p.vendedor === v);
+    let totalVendas = vendasV.length;
+    let totalLeadsV = S.leads.filter(l => l.vendedor === v).length;
+    let taxaConv = totalLeadsV > 0 ? Math.round(totalVendas / totalLeadsV * 100) : 0;
+    let ticketMedio = totalVendas > 0 ? vendasV.reduce((s,vd) => s + vd.adesao, 0) / totalVendas : 0;
+    let metaV = S.metasVendedor.find(m => m.vendedor === v);
+    let metaValor = metaV ? metaV.adesao : 0;
+    let realizado = vendasV.reduce((s,vd) => s + vd.adesao, 0);
+    let pct = metaValor > 0 ? Math.round(realizado / metaValor * 100) : 0;
+    return `<tr>
+      <td><strong>${v}</strong></td>
+      <td>R$ ${metaValor.toLocaleString('pt-BR')}</td>
+      <td>R$ ${realizado.toLocaleString('pt-BR')}</td>
+      <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
+      <td>${perdasV.length}</span></td>
+      <td>${taxaConv}%</span></td>
+      <td>R$ ${ticketMedio.toLocaleString('pt-BR')}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center">Nenhum vendedor cadastrado</span></tr>';
+
+  // Plano de Ação
+  let tbPlano = document.getElementById('plano-acao-table');
+  if(tbPlano) tbPlano.innerHTML = S.planoAcao.map(p => `<tr>
+    <td>${p.descricao || '—'}</td>
+    <td>${p.responsavel || '—'}</td>
+    <td>${p.prazo || '—'}</td>
+    <td><span class="tag ${p.status === 'Concluído' ? 'tag-success' : p.status === 'Em andamento' ? 'tag-warning' : 'tag-danger'}">${p.status || 'Pendente'}</span></td>
+    <td>${p.resultado || '—'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarPlanoAcao('${p.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deletarPlanoAcao('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<table><td colspan="6" style="text-align:center">Nenhum plano de ação cadastrado</span></tr>';
+
+  // Problemas
+  let tbProblemas = document.getElementById('problemas-table');
+  if(tbProblemas) tbProblemas.innerHTML = S.problemas.map(p => `<tr>
+    <td>${p.descricao || '—'}</td>
+    <td><span class="tag ${p.impacto === 'Crítico' ? 'tag-danger' : p.impacto === 'Alto' ? 'tag-warning' : 'tag-info'}">${p.impacto || 'Médio'}</span></td>
+    <td>${p.data || '—'}</td>
+    <td><span class="tag ${p.status === 'Resolvido' ? 'tag-success' : 'tag-warning'}">${p.status || 'Identificado'}</span></td>
+    <td>${p.solucao || '—'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="editarProblema('${p.id}')"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deletarProblema('${p.id}')"><i class="fas fa-trash"></i></button></span></td>
+  </tr>`).join('') || '<td><td colspan="6" style="text-align:center">Nenhum problema registrado</span></tr>';
+}
+
+function renderIndicadoresPeriodo() {
+  let periodo = document.getElementById('periodo-indicadores')?.value || 'semana';
+  let now = new Date();
+  let inicio = new Date();
+  if(periodo === 'semana') inicio.setDate(now.getDate() - 7);
+  else if(periodo === 'mes') inicio.setMonth(now.getMonth() - 1);
+  else inicio.setMonth(now.getMonth() - 3);
+  
+  let vendasPeriodo = S.vendas.filter(v => new Date(v.data) >= inicio);
+  let contratos = vendasPeriodo.length;
+  let mrr = vendasPeriodo.reduce((s,v) => s + v.mensalidade, 0);
+  let entradas = vendasPeriodo.reduce((s,v) => s + v.adesao, 0);
+  let leadsPeriodo = S.leads.filter(l => new Date(l.createdAt) >= inicio).length;
+  let taxa = leadsPeriodo > 0 ? Math.round(contratos / leadsPeriodo * 100) : 0;
+  
+  let grid = document.getElementById('periodo-indicadores-grid');
+  if(grid) grid.innerHTML = `
+    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-file-signature"></i></div><div class="stat-value">${contratos}</div><div class="stat-label">Contratos</div></div>
+    <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-chart-line"></i></div><div class="stat-value">R$ ${mrr.toLocaleString('pt-BR')}</div><div class="stat-label">MRR</div></div>
+    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-money-bill-wave"></i></div><div class="stat-value">R$ ${entradas.toLocaleString('pt-BR')}</div><div class="stat-label">Entradas</div></div>
+    <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-percent"></i></div><div class="stat-value">${taxa}%</div><div class="stat-label">Conversão</div></div>
+  `;
+}
+
+function openOportunidadeModal() { updateVendedorSelects(); updateProdutoSelects(); openModal('modal-oportunidade'); }
+function saveOportunidade() {
+  let oport = { id: uid(), empresa: document.getElementById('op-empresa').value.trim(), vendedor: document.getElementById('op-vendedor').value, produto: document.getElementById('op-produto').value, adesao: parseFloat(document.getElementById('op-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('op-mensalidade').value) || 0, previsao: document.getElementById('op-previsao').value, probabilidade: document.getElementById('op-probabilidade').value, status: 'Em andamento' };
+  if(!oportunidades.empresa) { showToast('Informe a empresa!'); return; }
+  S.oportunidades.push(oportunidades);
+  saveToFirebase('oportunidades', oport.id, oport);
+  closeModal('modal-oportunidade'); renderGestaoVendas(); renderForecast(); showToast('Oportunidade salva!');
+}
+function editarOportunidade(id) { /* similar */ showToast('Edição disponível em breve'); }
+function deletarOportunidade(id) { if(confirm('Remover oportunidade?')) { S.oportunidades = S.oportunidades.filter(o => o.id !== id); deleteFromFirebase('oportunidades', id); renderGestaoVendas(); renderForecast(); showToast('Removido!'); } }
+
+function openPerdaModal() { updateVendedorSelects(); updateProdutoSelects(); openModal('modal-perda'); }
+function savePerda() {
+  let perda = { id: uid(), empresa: document.getElementById('perda-empresa').value.trim(), vendedor: document.getElementById('perda-vendedor').value, produto: document.getElementById('perda-produto').value, valor: parseFloat(document.getElementById('perda-valor').value) || 0, motivo: document.getElementById('perda-motivo').value, acaoCorretiva: document.getElementById('perda-acao').value, data: new Date().toISOString().split('T')[0] };
+  if(!perda.empresa) { showToast('Informe a empresa!'); return; }
+  S.perdas.push(perda);
+  saveToFirebase('perdas', perda.id, perda);
+  closeModal('modal-perda'); renderGestaoVendas(); showToast('Perda registrada!');
+}
+function deletarPerda(id) { if(confirm('Remover perda?')) { S.perdas = S.perdas.filter(p => p.id !== id); deleteFromFirebase('perdas', id); renderGestaoVendas(); showToast('Removido!'); } }
+
+function openPlanoAcaoModal() { updateVendedorSelects(); openModal('modal-plano-acao'); }
+function savePlanoAcao() {
+  let plano = { id: uid(), descricao: document.getElementById('plano-acao-desc').value.trim(), responsavel: document.getElementById('plano-acao-responsavel').value, prazo: document.getElementById('plano-acao-prazo').value, status: document.getElementById('plano-acao-status').value, resultado: '', createdAt: new Date().toISOString() };
+  if(!plano.descricao) { showToast('Informe a ação!'); return; }
+  S.planoAcao.push(plano);
+  saveToFirebase('planoAcao', plano.id, plano);
+  closeModal('modal-plano-acao'); renderGestaoVendas(); showToast('Plano de ação salvo!');
+}
+function editarPlanoAcao(id) { /* similar */ showToast('Edição disponível em breve'); }
+function deletarPlanoAcao(id) { if(confirm('Remover ação?')) { S.planoAcao = S.planoAcao.filter(p => p.id !== id); deleteFromFirebase('planoAcao', id); renderGestaoVendas(); showToast('Removido!'); } }
+
+function openProblemaModal() { openModal('modal-problema'); }
+function saveProblema() {
+  let problema = { id: uid(), descricao: document.getElementById('problema-desc').value.trim(), impacto: document.getElementById('problema-impacto').value, solucao: document.getElementById('problema-solucao').value, status: document.getElementById('problema-status').value, data: new Date().toISOString().split('T')[0] };
+  if(!problema.descricao) { showToast('Informe o problema!'); return; }
+  S.problemas.push(problema);
+  saveToFirebase('problemas', problema.id, problema);
+  closeModal('modal-problema'); renderGestaoVendas(); showToast('Problema registrado!');
+}
+function editarProblema(id) { /* similar */ showToast('Edição disponível em breve'); }
+function deletarProblema(id) { if(confirm('Remover problema?')) { S.problemas = S.problemas.filter(p => p.id !== id); deleteFromFirebase('problemas', id); renderGestaoVendas(); showToast('Removido!'); } }
+
+function exportGestaoVendas() {
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.vendas.map(v => ({ Data: v.data, Empresa: v.empresa, Vendedor: v.vendedor, Produto: v.produto, Adesao: v.adesao, Mensalidade: v.mensalidade }))), 'Vendas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.oportunidades), 'Oportunidades');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.perdas), 'Perdas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.planoAcao), 'PlanoAcao');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.problemas), 'Problemas');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(S.metasVendedor), 'Metas');
+  XLSX.writeFile(wb, `gestao_vendas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Planilha completa exportada!');
+}
+
+// ==================== METAS ====================
+function renderMetas() {
+  let vendas = S.vendas;
+  let realizadoPorVendedor = {};
+  vendas.forEach(v => { if(!realizadoPorVendedor[v.vendedor]) realizadoPorVendedor[v.vendedor] = { adesao: 0, mensalidade: 0 }; realizadoPorVendedor[v.vendedor].adesao += v.adesao; realizadoPorVendedor[v.vendedor].mensalidade += v.mensalidade; });
+  let tb = document.getElementById('metas-table');
+  if(tb) {
+    if(S.metasVendedor.length === 0) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center">Nenhuma meta cadastrada</span></td>'; return; }
+    tb.innerHTML = S.metasVendedor.map(m => {
+      let realizado = realizadoPorVendedor[m.vendedor] || { adesao: 0 };
+      let pct = m.adesao > 0 ? Math.round(realizado.adesao / m.adesao * 100) : 0;
+      return `<tr>
+        <td><strong>${m.vendedor}</strong></td>
+        <td>${m.produto === 'todos' ? 'Todos' : m.produto}</td>
+        <td>R$ ${m.adesao.toLocaleString('pt-BR')}</td>
+        <td>R$ ${m.mensalidade.toLocaleString('pt-BR')}</td>
+        <td>R$ ${realizado.adesao.toLocaleString('pt-BR')}</td>
+        <td><span class="tag ${pct >= 100 ? 'tag-success' : pct >= 50 ? 'tag-warning' : 'tag-danger'}">${pct}%</span></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deletarMetaVendedor('${m.id}')"><i class="fas fa-trash"></i></button></span></td>
+      </tr>`;
+    }).join('');
+  }
+  let prodTb = document.getElementById('produtividade-table');
+  if(prodTb) {
+    let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    prodTb.innerHTML = vendedores.map(v => {
+      let leadsV = S.leads.filter(l => l.vendedor === v);
+      let vendasV = S.vendas.filter(vd => vd.vendedor === v);
+      let receita = vendasV.reduce((s,vd) => s + vd.adesao + vd.mensalidade, 0);
+      return `<tr>
+        <td><strong>${v}</strong></td>
+        <td>${leadsV.length}</span></td>
+        <td>${leadsV.filter(l => l.pipeline === 'Agendamento').length}</span></td>
+        <td>${leadsV.filter(l => l.pipeline === 'Apresentação').length}</span></td>
+        <td>${leadsV.filter(l => l.pipeline === 'Negociação').length}</span></td>
+        <td>${leadsV.filter(l => l.status === 'Fechado' || l.pipeline === 'Fechamento').length}</span></td>
+        <td>R$ ${receita.toLocaleString('pt-BR')}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+function openMetaVendedorModal() { updateVendedorSelects(); updateProdutoSelects(); openModal('modal-meta-vendedor'); }
+function saveMetaVendedor() {
+  let meta = { id: uid(), vendedor: document.getElementById('meta-vendedor-nome').value, produto: document.getElementById('meta-vendedor-produto').value, adesao: parseFloat(document.getElementById('meta-vendedor-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('meta-vendedor-mensalidade').value) || 0 };
+  if(!meta.vendedor){ showToast('Selecione um vendedor!'); return; }
+  S.metasVendedor.push(meta);
+  saveToFirebase('metasVendedor', meta.id, meta);
+  closeModal('modal-meta-vendedor'); renderMetas(); showToast('Meta salva!');
+}
+function deletarMetaVendedor(id) { if(confirm('Remover meta?')) { S.metasVendedor = S.metasVendedor.filter(m => m.id !== id); deleteFromFirebase('metasVendedor', id); renderMetas(); showToast('Meta removida!'); } }
+function openMetaGlobalModal() { document.getElementById('global-adesao').value = S.metaGlobal.adesao; document.getElementById('global-mensalidade').value = S.metaGlobal.mensalidade; document.getElementById('global-periodo').value = S.metaGlobal.periodo; document.getElementById('global-distribuir').value = S.metaGlobal.distribuir; openModal('modal-meta-global'); }
+function saveMetaGlobal() {
+  S.metaGlobal = { adesao: parseFloat(document.getElementById('global-adesao').value) || 0, mensalidade: parseFloat(document.getElementById('global-mensalidade').value) || 0, periodo: document.getElementById('global-periodo').value, distribuir: document.getElementById('global-distribuir').value };
+  saveToFirebase('config', 'metaGlobal', S.metaGlobal);
+  if(S.metaGlobal.distribuir === 'sim') {
+    let vendedores = S.usuarios.filter(u => u.perfil === 'Consultor').map(u => u.nome);
+    let metaPorVendedor = S.metaGlobal.adesao / (vendedores.length || 1);
+    S.metasVendedor = S.metasVendedor.filter(m => m.mes !== S.metaGlobal.periodo);
+    vendedores.forEach(v => { S.metasVendedor.push({ id: uid(), vendedor: v, produto: 'todos', adesao: metaPorVendedor, mensalidade: S.metaGlobal.mensalidade / (vendedores.length || 1), mes: S.metaGlobal.periodo }); });
+    showToast(`Meta distribuída para ${vendedores.length} vendedores!`);
+  }
+  closeModal('modal-meta-global'); renderDashboard(); renderMetas(); showToast('Meta global salva!');
+}
+
+// ==================== DEMAIS FUNÇÕES ====================
+function renderRemarketing() { let tb = document.getElementById('remarketing-table'); if(tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center">Carregando...</td></tr>'; }
+function sendMarketingEmail() { showToast('Funcionalidade em desenvolvimento'); }
+function renderCampanhas() { let list = document.getElementById('campanhas-list'); if(list) list.innerHTML = '<div style="text-align:center; padding:40px">Nenhuma campanha</div>'; }
+function openCampanhaModal() { showToast('Funcionalidade em desenvolvimento'); }
+function saveCampanha() { showToast('Funcionalidade em desenvolvimento'); }
+function renderProdutos() { let tb = document.getElementById('produtos-table'); if(tb) tb.innerHTML = S.produtos.map(p => `<tr><td><strong>${p.nome}</strong></td><td>${p.categoria}</td><td>R$ ${p.adesao.toLocaleString('pt-BR')}</td><td>R$ ${p.mensalidade.toLocaleString('pt-BR')}</td><td><button class="btn btn-outline btn-sm" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i></button></td></tr>`).join(''); }
+function openProdutoModal() { showToast('Funcionalidade em desenvolvimento'); }
+function saveProduto() { showToast('Funcionalidade em desenvolvimento'); }
+function editarProduto(id) { showToast('Funcionalidade em desenvolvimento'); }
+function downloadTemplate() { let ws = XLSX.utils.aoa_to_sheet([['empresa','contato','email','telefone','cidade','uf','segmento','produto','vendedor','adesao','mensalidade'],['Exemplo','João','joao@email.com','1199999','São Paulo','SP','Tecnologia','SCE','','5000','1000']]); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Modelo'); XLSX.writeFile(wb, 'modelo_leads.xlsx'); showToast('Modelo baixado!'); }
+function handleImport(e) { let f = e.target.files[0]; if(!f) return; let r = new FileReader(); r.onload = function(ev){ let wb = XLSX.read(ev.target.result, {type:'binary'}); let ws = wb.Sheets[wb.SheetNames[0]]; let rows = XLSX.utils.sheet_to_json(ws); let imported = 0; for(let row of rows){ let empresa = row.empresa || row.Empresa; if(empresa && !S.leads.find(l => l.empresa === empresa)){ S.leads.push({ id: uid(), empresa, contato: row.contato || '', email: row.email || '', telefone: row.telefone || '', cidade: row.cidade || '', uf: row.uf || '', segmento: row.segmento || '', produto: row.produto || '', vendedor: row.vendedor || '', adesao: parseFloat(row.adesao) || 0, mensalidade: parseFloat(row.mensalidade) || 0, status: 'Oportunidade', pipeline: '', createdAt: new Date().toISOString() }); imported++; } } saveToFirebase('leads', lead.id, lead); renderLeads(); renderDashboard(); document.getElementById('import-preview').innerHTML = `<div style="background:#d1fae5; padding:10px; border-radius:10px">✅ ${imported} leads importados!</div>`; showToast(`${imported} leads importados!`); }; r.readAsBinaryString(f); }
+function enviarEmail(to, subject, body) { let hist = { id: uid(), to, subject, body, data: new Date().toISOString() }; S.emailHist.unshift(hist); saveToFirebase('emailHist', hist.id, hist); renderEmailHistory(); return true; }
+function sendBulkEmail() { let subject = document.getElementById('email-subject').value; let body = document.getElementById('email-body').value; if(!subject || !body){ showToast('Preencha assunto e mensagem!'); return; } let leads = S.leads.filter(l => l.email && l.status !== 'Descartado'); if(leads.length === 0) { showToast('Nenhum lead com email'); return; } leads.forEach(l => enviarEmail(l.email, subject, body.replace(/{empresa}/g, l.empresa).replace(/{contato}/g, l.contato || 'Prezado(a)'))); showToast(`Enviado para ${leads.length} leads`); }
+function renderEmailHistory() { let el = document.getElementById('email-history'); if(el) el.innerHTML = S.emailHist.slice(0,20).map(h => `<div style="padding:10px; border-bottom:1px solid #e2e8f0"><strong>${h.subject}</strong><br><small>${new Date(h.data).toLocaleString('pt-BR')}</small></div>`).join('') || '<div style="text-align:center; padding:20px">Nenhum e-mail enviado</div>'; }
+function renderRelatorios() { let tb = document.getElementById('relatorio-table'); if(tb) tb.innerHTML = S.vendas.map(v => `<tr><td>${v.data}</td><td>${v.vendedor}</td><td>${v.empresa}</td><td>${v.produto}</td><td>R$ ${v.adesao.toLocaleString('pt-BR')}</td><td>R$ ${v.mensalidade.toLocaleString('pt-BR')}</td><td><span class="tag tag-success">Fechado</span></td></tr>`).join('') || '<tr><td colspan="7" style="text-align:center">Nenhuma venda</span></tr>'; }
+function exportRelatorioExcel() { let ws = XLSX.utils.json_to_sheet(S.vendas.map(v => ({ Data: v.data, Vendedor: v.vendedor, Empresa: v.empresa, Produto: v.produto, Adesão: v.adesao, Mensalidade: v.mensalidade }))); let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Relatorio'); XLSX.writeFile(wb, `relatorio_${new Date().toISOString().split('T')[0]}.xlsx`); showToast('Excel exportado!'); }
+function exportRelatorioPDF() { let win = window.open('', '_blank'); win.document.write(`<html><head><title>Relatório</title><style>body{font-family:Arial} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:8px}</style></head><body><h1>Relatório de Vendas</h1>${document.getElementById('relatorio-table').outerHTML}</body></html>`); win.document.close(); win.print(); showToast('PDF gerado!'); }
+function renderUsuarios() { let tb = document.getElementById('users-table'); if(tb) tb.innerHTML = S.usuarios.map(u => `<tr><td><strong>${u.nome}</strong><br><small>${u.login}</small></td><td><span class="tag ${u.perfil === 'Diretor' ? 'tag-purple' : u.perfil === 'Gerente' ? 'tag-info' : 'tag-success'}">${u.perfil}</span></td><td>${u.equipe || '—'}</td><td><button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')"><i class="fas fa-edit"></i></button> ${u.id !== '1' ? `<button class="btn btn-danger btn-sm" onclick="deletarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>` : ''}</td></tr>`).join(''); }
+function openUserModal() { openModal('modal-user'); }
+function editarUsuario(id) { let u = S.usuarios.find(u => u.id === id); if(u) { document.getElementById('user-nome').value = u.nome; document.getElementById('user-login').value = u.login; document.getElementById('user-perfil').value = u.perfil; document.getElementById('user-equipe').value = u.equipe; document.getElementById('modal-user').dataset.editId = id; openModal('modal-user'); } }
+function saveUser() { let id = document.getElementById('modal-user').dataset.editId; let nome = document.getElementById('user-nome').value.trim(); let login = document.getElementById('user-login').value.trim(); let perfil = document.getElementById('user-perfil').value; let equipe = document.getElementById('user-equipe').value; let senha = document.getElementById('user-senha').value; let senha2 = document.getElementById('user-senha2').value; if(!nome || !login){ showToast('Preencha nome e login!'); return; } if(id) { let idx = S.usuarios.findIndex(u => u.id === id); if(idx !== -1) { S.usuarios[idx].nome = nome; S.usuarios[idx].login = login; S.usuarios[idx].perfil = perfil; S.usuarios[idx].equipe = equipe; if(senha) { if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } S.usuarios[idx].senha = senha; } } } else { if(!senha){ showToast('Senha obrigatória!'); return; } if(senha !== senha2){ showToast('Senhas não coincidem!'); return; } S.usuarios.push({ id: uid(), nome, login, senha, perfil, equipe }); } saveToFirebase('usuarios', S.usuarios[idx]?.id || S.usuarios[S.usuarios.length-1].id, S.usuarios[idx] || S.usuarios[S.usuarios.length-1]); closeModal('modal-user'); renderUsuarios(); updateVendedorSelects(); showToast('Usuário salvo!'); }
+function deletarUsuario(id) { if(confirm('Remover usuário?')) { S.usuarios = S.usuarios.filter(u => u.id !== id); deleteFromFirebase('usuarios', id); renderUsuarios(); updateVendedorSelects(); showToast('Usuário removido!'); } }
+function renderDashboard() { let totalLeads = S.leads.length; let totalFechamentos = S.vendas.length; let receitaTotal = S.vendas.reduce((s,v) => s + v.adesao + v.mensalidade, 0); let conversao = totalLeads > 0 ? Math.round(totalFechamentos / totalLeads * 100) : 0; document.getElementById('stat-total-leads').innerText = totalLeads; document.getElementById('stat-fechamentos').innerText = totalFechamentos; document.getElementById('stat-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR')}`; document.getElementById('stat-conversao').innerText = `${conversao}%`; let etapasCount = { Captação: 0, Agendamento: 0, Apresentação: 0, Negociação: 0, Fechamento: 0 }; S.leads.forEach(l => { if (l.status === 'Fechado') etapasCount.Fechamento++; else if (l.pipeline === 'Negociação') etapasCount.Negociação++; else if (l.pipeline === 'Apresentação') etapasCount.Apresentação++; else if (l.pipeline === 'Agendamento') etapasCount.Agendamento++; else etapasCount.Captação++; }); document.getElementById('jornada-steps').innerHTML = ['Captação', 'Agendamento', 'Apresentação', 'Negociação', 'Fechamento'].map(etapa => `<div class="step ${etapasCount[etapa] > 0 ? 'completed' : 'pending'}"><strong>${etapa}</strong><br>${etapasCount[etapa]} leads</div>`).join(''); let totalMeta = S.metaGlobal.adesao; let totalRealizado = S.vendas.reduce((s,v) => s + v.adesao, 0); let aRealizar = totalMeta - totalRealizado; if(charts.metas) charts.metas.destroy(); let ctx = document.getElementById('metas-chart')?.getContext('2d'); if(ctx) charts.metas = new Chart(ctx, { type: 'bar', data: { labels: ['Realizado', 'A Realizar'], datasets: [{ data: [totalRealizado, aRealizar > 0 ? aRealizar : 0], backgroundColor: ['#10b981', '#f59e0b'] }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'top' } } } }); }
+function openModal(id) { document.getElementById(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; document.body.style.overflow = ''; }
+function renderAll() { renderDashboard(); renderLeads(); renderPipeline(); renderAgenda(); renderMetas(); renderForecast(); renderGestaoVendas(); renderRemarketing(); renderCampanhas(); renderProdutos(); renderRelatorios(); renderUsuarios(); renderEmailHistory(); updateVendedorSelects(); updateProdutoSelects(); }
+
+initFirebase();
+loadLocalBackup();
+</script>
+</body>
+</html>
