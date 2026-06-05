@@ -441,13 +441,15 @@
                 <div><div class="card-title">Envio automático de e-mails</div><div class="card-subtitle">Integração EmailJS ou simulação/abertura do cliente de e-mail</div></div>
               </div>
               <div class="note warning">
-                Para envio real via GitHub Pages, preencha Public Key, Service ID e Template ID do EmailJS. Sem esses dados, o sistema registra envio simulado e pode abrir um <em>mailto</em>.
+                Para envio real via GitHub Pages, preencha Public Key, Service ID e Template ID do EmailJS. No template do EmailJS, use as variáveis <strong>{{to_email}}</strong>, <strong>{{to_name}}</strong>, <strong>{{subject}}</strong>, <strong>{{message}}</strong>, <strong>{{from_name}}</strong> e <strong>{{reply_to}}</strong>. O envio respeita o limite de 1 e-mail por segundo.
               </div>
               <div class="form-grid">
                 <div class="form-group"><label>EmailJS Public Key</label><input id="emailPublicKey" class="field" placeholder="Ex.: 0AbCdEF..." /></div>
                 <div class="form-group"><label>Service ID</label><input id="emailServiceId" class="field" placeholder="Ex.: service_xxxxx" /></div>
                 <div class="form-group"><label>Template ID</label><input id="emailTemplateId" class="field" placeholder="Ex.: template_xxxxx" /></div>
                 <div class="form-group"><label>Nome do remetente</label><input id="emailFromName" class="field" placeholder="Equipe Comercial" /></div>
+                <div class="form-group"><label>E-mail de resposta/remetente</label><input id="emailReplyTo" class="field" type="email" placeholder="Ex.: comercial@rensoftware.com.br" /></div>
+                <div class="form-group"><label>E-mail para teste</label><input id="emailTestTo" class="field" type="email" placeholder="Ex.: seuemail@empresa.com.br" /></div>
                 <div class="form-group full"><label>Assunto</label><input id="emailSubject" class="field" placeholder="Assunto da campanha" /></div>
                 <div class="form-group full"><label>Mensagem</label><textarea id="emailBody" class="textarea" placeholder="Use {{nome}}, {{empresa}}, {{produto}} e {{vendedor}}"></textarea></div>
                 <div class="form-group"><label>Público</label><select id="emailAudience" class="select"><option value="all">Todos os leads com e-mail</option><option value="open">Leads abertos</option><option value="lost">Leads perdidos</option><option value="customers">Clientes vendidos</option></select></div>
@@ -456,12 +458,12 @@
               <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
                 <button class="btn btn-primary" onclick="sendBulkEmails()"><i class="fa-solid fa-paper-plane"></i> Enviar campanha</button>
                 <button class="btn btn-outline" onclick="saveEmailConfig()"><i class="fa-solid fa-floppy-disk"></i> Salvar configuração</button>
-                <button class="btn btn-muted" onclick="testEmailConfig()"><i class="fa-solid fa-vial"></i> Testar</button>
+                <button class="btn btn-muted" onclick="testEmailConfig()"><i class="fa-solid fa-vial"></i> Testar envio</button>
               </div>
             </div>
             <div class="card">
               <div class="card-header"><div><div class="card-title">Histórico de e-mails</div><div class="card-subtitle">Últimos envios registrados</div></div></div>
-              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Destino</th><th>Assunto</th><th>Status</th></tr></thead><tbody id="emailHistoryTable"></tbody></table></div>
+              <div class="table-wrap"><table><thead><tr><th>Data</th><th>Destino</th><th>Assunto</th><th>Status</th><th>Detalhe</th></tr></thead><tbody id="emailHistoryTable"></tbody></table></div>
             </div>
           </div>
         </section>
@@ -691,7 +693,7 @@ function seedData() {
     goals,
     campaigns,
     landingPages: [],
-    emailConfig: { publicKey: "", serviceId: "", templateId: "", fromName: "Equipe Comercial Rensoftware" },
+    emailConfig: { publicKey: "", serviceId: "", templateId: "", fromName: "Equipe Comercial Rensoftware", replyTo: "", testTo: "" },
     emailHistory: []
   };
 }
@@ -1717,8 +1719,8 @@ function renderLandingPages() {
 function renderEmailHistory() {
   const rows = [...state.emailHistory].sort((a,b) => String(b.data).localeCompare(String(a.data))).slice(0, 80);
   $("emailHistoryTable").innerHTML = rows.map(e => `
-    <tr><td>${formatDate(e.data)}</td><td>${escapeHTML(e.destino)}</td><td>${escapeHTML(e.assunto)}</td><td>${statusTag(e.status)}</td></tr>
-  `).join("") || `<tr><td class="empty" colspan="4">Nenhum e-mail registrado.</td></tr>`;
+    <tr><td>${formatDate(e.data)}</td><td>${escapeHTML(e.destino)}</td><td>${escapeHTML(e.assunto)}</td><td>${statusTag(e.status)}</td><td>${escapeHTML(e.detalhe || "")}</td></tr>
+  `).join("") || `<tr><td class="empty" colspan="5">Nenhum e-mail registrado.</td></tr>`;
 }
 
 function renderProducts() {
@@ -2587,17 +2589,24 @@ function loadEmailConfigIntoForm() {
   $("emailPublicKey").value = state.emailConfig.publicKey || "";
   $("emailServiceId").value = state.emailConfig.serviceId || "";
   $("emailTemplateId").value = state.emailConfig.templateId || "";
-  $("emailFromName").value = state.emailConfig.fromName || "Equipe Comercial";
+  $("emailFromName").value = state.emailConfig.fromName || "Equipe Comercial Rensoftware";
+  if ($("emailReplyTo")) $("emailReplyTo").value = state.emailConfig.replyTo || "";
+  if ($("emailTestTo")) $("emailTestTo").value = state.emailConfig.testTo || "";
 }
-function saveEmailConfig() {
+function saveEmailConfig(showMessage = true) {
   state.emailConfig = {
-    publicKey: $("emailPublicKey").value.trim(),
-    serviceId: $("emailServiceId").value.trim(),
-    templateId: $("emailTemplateId").value.trim(),
-    fromName: $("emailFromName").value.trim() || "Equipe Comercial"
+    publicKey: $("emailPublicKey")?.value.trim() || "",
+    serviceId: $("emailServiceId")?.value.trim() || "",
+    templateId: $("emailTemplateId")?.value.trim() || "",
+    fromName: $("emailFromName")?.value.trim() || "Equipe Comercial Rensoftware",
+    replyTo: $("emailReplyTo")?.value.trim() || "",
+    testTo: $("emailTestTo")?.value.trim() || ""
   };
   persist();
-  showToast("Configuração de e-mail salva.");
+  if (showMessage) showToast("Configuração de e-mail salva.");
+}
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 function emailRecipients() {
   const audience = $("emailAudience").value;
@@ -2620,68 +2629,147 @@ function emailRecipients() {
 
   if (product && product !== "todos") people = people.filter(p => p.produtoId === product);
   const seen = new Set();
-  return people.filter(p => p.email && !seen.has(p.email) && seen.add(p.email));
+  return people.filter(p => isValidEmail(p.email) && !seen.has(p.email.toLowerCase()) && seen.add(p.email.toLowerCase()));
 }
 function applyTemplate(text, person) {
   return String(text || "")
     .replaceAll("{{nome}}", person.nome || "")
     .replaceAll("{{empresa}}", person.empresa || "")
     .replaceAll("{{produto}}", person.produto || "")
-    .replaceAll("{{vendedor}}", person.vendedor || "");
+    .replaceAll("{{vendedor}}", person.vendedor || "")
+    .replaceAll("{{email}}", person.email || "");
+}
+function emailConfigured() {
+  return Boolean(state.emailConfig.publicKey && state.emailConfig.serviceId && state.emailConfig.templateId && window.emailjs);
+}
+function emailErrorText(error) {
+  return String(error?.text || error?.message || error?.status || error || "Erro desconhecido").slice(0, 240);
+}
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+function buildEmailParams(person, subject, body) {
+  const replyTo = state.emailConfig.replyTo || "comercial@rensoftware.com.br";
+  // Envia aliases comuns para funcionar mesmo que o template EmailJS use nomes diferentes.
+  return {
+    to_email: person.email,
+    email: person.email,
+    recipient_email: person.email,
+    user_email: person.email,
+    to_name: person.nome || person.empresa || person.email,
+    name: person.nome || person.empresa || "",
+    user_name: person.nome || person.empresa || "",
+    empresa: person.empresa || "",
+    company: person.empresa || "",
+    produto: person.produto || "",
+    product: person.produto || "",
+    vendedor: person.vendedor || "",
+    seller: person.vendedor || "",
+    subject,
+    assunto: subject,
+    message: body,
+    html_message: String(body || "").replace(/\n/g, "<br>"),
+    mensagem: body,
+    from_name: state.emailConfig.fromName || "Equipe Comercial Rensoftware",
+    sender_name: state.emailConfig.fromName || "Equipe Comercial Rensoftware",
+    reply_to: replyTo,
+    from_email: replyTo
+  };
+}
+async function sendOneEmail(person, subject, body) {
+  if (!emailConfigured()) {
+    return { ok: false, simulated: true, detail: "Configuração EmailJS incompleta ou biblioteca não carregada." };
+  }
+  if (!isValidEmail(person.email)) {
+    return { ok: false, simulated: false, detail: "E-mail de destino inválido." };
+  }
+
+  const params = buildEmailParams(person, subject, body);
+  // Usa options.publicKey diretamente no send. Isso evita falhas quando o init global não foi aplicado.
+  const response = await emailjs.send(
+    state.emailConfig.serviceId,
+    state.emailConfig.templateId,
+    params,
+    { publicKey: state.emailConfig.publicKey }
+  );
+  return { ok: true, simulated: false, detail: `${response?.status || 200} ${response?.text || "OK"}`.trim() };
 }
 async function sendBulkEmails() {
-  saveEmailConfig();
-  const subject = $("emailSubject").value.trim();
-  const body = $("emailBody").value.trim();
-  if (!subject || !body) return showToast("Preencha assunto e mensagem.", "fa-triangle-exclamation");
+  saveEmailConfig(false);
+  const subjectTemplate = $("emailSubject").value.trim();
+  const bodyTemplate = $("emailBody").value.trim();
+  if (!subjectTemplate || !bodyTemplate) return showToast("Preencha assunto e mensagem.", "fa-triangle-exclamation");
   const recipients = emailRecipients();
-  if (!recipients.length) return showToast("Nenhum destinatário encontrado para o filtro.", "fa-triangle-exclamation");
+  if (!recipients.length) return showToast("Nenhum destinatário válido encontrado para o filtro.", "fa-triangle-exclamation");
 
   let sent = 0, simulated = 0, failed = 0;
-  const configured = state.emailConfig.publicKey && state.emailConfig.serviceId && state.emailConfig.templateId && window.emailjs;
+  const configured = emailConfigured();
+  if (!configured) showToast("EmailJS não configurado. Os envios serão marcados como simulação.", "fa-triangle-exclamation");
 
-  if (configured) {
-    emailjs.init({ publicKey: state.emailConfig.publicKey });
-  }
-
-  for (const p of recipients) {
-    const msg = applyTemplate(body, p);
-    const subj = applyTemplate(subject, p);
+  for (const [index, p] of recipients.entries()) {
+    const msg = applyTemplate(bodyTemplate, p);
+    const subj = applyTemplate(subjectTemplate, p);
     try {
-      if (configured) {
-        await emailjs.send(state.emailConfig.serviceId, state.emailConfig.templateId, {
-          to_email: p.email,
-          to_name: p.nome,
-          subject: subj,
-          message: msg,
-          from_name: state.emailConfig.fromName
-        });
-        state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Enviado" });
+      if (configured && index > 0) await sleep(1100); // EmailJS limita a 1 requisição por segundo.
+      const result = await sendOneEmail(p, subj, msg);
+      if (result.ok) {
+        state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Enviado", detalhe: result.detail });
         sent++;
-      } else {
-        state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Simulado" });
+      } else if (result.simulated) {
+        state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Simulado", detalhe: result.detail });
         simulated++;
+      } else {
+        state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Erro", detalhe: result.detail });
+        failed++;
       }
     } catch (error) {
-      console.error(error);
-      state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Erro" });
+      const detail = emailErrorText(error);
+      console.error("Erro EmailJS:", error);
+      state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: p.email, assunto: subj, status: "Erro", detalhe: detail });
       failed++;
     }
+    persist();
+    renderEmailHistory();
   }
 
-  persist();
-  renderEmailHistory();
   showToast(`E-mails processados. Enviados: ${sent}. Simulados: ${simulated}. Erros: ${failed}.`);
 }
-function testEmailConfig() {
-  saveEmailConfig();
-  if (state.emailConfig.publicKey && state.emailConfig.serviceId && state.emailConfig.templateId) {
-    showToast("Configuração preenchida. Execute uma campanha para validar com o EmailJS.");
-  } else {
-    const subject = encodeURIComponent("Teste ProspectFlow CRM");
-    const body = encodeURIComponent("Teste de envio automático via cliente de e-mail.");
-    window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    showToast("Configuração incompleta. Abrindo mailto para teste simulado.", "fa-triangle-exclamation");
+async function testEmailConfig() {
+  saveEmailConfig(false);
+  const subject = ($("emailSubject")?.value.trim() || "Teste de envio Rensoftware CRM");
+  const body = ($("emailBody")?.value.trim() || "Olá, este é um teste de envio automático via EmailJS.");
+  const testTo = state.emailConfig.testTo || state.emailConfig.replyTo;
+  if (!testTo || !isValidEmail(testTo)) {
+    return showToast("Preencha um e-mail válido no campo E-mail para teste.", "fa-triangle-exclamation");
+  }
+  if (!emailConfigured()) {
+    const mailSubject = encodeURIComponent(subject);
+    const mailBody = encodeURIComponent(body);
+    window.location.href = `mailto:${encodeURIComponent(testTo)}?subject=${mailSubject}&body=${mailBody}`;
+    return showToast("Configuração incompleta. Abrindo cliente de e-mail para teste.", "fa-triangle-exclamation");
+  }
+
+  const person = {
+    nome: "Contato de Teste",
+    empresa: "Rensoftware",
+    email: testTo,
+    produto: "CRM Comercial",
+    vendedor: state.emailConfig.fromName || "Equipe Comercial Rensoftware",
+    produtoId: "todos"
+  };
+
+  try {
+    const result = await sendOneEmail(person, subject, body);
+    state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: testTo, assunto: subject, status: "Enviado", detalhe: `Teste: ${result.detail}` });
+    persist();
+    renderEmailHistory();
+    showToast("Teste enviado pelo EmailJS.");
+  } catch (error) {
+    const detail = emailErrorText(error);
+    state.emailHistory.push({ id: uid("em"), data: new Date().toISOString(), destino: testTo, assunto: subject, status: "Erro", detalhe: detail });
+    persist();
+    renderEmailHistory();
+    showToast(`Falha no teste EmailJS: ${detail}`, "fa-triangle-exclamation");
   }
 }
 
