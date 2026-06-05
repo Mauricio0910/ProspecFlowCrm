@@ -9,7 +9,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -207,7 +209,7 @@
 
       <div class="auth-hint">
         <strong>Acesso inicial:</strong> admin / 1234<br>
-        Após entrar, altere a senha em <strong>Usuários</strong>. O sistema funciona em modo local e sincroniza com Firestore quando a configuração web do Firebase for preenchida no código.
+        Após entrar, altere a senha em <strong>Usuários</strong>. O sistema funciona em modo local e sincroniza com Firestore ou Realtime Database quando o Firebase estiver acessível.
       </div>
     </div>
   </section>
@@ -292,7 +294,7 @@
               <div><div class="card-title">Resumo de produtividade</div><div class="card-subtitle">Vendedores cadastrados em Usuários</div></div>
               <button class="btn btn-primary" onclick="goToPage('metas')"><i class="fa-solid fa-bullseye"></i> Ver metas</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="dashboardProdutividade"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th><th>Meta</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="dashboardProdutividade"></tbody></table></div>
           </div>
         </section>
 
@@ -505,14 +507,19 @@ const firebaseConfig = {
 
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
+const FIREBASE_RTDB_PATH = "prospectflow_crm/database";
 const STORAGE_KEY = "prospectflow_db";
 
 let state = null;
 let currentUser = null;
 let firebaseReady = false;
+let firebaseMode = "local";
 let firestore = null;
+let realtimeDb = null;
+let realtimeRef = null;
 let unsubscribeFirestore = null;
 let saveTimer = null;
+let applyingRemoteSnapshot = false;
 let charts = {};
 const PIPELINE = [
   { nome: "Captação", prob: 10 },
@@ -627,6 +634,47 @@ function seedData() {
   };
 }
 
+function safeParseJSON(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    console.warn("Base local inválida. Criando uma nova base padrão.", error);
+    return null;
+  }
+}
+
+function ensureRequiredDefaults(data) {
+  const seed = seedData();
+
+  data.users = Array.isArray(data.users) ? data.users : [];
+  data.products = Array.isArray(data.products) ? data.products : [];
+  data.leads = Array.isArray(data.leads) ? data.leads : [];
+  data.sales = Array.isArray(data.sales) ? data.sales : [];
+  data.goals = Array.isArray(data.goals) ? data.goals : [];
+  data.landingPages = Array.isArray(data.landingPages) ? data.landingPages : [];
+  data.emailHistory = Array.isArray(data.emailHistory) ? data.emailHistory : [];
+  data.emailConfig = { ...seed.emailConfig, ...(data.emailConfig || {}) };
+
+  // Garante acesso inicial mesmo quando localStorage/Firestore vier de versões antigas.
+  const admin = data.users.find(u => norm(u.login) === "admin" || u.id === "u_admin");
+  if (admin) {
+    admin.id = admin.id || "u_admin";
+    admin.nome = admin.nome || "Administrador";
+    admin.login = admin.login || "admin";
+    admin.senha = String(admin.senha || "1234");
+    admin.perfil = admin.perfil || "Administrador";
+    admin.equipe = admin.equipe || "Comercial";
+    admin.ativo = true;
+  } else {
+    data.users.unshift({ ...seed.users[0] });
+  }
+
+  if (!data.products.length) data.products = seed.products.map(p => ({ ...p }));
+  if (!data.goals.length) data.goals = seed.goals.map(g => ({ ...g }));
+
+  return data;
+}
+
 function migrateOldShape(raw) {
   if (!raw || typeof raw !== "object") return seedData();
   if (raw.users || raw.products || raw.sales || raw.goals) return normalizeState(raw);
@@ -731,26 +779,106 @@ function migrateOldShape(raw) {
 
 function normalizeState(raw) {
   const seed = seedData();
-  const data = { ...seed, ...raw };
-  data.users = Array.isArray(data.users) && data.users.length ? data.users : seed.users;
-  data.products = Array.isArray(data.products) && data.products.length ? data.products : seed.products;
-  data.leads = Array.isArray(data.leads) ? data.leads : [];
-  data.sales = Array.isArray(data.sales) ? data.sales : [];
-  data.goals = Array.isArray(data.goals) && data.goals.length ? data.goals : seed.goals;
-  data.landingPages = Array.isArray(data.landingPages) ? data.landingPages : [];
-  data.emailHistory = Array.isArray(data.emailHistory) ? data.emailHistory : [];
-  data.emailConfig = { ...seed.emailConfig, ...(data.emailConfig || {}) };
+  const data = ensureRequiredDefaults({ ...seed, ...(raw || {}) });
+  data.version = 3;
+  data.createdAt = data.createdAt || new Date().toISOString();
   data.updatedAt = new Date().toISOString();
 
-  data.products = data.products.map(p => ({ ...p, implantacao: Number(p.implantacao ?? p.adesao ?? 0), mensalidade: Number(p.mensalidade ?? 0), ativo: p.ativo !== false }));
-  data.users = data.users.map(u => ({ ...u, ativo: u.ativo !== false, perfil: u.perfil || "Vendedor", senha: u.senha || "1234" }));
+  data.products = data.products.map(p => ({
+    id: String(p.id || uid("p")),
+    nome: p.nome || "Produto",
+    categoria: p.categoria || "Comercial",
+    implantacao: Number(p.implantacao ?? p.adesao ?? 0),
+    mensalidade: Number(p.mensalidade ?? 0),
+    ativo: p.ativo !== false
+  }));
+
+  data.users = data.users.map(u => ({
+    id: String(u.id || uid("u")),
+    nome: u.nome || "Usuário",
+    login: norm(u.login || u.nome),
+    senha: String(u.senha || "1234"),
+    perfil: u.perfil || "Vendedor",
+    equipe: u.equipe || "Comercial",
+    ativo: u.ativo !== false
+  }));
+
   data.leads = data.leads.map(l => {
     const stage = l.pipeline || "Captação";
-    return { ...l, status: l.status || "Aberto", pipeline: stage, probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)), implantacao: Number(l.implantacao ?? l.adesao ?? 0), mensalidade: Number(l.mensalidade ?? 0), previsaoFechamento: l.previsaoFechamento || todayISO() };
+    return {
+      id: String(l.id || uid("l")),
+      empresa: l.empresa || "Empresa",
+      contato: l.contato || "",
+      email: l.email || "",
+      telefone: l.telefone || "",
+      cidade: l.cidade || "",
+      uf: l.uf || "",
+      segmento: l.segmento || "",
+      produtoId: l.produtoId || activeProductFallback(data.products),
+      vendedorId: l.vendedorId || activeSellerFallback(data.users),
+      implantacao: Number(l.implantacao ?? l.adesao ?? 0),
+      mensalidade: Number(l.mensalidade ?? 0),
+      pipeline: stage,
+      status: l.status || "Aberto",
+      probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)),
+      previsaoFechamento: l.previsaoFechamento || todayISO(),
+      origem: l.origem || "",
+      createdAt: l.createdAt || new Date().toISOString(),
+      updatedAt: l.updatedAt || new Date().toISOString()
+    };
   });
-  data.sales = data.sales.map(s => ({ ...s, implantacao: Number(s.implantacao ?? s.adesao ?? 0), mensalidade: Number(s.mensalidade ?? 0), dataVenda: s.dataVenda || todayISO(), status: s.status || "Fechada" }));
-  data.goals = data.goals.map(g => ({ ...g, tipo: g.tipo || (g.vendedorId ? "Individual" : "Global"), produtoId: g.produtoId || "todos", periodo: g.periodo || monthKey(), implantacao: Number(g.implantacao ?? g.adesao ?? 0), mensalidade: Number(g.mensalidade ?? 0) }));
+
+  data.sales = data.sales.map(s => ({
+    id: String(s.id || uid("s")),
+    leadId: s.leadId || "",
+    cliente: s.cliente || s.empresa || "Cliente",
+    produtoId: s.produtoId || activeProductFallback(data.products),
+    vendedorId: s.vendedorId || activeSellerFallback(data.users),
+    implantacao: Number(s.implantacao ?? s.adesao ?? 0),
+    mensalidade: Number(s.mensalidade ?? 0),
+    dataVenda: s.dataVenda || s.data || todayISO(),
+    status: s.status || "Fechada",
+    observacao: s.observacao || ""
+  }));
+
+  data.goals = data.goals.map(g => ({
+    id: String(g.id || uid("g")),
+    tipo: g.tipo || (g.vendedorId ? "Individual" : "Global"),
+    vendedorId: g.vendedorId || "",
+    produtoId: g.produtoId || "todos",
+    periodo: g.periodo || monthKey(),
+    implantacao: Number(g.implantacao ?? g.adesao ?? 0),
+    mensalidade: Number(g.mensalidade ?? 0)
+  }));
+
+  data.landingPages = data.landingPages.map(lp => ({
+    id: String(lp.id || uid("lp")),
+    nome: lp.nome || "Landing Page",
+    campanha: lp.campanha || "",
+    produtoId: lp.produtoId || activeProductFallback(data.products),
+    titulo: lp.titulo || "Transforme sua gestão comercial",
+    subtitulo: lp.subtitulo || "Automatize processos, acompanhe resultados e venda mais com nossa solução.",
+    cta: lp.cta || "Quero falar com um especialista",
+    whatsapp: lp.whatsapp || "",
+    corPrimaria: lp.corPrimaria || "#5b6ee1",
+    corSecundaria: lp.corSecundaria || "#7c3aed",
+    beneficios: lp.beneficios || "",
+    depoimento: lp.depoimento || "",
+    html: lp.html || "",
+    createdAt: lp.createdAt || new Date().toISOString(),
+    updatedAt: lp.updatedAt || new Date().toISOString()
+  }));
+
+  ensureRequiredDefaults(data);
   return data;
+}
+
+function activeProductFallback(products) {
+  return (products || []).find(p => p.ativo !== false)?.id || "";
+}
+
+function activeSellerFallback(users) {
+  return (users || []).find(u => u.ativo !== false && ["Vendedor", "Consultor", "SDR", "Gerente", "Administrador"].includes(u.perfil))?.id || "";
 }
 
 function hasFirebaseConfig() {
@@ -758,45 +886,132 @@ function hasFirebaseConfig() {
 }
 
 async function initData() {
-  const local = localStorage.getItem(STORAGE_KEY);
-  state = local ? migrateOldShape(JSON.parse(local)) : seedData();
-
-  if (hasFirebaseConfig() && window.firebase) {
-    try {
-      firebase.initializeApp(firebaseConfig);
-      firestore = firebase.firestore();
-      firebaseReady = true;
-
-      const docRef = firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
-      const snapshot = await docRef.get();
-
-      if (snapshot.exists) {
-        state = migrateOldShape(snapshot.data());
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } else {
-        await docRef.set(state, { merge: true });
-      }
-
-      unsubscribeFirestore = docRef.onSnapshot(snap => {
-        if (snap.exists) {
-          state = migrateOldShape(snap.data());
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          if (currentUser) renderAll();
-        }
-      });
-
-      setSyncStatus(true, "Firestore");
-    } catch (error) {
-      console.error(error);
-      firebaseReady = false;
-      setSyncStatus(false, "Local: erro Firebase");
-    }
-  } else {
-    setSyncStatus(false, "Local");
-  }
-
+  const local = safeParseJSON(localStorage.getItem(STORAGE_KEY));
+  state = normalizeState(local || seedData());
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   populateMonthFilters();
+  setSyncStatus(false, "Local");
+
+  // Tenta sincronizar, mas não bloqueia o login nem os módulos se o Firebase falhar.
+  await connectFirebase();
+}
+
+async function connectFirebase() {
+  if (!hasFirebaseConfig()) {
+    setSyncStatus(false, "Local: Firebase sem configuração");
+    return;
+  }
+  if (!window.firebase) {
+    setSyncStatus(false, "Local: SDK Firebase não carregou");
+    return;
+  }
+
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    await ensureFirebaseSession();
+
+    if (firebase.firestore) {
+      try {
+        await connectFirestore();
+        return;
+      } catch (error) {
+        console.warn("Firestore indisponível. Tentando Realtime Database.", error);
+      }
+    }
+
+    if (firebase.database && firebaseConfig.databaseURL) {
+      await connectRealtimeDatabase();
+      return;
+    }
+
+    setSyncStatus(false, "Local: Firebase sem Firestore/Database");
+  } catch (error) {
+    console.error(error);
+    firebaseReady = false;
+    firebaseMode = "local";
+    setSyncStatus(false, `Local: ${firebaseErrorMessage(error)}`);
+  }
+}
+
+async function ensureFirebaseSession() {
+  if (!firebase.auth) return;
+  try {
+    if (!firebase.auth().currentUser) {
+      await firebase.auth().signInAnonymously();
+    }
+  } catch (error) {
+    // Se o login anônimo não estiver habilitado, continua tentando regras públicas.
+    console.warn("Firebase Auth anônimo não habilitado ou indisponível.", error);
+  }
+}
+
+async function connectFirestore() {
+  firestore = firebase.firestore();
+  const docRef = firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
+  const snapshot = await docRef.get();
+
+  if (snapshot.exists) {
+    applyRemoteState(snapshot.data());
+  } else {
+    await docRef.set(state, { merge: true });
+  }
+
+  if (unsubscribeFirestore) unsubscribeFirestore();
+  unsubscribeFirestore = docRef.onSnapshot(snap => {
+    if (snap.exists) applyRemoteState(snap.data());
+  }, error => {
+    console.error(error);
+    firebaseReady = false;
+    firebaseMode = "local";
+    setSyncStatus(false, `Local: ${firebaseErrorMessage(error)}`);
+  });
+
+  firebaseReady = true;
+  firebaseMode = "firestore";
+  setSyncStatus(true, "Firestore ativo");
+}
+
+async function connectRealtimeDatabase() {
+  realtimeDb = firebase.database();
+  realtimeRef = realtimeDb.ref(FIREBASE_RTDB_PATH);
+  const snapshot = await realtimeRef.get();
+
+  if (snapshot.exists()) {
+    applyRemoteState(snapshot.val());
+  } else {
+    await realtimeRef.set(state);
+  }
+
+  realtimeRef.off();
+  realtimeRef.on("value", snap => {
+    if (snap.exists()) applyRemoteState(snap.val());
+  }, error => {
+    console.error(error);
+    firebaseReady = false;
+    firebaseMode = "local";
+    setSyncStatus(false, `Local: ${firebaseErrorMessage(error)}`);
+  });
+
+  firebaseReady = true;
+  firebaseMode = "database";
+  setSyncStatus(true, "Realtime Database ativo");
+}
+
+function applyRemoteState(remoteData) {
+  applyingRemoteSnapshot = true;
+  state = normalizeState(remoteData);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  populateMonthFilters();
+  if (currentUser) {
+    currentUser = state.users.find(u => u.id === currentUser.id) || state.users.find(u => norm(u.login) === norm(currentUser.login)) || currentUser;
+    renderAll();
+  }
+  applyingRemoteSnapshot = false;
+}
+
+function firebaseErrorMessage(error) {
+  const code = error?.code ? String(error.code).replace("permission-denied", "permissão negada") : "erro Firebase";
+  return code.length > 44 ? code.slice(0, 44) + "..." : code;
 }
 
 function setSyncStatus(ok, text) {
@@ -806,19 +1021,27 @@ function setSyncStatus(ok, text) {
 }
 
 function persist() {
+  if (!state) state = normalizeState(seedData());
   state.updatedAt = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
-  if (!firebaseReady || !firestore) return;
+  if (!firebaseReady || applyingRemoteSnapshot) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set(state, { merge: true });
-      setSyncStatus(true, "Firestore sincronizado");
+      if (firebaseMode === "firestore" && firestore) {
+        await firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set(state, { merge: true });
+        setSyncStatus(true, "Firestore sincronizado");
+      } else if (firebaseMode === "database" && realtimeRef) {
+        await realtimeRef.set(state);
+        setSyncStatus(true, "Realtime Database sincronizado");
+      }
     } catch (error) {
       console.error(error);
-      setSyncStatus(false, "Local: falha sync");
-      showToast("Falha ao sincronizar com Firestore. Dados mantidos localmente.", "fa-triangle-exclamation");
+      firebaseReady = false;
+      firebaseMode = "local";
+      setSyncStatus(false, `Local: ${firebaseErrorMessage(error)}`);
+      showToast("Falha ao sincronizar com Firebase. Dados mantidos localmente.", "fa-triangle-exclamation");
     }
   }, 450);
 }
@@ -856,12 +1079,22 @@ function populateMonthFilters() {
 
 function doLogin() {
   clearError();
+  if (!state) {
+    state = normalizeState(seedData());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    populateMonthFilters();
+  }
+
   const login = norm($("loginInput").value);
   const senha = String($("passwordInput").value || "").trim();
-  const user = state.users.find(u => norm(u.login) === login && String(u.senha || "").trim() === senha && u.ativo !== false);
+  const user = state.users.find(u =>
+    (norm(u.login) === login || norm(u.nome) === login) &&
+    String(u.senha || "").trim() === senha &&
+    u.ativo !== false
+  );
 
   if (!user) {
-    showError("Usuário ou senha inválidos, ou usuário inativo. Confira em Usuários ou use admin / 1234 no primeiro acesso.");
+    showError("Usuário ou senha inválidos, ou usuário inativo. No primeiro acesso use admin / 1234. Se você alterou a senha, entre com a senha cadastrada em Usuários.");
     return;
   }
 
@@ -1342,7 +1575,8 @@ function saveLead(id = "") {
 
   if (id) {
     const idx = state.leads.findIndex(l => l.id === id);
-    state.leads[idx] = { ...state.leads[idx], ...data };
+    if (idx >= 0) state.leads[idx] = { ...state.leads[idx], ...data };
+    else state.leads.push(data);
   } else {
     data.createdAt = new Date().toISOString();
     state.leads.push(data);
@@ -1443,7 +1677,8 @@ function saveSale(id = "") {
   };
   if (id) {
     const idx = state.sales.findIndex(s => s.id === id);
-    state.sales[idx] = { ...state.sales[idx], ...data };
+    if (idx >= 0) state.sales[idx] = { ...state.sales[idx], ...data };
+    else state.sales.push(data);
   } else {
     state.sales.push(data);
   }
@@ -1498,7 +1733,8 @@ function saveGoal(id = "") {
   };
   if (id) {
     const idx = state.goals.findIndex(g => g.id === id);
-    state.goals[idx] = data;
+    if (idx >= 0) state.goals[idx] = data;
+    else state.goals.push(data);
   } else {
     state.goals.push(data);
   }
@@ -1543,7 +1779,8 @@ function saveProduct(id = "") {
   };
   if (id) {
     const idx = state.products.findIndex(p => p.id === id);
-    state.products[idx] = data;
+    if (idx >= 0) state.products[idx] = data;
+    else state.products.push(data);
   } else {
     state.products.push(data);
   }
@@ -1750,7 +1987,11 @@ function saveLanding(id = "", download = false) {
   data.html = generateLandingHTML(data);
   if (id) {
     const idx = state.landingPages.findIndex(lp => lp.id === id);
-    state.landingPages[idx] = { ...state.landingPages[idx], ...data };
+    if (idx >= 0) state.landingPages[idx] = { ...state.landingPages[idx], ...data };
+    else {
+      data.createdAt = new Date().toISOString();
+      state.landingPages.push(data);
+    }
   } else {
     data.createdAt = new Date().toISOString();
     state.landingPages.push(data);
@@ -1915,6 +2156,7 @@ function exportTable(type) {
   exportXlsx(rows, `${name}_${todayISO()}.xlsx`, name);
 }
 function exportAllReports() {
+  if (!window.XLSX) return showToast("Biblioteca XLSX não carregou.", "fa-triangle-exclamation");
   const wb = XLSX.utils.book_new();
   const sheets = {
     Vendas: state.sales.map(s => ({ Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, Status: s.status })),
@@ -1942,9 +2184,10 @@ document.addEventListener("keydown", event => {
 
 initData().catch(error => {
   console.error(error);
-  state = seedData();
+  state = normalizeState(seedData());
   setSyncStatus(false, "Local");
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  populateMonthFilters();
 });
 </script>
 </body>
