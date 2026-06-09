@@ -710,7 +710,7 @@ function seedData() {
   ];
 
   return {
-    version: 5,
+    version: 6,
     users,
     products,
     leads,
@@ -1219,12 +1219,17 @@ function canViewAllProductivity() {
   return ["administrador", "gerente", "sdr"].includes(profile);
 }
 function productivitySellers() {
-  const list = sellers();
+  // Produtividade e metas consideram somente o time comercial vendedor.
+  // SDR, Marketing, Gerente e Administrador podem ter acesso à visão, mas não recebem meta distribuída.
+  const list = eligibleGoalSellers();
   if (canViewAllProductivity()) return list;
   return list.filter(u => u.id === currentUser?.id || norm(u.login) === norm(currentUser?.login));
 }
 function visibleGoalsForCurrentUser(period = monthKey()) {
-  const goals = state.goals.filter(g => g.periodo === period);
+  const sellerIds = new Set(eligibleGoalSellers().map(u => u.id));
+  const goals = state.goals
+    .filter(g => g.periodo === period)
+    .filter(g => g.tipo === "Global" || !g.vendedorId || sellerIds.has(g.vendedorId));
   if (canViewAllProductivity()) return goals;
   return goals.filter(g => g.tipo === "Global" || g.vendedorId === currentUser?.id);
 }
@@ -1244,12 +1249,18 @@ function sellerOptions(selected = "", includeBlank = false) {
     sellers().map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`).join("");
 }
 
+function goalSellerOptions(selected = "", includeBlank = false) {
+  return `${includeBlank ? `<option value="">Selecione o vendedor</option>` : ""}` +
+    eligibleGoalSellers().map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`).join("");
+}
+
 function eligibleGoalSellers(data = state) {
-  const sellerProfiles = ["Vendedor", "Consultor", "SDR", "Gerente"];
-  const users = (data?.users || []).filter(u => u.ativo !== false);
-  const direct = users.filter(u => sellerProfiles.includes(u.perfil));
-  if (direct.length) return direct;
-  return users.filter(u => ["Vendedor", "Consultor", "SDR", "Gerente", "Administrador"].includes(u.perfil) || norm(u.equipe).includes("comercial") || norm(u.equipe).includes("inside"));
+  // Regra de negócio: meta é exclusiva do time de vendedores.
+  // Perfis de SDR, Marketing, Gerente e Administrador apenas acompanham, sem receber cota.
+  const goalProfiles = ["vendedor", "consultor"];
+  return (data?.users || [])
+    .filter(u => u.ativo !== false)
+    .filter(u => goalProfiles.includes(norm(u.perfil)));
 }
 function campaignName(id) {
   if (!id) return "—";
@@ -1318,9 +1329,14 @@ function syncClosedLeadsIntoSales(data = state, silent = true) {
 function distributeGlobalGoals(data = state) {
   data.goals = Array.isArray(data.goals) ? data.goals : [];
   const sellersList = eligibleGoalSellers(data);
+  const sellerIds = new Set(sellersList.map(u => u.id));
   const globals = data.goals.filter(g => g.tipo === "Global");
+  const globalIds = new Set(globals.map(g => g.id));
+
+  // Remove metas automáticas antigas atribuídas a SDR, Marketing, Gerente, Admin ou metas globais excluídas.
+  data.goals = data.goals.filter(g => !(g.origem === "Distribuída" && (!sellerIds.has(g.vendedorId) || !globalIds.has(g.globalGoalId))));
+
   globals.forEach(globalGoal => {
-    data.goals = data.goals.filter(g => !(g.origem === "Distribuída" && g.globalGoalId === globalGoal.id && !sellersList.some(u => u.id === g.vendedorId)));
     if (!sellersList.length) return;
     const shareImplantacao = (Number(globalGoal.implantacao) || 0) / sellersList.length;
     const shareMensalidade = (Number(globalGoal.mensalidade) || 0) / sellersList.length;
@@ -2070,7 +2086,7 @@ function openGoalModal(id = "") {
     <div class="form-grid">
       <div class="form-group"><label>Tipo de meta</label><select id="gTipo" class="select" onchange="toggleGoalSeller()"><option${goal.tipo === "Global" ? " selected" : ""}>Global</option><option${goal.tipo === "Individual" ? " selected" : ""}>Individual</option></select></div>
       <div class="form-group"><label>Período</label><input id="gPeriodo" class="field" type="month" value="${goal.periodo || monthKey()}"></div>
-      <div class="form-group"><label>Vendedor</label><select id="gVendedor" class="select">${sellerOptions(goal.vendedorId, true)}</select></div>
+      <div class="form-group"><label>Vendedor</label><select id="gVendedor" class="select">${goalSellerOptions(goal.vendedorId, true)}</select></div>
       <div class="form-group"><label>Produto</label><select id="gProduto" class="select">${productOptions(goal.produtoId || "todos", true)}</select></div>
       <div class="form-group"><label>Meta implantação</label><input id="gImplantacao" class="field" type="number" step="0.01" value="${goal.implantacao || 0}"></div>
       <div class="form-group"><label>Meta mensalidade</label><input id="gMensalidade" class="field" type="number" step="0.01" value="${goal.mensalidade || 0}"></div>
@@ -2091,6 +2107,9 @@ function saveGoal(id = "") {
   const tipo = $("gTipo").value;
   const vendedorId = tipo === "Global" ? "" : $("gVendedor").value;
   if (tipo === "Individual" && !vendedorId) return showToast("Selecione o vendedor da meta individual.", "fa-triangle-exclamation");
+  if (tipo === "Individual" && !eligibleGoalSellers().some(u => u.id === vendedorId)) {
+    return showToast("Metas individuais só podem ser atribuídas a vendedores/consultores ativos.", "fa-triangle-exclamation");
+  }
   const data = {
     id: id || uid("g"),
     tipo,
