@@ -295,7 +295,7 @@
             </div>
             <div class="card">
               <div class="card-header">
-                <div><div class="card-title">Forecast por etapa</div><div class="card-subtitle">Valor ponderado por probabilidade</div></div>
+                <div><div class="card-title">Forecast por etapa</div><div class="card-subtitle">Valor integral de implantação por etapa</div></div>
               </div>
               <canvas id="dashboardForecastChart" height="120"></canvas>
             </div>
@@ -362,7 +362,7 @@
           </div>
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Leads abertos com implantação ponderada por probabilidade; mensalidade/MRR fica em coluna separada</div></div>
+              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Leads abertos com valor integral de implantação; probabilidade é apenas indicador</div></div>
               <button class="btn btn-outline" onclick="exportTable('forecast')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Prob.</th><th>Forecast</th><th>Prev. Fechamento</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
@@ -710,7 +710,7 @@ function seedData() {
   ];
 
   return {
-    version: 6,
+    version: 8,
     users,
     products,
     leads,
@@ -1499,28 +1499,41 @@ function sumSales(list) {
   }, { implantacao: 0, mensalidade: 0 });
 }
 function totalGoalForSeller(sellerId, period = monthKey()) {
-  const goals = state.goals.filter(g => g.periodo === period && g.tipo === "Individual" && g.vendedorId === sellerId);
-  const summed = goals.reduce((acc, g) => {
+  return sellerGoalForProductivity(sellerId, period);
+}
+
+function sellerGoalForProductivity(sellerId, period = monthKey()) {
+  // Regra de produtividade:
+  // 1) Se existe meta global no período, a meta do vendedor é a cota distribuída da meta global.
+  // 2) Metas individuais manuais só entram quando não há meta global/distribuída no mês.
+  // Isso evita dobrar a meta quando existe meta global + metas individuais antigas na base.
+  const distributed = state.goals.filter(g =>
+    g.periodo === period &&
+    g.tipo === "Individual" &&
+    g.origem === "Distribuída" &&
+    g.vendedorId === sellerId
+  );
+
+  const source = distributed.length
+    ? distributed
+    : state.goals.filter(g =>
+        g.periodo === period &&
+        g.tipo === "Individual" &&
+        g.origem !== "Distribuída" &&
+        g.vendedorId === sellerId
+      );
+
+  return source.reduce((acc, g) => {
     acc.implantacao += Number(g.implantacao) || 0;
     acc.mensalidade += Number(g.mensalidade) || 0;
     return acc;
   }, { implantacao: 0, mensalidade: 0 });
-
-  // Segurança: caso uma base antiga tenha meta global mas ainda não tenha metas distribuídas.
-  if (!goals.length) {
-    const globals = state.goals.filter(g => g.periodo === period && g.tipo === "Global");
-    const sellersCount = Math.max(eligibleGoalSellers().length, 1);
-    globals.forEach(g => {
-      summed.implantacao += (Number(g.implantacao) || 0) / sellersCount;
-      summed.mensalidade += (Number(g.mensalidade) || 0) / sellersCount;
-    });
-  }
-
-  return summed;
 }
 function goalPct(done, goal) {
-  const target = (Number(goal.implantacao) || 0) + (Number(goal.mensalidade) || 0);
-  const realized = (Number(done.implantacao) || 0) + (Number(done.mensalidade) || 0);
+  // Atingimento comercial principal é calculado pela implantação.
+  // Mensalidade/MRR permanece separada para não distorcer meta, realizado e falta atingir.
+  const target = Number(goal.implantacao) || 0;
+  const realized = Number(done.implantacao) || 0;
   return target > 0 ? Math.round((realized / target) * 100) : 0;
 }
 function progressBar(pct) {
@@ -1531,9 +1544,14 @@ function openLeads() {
   return state.leads.filter(l => l.status !== "Fechado" && l.status !== "Perdido");
 }
 function forecastValue(lead) {
-  // Forecast financeiro de implantação: mensalidade/MRR é calculada separadamente.
-  // Isso evita somar ou descontar mensalidade do valor de implantação informado pelo vendedor.
-  return (Number(lead.implantacao) || 0) * ((Number(lead.probabilidade) || 0) / 100);
+  // Forecast de implantação sempre usa o valor integral informado no lead.
+  // A probabilidade fica apenas como indicador de chance, não como desconto financeiro.
+  return Number(lead.implantacao) || 0;
+}
+
+function forecastMrrValue(lead) {
+  // MRR/mensalidade também é apresentado integralmente, separado da implantação.
+  return Number(lead.mensalidade) || 0;
 }
 
 // =============== RENDER ===============
@@ -1571,13 +1589,16 @@ function renderDashboard() {
   const period = monthKey();
   const globalGoal = state.goals.find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
   const done = sumSales(salesInMonth(period));
-  const realized = done.implantacao + done.mensalidade;
-  const target = Number(globalGoal.implantacao || 0) + Number(globalGoal.mensalidade || 0);
-  drawChart("dashboardGoalChart", "doughnut", ["Realizado", "A realizar"], [realized, Math.max(target - realized, 0)]);
+
+  // Gráfico global considera implantação como métrica principal.
+  // Mensalidade/MRR fica separada nos cards e tabelas.
+  const realized = Number(done.implantacao) || 0;
+  const target = Number(globalGoal.implantacao || 0);
+  drawChart("dashboardGoalChart", "doughnut", ["Realizado", "Falta atingir"], [realized, Math.max(target - realized, 0)]);
 
   const stages = PIPELINE.filter(p => p.nome !== "Perdido").map(p => p.nome);
-  const weightedByStage = stages.map(stage => openLeads().filter(l => l.pipeline === stage).reduce((sum, l) => sum + forecastValue(l), 0));
-  drawChart("dashboardForecastChart", "bar", stages, weightedByStage);
+  const forecastByStage = stages.map(stage => openLeads().filter(l => l.pipeline === stage).reduce((sum, l) => sum + forecastValue(l), 0));
+  drawChart("dashboardForecastChart", "bar", stages, forecastByStage);
 
   $("dashboardProdutividade").innerHTML = productivityRows().slice(0, 8).join("") || `<tr><td class="empty" colspan="10">Cadastre vendedores em Usuários para visualizar produtividade.</td></tr>`;
 }
@@ -1668,11 +1689,11 @@ function renderSales() {
 function renderForecast() {
   const leads = openLeads().sort((a,b) => forecastValue(b) - forecastValue(a));
   const totalOpen = leads.reduce((s,l) => s + (Number(l.implantacao) || 0), 0);
-  const weighted = leads.reduce((s,l) => s + forecastValue(l), 0);
-  const mrr = leads.reduce((s,l) => s + (Number(l.mensalidade || 0) * ((Number(l.probabilidade) || 0) / 100)), 0);
+  const forecastTotal = leads.reduce((s,l) => s + forecastValue(l), 0);
+  const mrr = leads.reduce((s,l) => s + forecastMrrValue(l), 0);
   const avg = leads.length ? Math.round(leads.reduce((s,l) => s + Number(l.probabilidade || 0), 0) / leads.length) : 0;
 
-  $("forecastWeighted").textContent = money(weighted);
+  $("forecastWeighted").textContent = money(forecastTotal);
   $("forecastOpen").textContent = money(totalOpen);
   $("forecastMrr").textContent = money(mrr);
   $("forecastAvgProb").textContent = `${avg}%`;
@@ -1686,7 +1707,7 @@ function renderForecast() {
       <td>${money(l.mensalidade)}</td>
       <td>${stageTag(l.pipeline)}</td>
       <td>${l.probabilidade || 0}%</td>
-      <td><strong>${money(forecastValue(l))}</strong></td>
+      <td><strong>${money(forecastValue(l))}</strong><br><small>valor integral</small></td>
       <td>${formatDate(l.previsaoFechamento)}</td>
     </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhuma oportunidade aberta para forecast.</td></tr>`;
 }
@@ -1699,21 +1720,21 @@ function renderGoals() {
   });
   $("goalsTable").innerHTML = goals.map(g => {
     const done = sumSales(salesForGoal(g));
-    const target = { implantacao: g.implantacao, mensalidade: g.mensalidade };
+    const target = { implantacao: Number(g.implantacao) || 0, mensalidade: Number(g.mensalidade) || 0 };
     const pct = goalPct(done, target);
     const falta = {
-      implantacao: Math.max((g.implantacao || 0) - done.implantacao, 0),
-      mensalidade: Math.max((g.mensalidade || 0) - done.mensalidade, 0)
+      implantacao: Math.max(target.implantacao - done.implantacao, 0),
+      mensalidade: Math.max(target.mensalidade - done.mensalidade, 0)
     };
     const tipoLabel = g.origem === "Distribuída" ? "Individual auto" : g.tipo;
     return `<tr>
       <td>${statusTag(tipoLabel)}</td>
       <td>${g.tipo === "Global" ? "Todos" : escapeHTML(userName(g.vendedorId))}</td>
       <td>${escapeHTML(productName(g.produtoId))}</td>
-      <td>${money(g.implantacao)}</td>
-      <td>${money(g.mensalidade)}</td>
+      <td>${money(target.implantacao)}</td>
+      <td>${money(target.mensalidade)}</td>
       <td>${money(done.implantacao)}<br><small>MRR: ${money(done.mensalidade)}</small></td>
-      <td>${progressBar(pct)}</td>
+      <td>${progressBar(pct)}<small>sobre implantação</small></td>
       <td>${money(falta.implantacao)}<br><small>MRR: ${money(falta.mensalidade)}</small></td>
       <td>
         ${g.origem === "Distribuída" ? `<span class="tag tag-info">da meta global</span>` : `<button class="btn btn-outline btn-sm" onclick="openGoalModal('${g.id}')"><i class="fa-solid fa-pen"></i></button>
@@ -1733,7 +1754,8 @@ function productivityRows(period = monthKey()) {
     const done = sumSales(monthSales);
     const goal = totalGoalForSeller(u.id, period);
     const pct = goalPct(done, goal);
-    const faltaTotal = Math.max((goal.implantacao + goal.mensalidade) - (done.implantacao + done.mensalidade), 0);
+    const faltaImplantacao = Math.max((Number(goal.implantacao) || 0) - (Number(done.implantacao) || 0), 0);
+    const faltaMensalidade = Math.max((Number(goal.mensalidade) || 0) - (Number(done.mensalidade) || 0), 0);
     const conversion = leadsMes.length ? Math.round((monthSales.length / leadsMes.length) * 100) : 0;
     return `<tr>
       <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
@@ -1744,8 +1766,8 @@ function productivityRows(period = monthKey()) {
       <td>${money(done.implantacao)}</td>
       <td>${money(done.mensalidade)}</td>
       <td>${money(goal.implantacao)}<br><small>MRR: ${money(goal.mensalidade)}</small></td>
-      <td>${progressBar(pct)}</td>
-      <td>${money(faltaTotal)}</td>
+      <td>${progressBar(pct)}<small>sobre implantação</small></td>
+      <td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td>
     </tr>`;
   });
 }
