@@ -339,9 +339,15 @@
         </section>
 
         <section id="page-vendas" class="page">
+          <div class="grid stats-grid">
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-handshake"></i></div><div id="salesClosedCount" class="stat-value">0</div><div class="stat-label">Pedidos fechados no período</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-sack-dollar"></i></div><div id="salesClosedImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Implantação fechada</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-repeat"></i></div><div id="salesClosedMrr" class="stat-value">R$ 0</div><div class="stat-label">Mensalidade fechada</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-chart-line"></i></div><div id="salesAvgTicket" class="stat-value">R$ 0</div><div class="stat-label">Ticket médio de implantação</div></div>
+          </div>
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Gestão de Vendas</div><div class="card-subtitle">Visão da jornada do lead: prospecção, pipeline, fechamento, receita e produtividade</div></div>
+              <div><div class="card-title">Gestão de Pedidos / Vendas</div><div class="card-subtitle">Dados gerais de fechamento, origem, produto, vendedor e receita do pedido</div></div>
               <button class="btn btn-primary" onclick="openSaleModal()"><i class="fa-solid fa-plus"></i> Nova Venda</button>
             </div>
             <div class="toolbar">
@@ -349,23 +355,59 @@
               <button class="btn btn-muted" onclick="syncClosedLeadsIntoSales(state, false);renderAll()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar leads fechados</button>
               <button class="btn btn-outline" onclick="exportTable('sales')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Cliente / Lead</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Prospecção</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
           </div>
         </section>
 
         <section id="page-forecast" class="page">
           <div class="grid stats-grid">
-            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-scale-balanced"></i></div><div id="forecastWeighted" class="stat-value">R$ 0</div><div class="stat-label">Forecast implantação ponderado</div></div>
-            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-file-invoice-dollar"></i></div><div id="forecastOpen" class="stat-value">R$ 0</div><div class="stat-label">Implantação aberta</div></div>
-            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div><div id="forecastMrr" class="stat-value">R$ 0</div><div class="stat-label">MRR previsto</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-calendar-check"></i></div><div id="forecastWeighted" class="stat-value">R$ 0</div><div class="stat-label">Implantação prevista no filtro</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-file-invoice-dollar"></i></div><div id="forecastOpen" class="stat-value">R$ 0</div><div class="stat-label">Implantação aberta total</div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div><div id="forecastMrr" class="stat-value">R$ 0</div><div class="stat-label">Mensalidade prevista no filtro</div></div>
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-percent"></i></div><div id="forecastAvgProb" class="stat-value">0%</div><div class="stat-label">Probabilidade média</div></div>
           </div>
+
+          <div class="grid stats-grid">
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-check-double"></i></div><div id="forecastPrevWeekDone" class="stat-value">R$ 0</div><div class="stat-label">Realizado na semana anterior</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-calendar-week"></i></div><div id="forecastCurrentWeekPredicted" class="stat-value">R$ 0</div><div class="stat-label">Previsto para semana atual</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-repeat"></i></div><div id="forecastCurrentWeekMrr" class="stat-value">R$ 0</div><div class="stat-label">Mensalidade prevista semana atual</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-scale-balanced"></i></div><div id="forecastWeekGap" class="stat-value">R$ 0</div><div class="stat-label">Diferença previsto × realizado</div></div>
+          </div>
+
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Leads abertos com valor integral de implantação; probabilidade é apenas indicador</div></div>
+              <div><div class="card-title">Filtros do Forecast</div><div class="card-subtitle">Separe o relatório por dia, semana ou mês usando a previsão de fechamento</div></div>
               <button class="btn btn-outline" onclick="exportTable('forecast')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Prob.</th><th>Forecast</th><th>Prev. Fechamento</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
+            <div class="toolbar">
+              <select id="forecastPeriodMode" class="select" style="max-width:180px" onchange="updateForecastDateInput();renderForecast()">
+                <option value="week">Semana</option>
+                <option value="month">Mês</option>
+                <option value="day">Dia</option>
+                <option value="all">Todos</option>
+              </select>
+              <span id="forecastDateSlot"></span>
+              <select id="forecastSellerFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
+              <select id="forecastProductFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
+              <select id="forecastStageFilter" class="select" style="max-width:220px" onchange="renderForecast()">
+                <option value="">Todas as etapas</option>
+                <option>Captação</option><option>Agendamento</option><option>Apresentação</option><option>Negociação</option><option>Fechamento</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Forecast por vendedor</div><div class="card-subtitle">Compara realizado na semana anterior com previsto para a semana atual</div></div>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Leads no filtro</th><th>Previsto filtro</th><th>Mensalidade filtro</th><th>Prob. média</th><th>Realizado semana anterior</th><th>Previsto semana atual</th><th>MRR semana atual</th></tr></thead><tbody id="forecastSellerTable"></tbody></table></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Valores integrais de implantação e mensalidade; probabilidade não altera o valor financeiro</div></div>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Data prevista</th><th>Cliente</th><th>Cidade</th><th>Estado</th><th>Produto</th><th>Etapa</th><th>Prob.</th><th>Valor previsto fechamento</th><th>Mensalidade prevista</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
           </div>
         </section>
 
@@ -471,8 +513,12 @@
         <section id="page-produtos" class="page">
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Produtos</div><div class="card-subtitle">Produtos comercializados, implantação e mensalidade padrão</div></div>
+              <div><div class="card-title">Produtos</div><div class="card-subtitle">Produtos comercializados por categoria, implantação e mensalidade padrão</div></div>
               <button class="btn btn-primary" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Novo Produto</button>
+            </div>
+            <div class="toolbar">
+              <input id="productSearch" class="field" placeholder="Filtro geral: produto ou categoria..." oninput="renderProducts()" />
+              <select id="productCategoryFilter" class="select" style="max-width:240px" onchange="renderProducts()"></select>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Implantação</th><th>Mensalidade</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="productsTable"></tbody></table></div>
           </div>
@@ -1330,21 +1376,20 @@ function distributeGlobalGoals(data = state) {
   data.goals = Array.isArray(data.goals) ? data.goals : [];
   const sellersList = eligibleGoalSellers(data);
   const sellerIds = new Set(sellersList.map(u => u.id));
-  const globals = data.goals.filter(g => g.tipo === "Global");
-  const globalIds = new Set(globals.map(g => g.id));
 
-  // Remove metas automáticas antigas atribuídas a SDR, Marketing, Gerente, Admin ou metas globais excluídas.
-  data.goals = data.goals.filter(g => !(g.origem === "Distribuída" && (!sellerIds.has(g.vendedorId) || !globalIds.has(g.globalGoalId))));
+  // Recria as metas automáticas a cada renderização.
+  // Isso evita meta duplicada ou distribuída com quantidade antiga de vendedores.
+  const globals = data.goals.filter(g => g.tipo === "Global");
+  data.goals = data.goals.filter(g => g.origem !== "Distribuída");
 
   globals.forEach(globalGoal => {
     if (!sellersList.length) return;
     const shareImplantacao = (Number(globalGoal.implantacao) || 0) / sellersList.length;
     const shareMensalidade = (Number(globalGoal.mensalidade) || 0) / sellersList.length;
+
     sellersList.forEach(seller => {
-      const id = `${globalGoal.id}_${seller.id}_auto`;
-      const existing = data.goals.find(g => g.id === id || (g.origem === "Distribuída" && g.globalGoalId === globalGoal.id && g.vendedorId === seller.id));
-      const row = {
-        id,
+      data.goals.push({
+        id: `${globalGoal.id}_${seller.id}_auto`,
         tipo: "Individual",
         vendedorId: seller.id,
         produtoId: globalGoal.produtoId || "todos",
@@ -1353,11 +1398,12 @@ function distributeGlobalGoals(data = state) {
         mensalidade: shareMensalidade,
         origem: "Distribuída",
         globalGoalId: globalGoal.id
-      };
-      if (existing) Object.assign(existing, row);
-      else data.goals.push(row);
+      });
     });
   });
+
+  // Segurança extra: mantém metas automáticas apenas para vendedores/consultores ativos.
+  data.goals = data.goals.filter(g => !(g.origem === "Distribuída" && !sellerIds.has(g.vendedorId)));
 }
 function lostLeads() {
   return state.leads.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
@@ -1390,7 +1436,12 @@ function fillEmailProductFilter() {
   select.innerHTML = `<option value="todos">Todos os produtos</option>${productOptions("", false)}`;
 }
 function populateMonthFilters() {
-  const values = new Set([monthKey(), ...state.goals.map(g => g.periodo), ...state.sales.map(s => monthKey(`${s.dataVenda}T00:00:00`))]);
+  const values = new Set([monthKey()]);
+  (state.goals || []).forEach(g => { if (g.periodo) values.add(g.periodo); });
+  (state.sales || []).forEach(s => {
+    const d = s.dataVenda || s.createdAt || todayISO();
+    try { values.add(monthKey(String(d).includes("T") ? d : `${d}T00:00:00`)); } catch (e) {}
+  });
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
   ["goalMonthFilter", "saleMonthFilter"].forEach(id => { if ($(id)) $(id).innerHTML = opts; });
 }
@@ -1503,27 +1554,37 @@ function totalGoalForSeller(sellerId, period = monthKey()) {
 }
 
 function sellerGoalForProductivity(sellerId, period = monthKey()) {
-  // Regra de produtividade:
-  // 1) Se existe meta global no período, a meta do vendedor é a cota distribuída da meta global.
-  // 2) Metas individuais manuais só entram quando não há meta global/distribuída no mês.
-  // Isso evita dobrar a meta quando existe meta global + metas individuais antigas na base.
-  const distributed = state.goals.filter(g =>
+  // Regra única de produtividade:
+  // - Se existir meta global no período, a meta do vendedor é a divisão do TOTAL global
+  //   entre os vendedores/consultores ativos, considerando todos os produtos juntos.
+  // - Metas individuais manuais só entram quando não existir meta global no mês.
+  const activeSellerCount = Math.max(eligibleGoalSellers().length, 1);
+  const globalGoals = state.goals.filter(g =>
+    g.periodo === period &&
+    g.tipo === "Global"
+  );
+
+  if (globalGoals.length) {
+    const totalGlobal = globalGoals.reduce((acc, g) => {
+      acc.implantacao += Number(g.implantacao) || 0;
+      acc.mensalidade += Number(g.mensalidade) || 0;
+      return acc;
+    }, { implantacao: 0, mensalidade: 0 });
+
+    return {
+      implantacao: totalGlobal.implantacao / activeSellerCount,
+      mensalidade: totalGlobal.mensalidade / activeSellerCount
+    };
+  }
+
+  const manualGoals = state.goals.filter(g =>
     g.periodo === period &&
     g.tipo === "Individual" &&
-    g.origem === "Distribuída" &&
+    g.origem !== "Distribuída" &&
     g.vendedorId === sellerId
   );
 
-  const source = distributed.length
-    ? distributed
-    : state.goals.filter(g =>
-        g.periodo === period &&
-        g.tipo === "Individual" &&
-        g.origem !== "Distribuída" &&
-        g.vendedorId === sellerId
-      );
-
-  return source.reduce((acc, g) => {
+  return manualGoals.reduce((acc, g) => {
     acc.implantacao += Number(g.implantacao) || 0;
     acc.mensalidade += Number(g.mensalidade) || 0;
     return acc;
@@ -1554,12 +1615,157 @@ function forecastMrrValue(lead) {
   return Number(lead.mensalidade) || 0;
 }
 
+function isoDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+function safeDate(value, fallback = new Date()) {
+  const d = value ? new Date(String(value).includes("T") ? value : `${value}T00:00:00`) : fallback;
+  return Number.isNaN(d.getTime()) ? fallback : d;
+}
+function startOfWeek(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay(); // domingo = 0
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function forecastReferenceDate() {
+  const mode = $("forecastPeriodMode")?.value || "week";
+  const input = $("forecastDateFilter");
+  if (mode === "month") {
+    const raw = input?.value || monthKey();
+    return safeDate(`${raw}-01`, new Date());
+  }
+  return safeDate(input?.value || todayISO(), new Date());
+}
+function forecastRange(mode = $("forecastPeriodMode")?.value || "week", ref = forecastReferenceDate()) {
+  if (mode === "all") return { start: "", end: "", label: "Todos" };
+
+  const d = safeDate(ref, new Date());
+  if (mode === "day") {
+    const day = isoDate(d);
+    return { start: day, end: day, label: formatDate(day) };
+  }
+
+  if (mode === "month") {
+    const start = new Date(d.getFullYear(), d.getMonth(), 1);
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return { start: isoDate(start), end: isoDate(end), label: `${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}` };
+  }
+
+  const start = startOfWeek(d);
+  const end = addDays(start, 6);
+  return { start: isoDate(start), end: isoDate(end), label: `${formatDate(isoDate(start))} a ${formatDate(isoDate(end))}` };
+}
+function inDateRange(dateValue, range) {
+  if (!range?.start || !range?.end) return true;
+  const d = String(dateValue || "").slice(0, 10);
+  if (!d) return false;
+  return d >= range.start && d <= range.end;
+}
+function updateForecastDateInput() {
+  const slot = $("forecastDateSlot");
+  if (!slot) return;
+  const mode = $("forecastPeriodMode")?.value || "week";
+  if (mode === "all") {
+    slot.innerHTML = "";
+    return;
+  }
+  const type = mode === "month" ? "month" : "date";
+  const value = mode === "month" ? monthKey() : todayISO();
+  const label = mode === "day" ? "Dia" : mode === "month" ? "Mês" : "Semana de referência";
+  slot.innerHTML = `<input id="forecastDateFilter" class="field" type="${type}" value="${value}" title="${label}" onchange="renderForecast()" style="max-width:190px" />`;
+}
+function populateForecastFilters() {
+  const seller = $("forecastSellerFilter");
+  if (seller) {
+    const selected = seller.value || "";
+    const sellersList = canViewAllProductivity() ? eligibleGoalSellers() : productivitySellers();
+    seller.innerHTML = `<option value="">Todos os vendedores</option>` + sellersList.map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`).join("");
+  }
+
+  const product = $("forecastProductFilter");
+  if (product) {
+    const selected = product.value || "";
+    product.innerHTML = `<option value="">Todos os produtos</option>` + activeProducts().map(p => `<option value="${p.id}"${selected === p.id ? " selected" : ""}>${escapeHTML(p.nome)}</option>`).join("");
+  }
+
+  if ($("forecastPeriodMode") && !$("forecastDateFilter") && $("forecastPeriodMode").value !== "all") {
+    updateForecastDateInput();
+  }
+}
+function forecastFilteredLeads() {
+  const mode = $("forecastPeriodMode")?.value || "week";
+  const range = forecastRange(mode);
+  const seller = $("forecastSellerFilter")?.value || "";
+  const product = $("forecastProductFilter")?.value || "";
+  const stage = $("forecastStageFilter")?.value || "";
+
+  return openLeads()
+    .filter(l => inDateRange(l.previsaoFechamento, range))
+    .filter(l => !seller || l.vendedorId === seller)
+    .filter(l => !product || l.produtoId === product)
+    .filter(l => !stage || l.pipeline === stage);
+}
+function currentWeekForecastLeads() {
+  const range = forecastRange("week", new Date());
+  return openLeads().filter(l => inDateRange(l.previsaoFechamento, range));
+}
+function previousWeekSales() {
+  const start = addDays(startOfWeek(new Date()), -7);
+  const end = addDays(start, 6);
+  const range = { start: isoDate(start), end: isoDate(end) };
+  return state.sales.filter(s => s.status !== "Cancelada" && inDateRange(s.dataVenda, range));
+}
+function forecastSellerRows(filteredLeads) {
+  const currentWeekLeads = currentWeekForecastLeads();
+  const lastWeekSales = previousWeekSales();
+
+  return productivitySellers().map(u => {
+    const sellerLeads = filteredLeads.filter(l => l.vendedorId === u.id);
+    const sellerWeekLeads = currentWeekLeads.filter(l => l.vendedorId === u.id);
+    const sellerLastSales = lastWeekSales.filter(s => s.vendedorId === u.id);
+    const forecast = sellerLeads.reduce((s,l) => s + forecastValue(l), 0);
+    const mrr = sellerLeads.reduce((s,l) => s + forecastMrrValue(l), 0);
+    const avg = sellerLeads.length ? Math.round(sellerLeads.reduce((s,l) => s + Number(l.probabilidade || 0), 0) / sellerLeads.length) : 0;
+    const doneLastWeek = sumSales(sellerLastSales);
+    const plannedWeek = sellerWeekLeads.reduce((s,l) => s + forecastValue(l), 0);
+    const plannedMrrWeek = sellerWeekLeads.reduce((s,l) => s + forecastMrrValue(l), 0);
+    return `<tr>
+      <td><strong>${escapeHTML(u.nome)}</strong></td>
+      <td>${sellerLeads.length}</td>
+      <td>${money(forecast)}</td>
+      <td>${money(mrr)}</td>
+      <td>${avg}%</td>
+      <td>${money(doneLastWeek.implantacao)}</td>
+      <td>${money(plannedWeek)}</td>
+      <td>${money(plannedMrrWeek)}</td>
+    </tr>`;
+  }).join("");
+}
+function populateProductCategoryFilter() {
+  const select = $("productCategoryFilter");
+  if (!select) return;
+  const selected = select.value || "";
+  const categories = [...new Set(state.products.map(p => p.categoria || "Sem categoria"))].sort((a,b) => a.localeCompare(b));
+  select.innerHTML = `<option value="">Todas as categorias</option>` + categories.map(c => `<option value="${escapeHTML(c)}"${selected === c ? " selected" : ""}>${escapeHTML(c)}</option>`).join("");
+}
+
 // =============== RENDER ===============
 function renderAll() {
   if (!currentUser) return;
   syncClosedLeadsIntoSales(state, true);
   distributeGlobalGoals(state);
   populateMonthFilters();
+  populateForecastFilters();
+  populateProductCategoryFilter();
   fillEmailProductFilter();
   loadEmailConfigIntoForm();
   renderDashboard();
@@ -1661,55 +1867,86 @@ function renderSales() {
     .filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period)
     .sort((a,b) => String(b.dataVenda).localeCompare(String(a.dataVenda)));
 
+  const activeRows = rows.filter(s => s.status !== "Cancelada");
+  const totals = sumSales(activeRows);
+  const avgTicket = activeRows.length ? totals.implantacao / activeRows.length : 0;
+  if ($("salesClosedCount")) $("salesClosedCount").textContent = activeRows.length;
+  if ($("salesClosedImplantacao")) $("salesClosedImplantacao").textContent = money(totals.implantacao);
+  if ($("salesClosedMrr")) $("salesClosedMrr").textContent = money(totals.mensalidade);
+  if ($("salesAvgTicket")) $("salesAvgTicket").textContent = money(avgTicket);
+
   $("salesTable").innerHTML = rows.map(s => {
     const life = saleLifecycleRow(s);
     const lead = life.lead;
     const origem = s.origem || lead?.origem || campaignName(s.campaignId || lead?.campaignId) || "Manual";
+    const pedido = `PED-${String(s.id || "").slice(-6).toUpperCase()}`;
     return `
     <tr>
-      <td><strong>${escapeHTML(s.cliente)}</strong><br><small>${lead ? `Lead: ${escapeHTML(lead.contato || lead.empresa)}` : "Venda manual"}</small></td>
+      <td><strong>${escapeHTML(pedido)}</strong><br><small>${escapeHTML(s.cliente || lead?.empresa || "Cliente não informado")}</small></td>
       <td>${escapeHTML(origem)}</td>
       <td>${escapeHTML(productName(s.produtoId))}</td>
       <td>${escapeHTML(userName(s.vendedorId))}</td>
-      <td>${formatDate(life.created)}</td>
-      <td>${formatDate(life.closed)}</td>
+      <td>${formatDate(life.closed || s.dataVenda)}</td>
       <td>${escapeHTML(life.cycle)}</td>
       <td>${money(s.implantacao)}</td>
       <td>${money(s.mensalidade)}</td>
       <td>${statusTag(s.status)}</td>
       <td>
         ${lead ? `<button class="btn btn-muted btn-sm" onclick="openLeadModal('${lead.id}')" title="Ver lead"><i class="fa-solid fa-user"></i></button>` : ""}
-        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')" title="Editar pedido"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="11">Nenhuma venda no período selecionado.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="10">Nenhuma venda no período selecionado.</td></tr>`;
 }
 
 function renderForecast() {
-  const leads = openLeads().sort((a,b) => forecastValue(b) - forecastValue(a));
-  const totalOpen = leads.reduce((s,l) => s + (Number(l.implantacao) || 0), 0);
-  const forecastTotal = leads.reduce((s,l) => s + forecastValue(l), 0);
-  const mrr = leads.reduce((s,l) => s + forecastMrrValue(l), 0);
-  const avg = leads.length ? Math.round(leads.reduce((s,l) => s + Number(l.probabilidade || 0), 0) / leads.length) : 0;
+  populateForecastFilters();
+
+  const filtered = forecastFilteredLeads().sort((a,b) => {
+    const dateCmp = String(a.previsaoFechamento || "9999-12-31").localeCompare(String(b.previsaoFechamento || "9999-12-31"));
+    if (dateCmp !== 0) return dateCmp;
+    return forecastValue(b) - forecastValue(a);
+  });
+
+  const allOpen = openLeads();
+  const totalOpen = allOpen.reduce((s,l) => s + forecastValue(l), 0);
+  const forecastTotal = filtered.reduce((s,l) => s + forecastValue(l), 0);
+  const mrr = filtered.reduce((s,l) => s + forecastMrrValue(l), 0);
+  const avg = filtered.length ? Math.round(filtered.reduce((s,l) => s + Number(l.probabilidade || 0), 0) / filtered.length) : 0;
+
+  const lastWeekDone = sumSales(previousWeekSales());
+  const weekLeads = currentWeekForecastLeads();
+  const currentWeekPredicted = weekLeads.reduce((s,l) => s + forecastValue(l), 0);
+  const currentWeekMrr = weekLeads.reduce((s,l) => s + forecastMrrValue(l), 0);
+  const gap = currentWeekPredicted - lastWeekDone.implantacao;
 
   $("forecastWeighted").textContent = money(forecastTotal);
   $("forecastOpen").textContent = money(totalOpen);
   $("forecastMrr").textContent = money(mrr);
   $("forecastAvgProb").textContent = `${avg}%`;
+  if ($("forecastPrevWeekDone")) $("forecastPrevWeekDone").textContent = money(lastWeekDone.implantacao);
+  if ($("forecastCurrentWeekPredicted")) $("forecastCurrentWeekPredicted").textContent = money(currentWeekPredicted);
+  if ($("forecastCurrentWeekMrr")) $("forecastCurrentWeekMrr").textContent = money(currentWeekMrr);
+  if ($("forecastWeekGap")) $("forecastWeekGap").textContent = money(gap);
 
-  $("forecastTable").innerHTML = leads.map(l => `
+  if ($("forecastSellerTable")) {
+    $("forecastSellerTable").innerHTML = forecastSellerRows(filtered) || `<tr><td class="empty" colspan="8">Nenhum vendedor ativo para exibir.</td></tr>`;
+  }
+
+  $("forecastTable").innerHTML = filtered.map(l => `
     <tr>
       <td>${escapeHTML(userName(l.vendedorId))}</td>
-      <td><strong>${escapeHTML(l.empresa)}</strong></td>
+      <td>${formatDate(l.previsaoFechamento)}</td>
+      <td><strong>${escapeHTML(l.empresa)}</strong><br><small>${escapeHTML(l.contato || "")}</small></td>
+      <td>${escapeHTML(l.cidade || "—")}</td>
+      <td>${escapeHTML(l.uf || "—")}</td>
       <td>${escapeHTML(productName(l.produtoId))}</td>
-      <td>${money(l.implantacao)}</td>
-      <td>${money(l.mensalidade)}</td>
       <td>${stageTag(l.pipeline)}</td>
       <td>${l.probabilidade || 0}%</td>
-      <td><strong>${money(forecastValue(l))}</strong><br><small>valor integral</small></td>
-      <td>${formatDate(l.previsaoFechamento)}</td>
-    </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhuma oportunidade aberta para forecast.</td></tr>`;
+      <td><strong>${money(forecastValue(l))}</strong></td>
+      <td><strong>${money(forecastMrrValue(l))}</strong></td>
+    </tr>`).join("") || `<tr><td class="empty" colspan="10">Nenhuma oportunidade aberta no filtro selecionado.</td></tr>`;
 }
 
 function renderGoals() {
@@ -1747,7 +1984,7 @@ function renderGoals() {
 }
 
 function productivityRows(period = monthKey()) {
-  return productivitySellers().map(u => {
+  const rows = productivitySellers().map(u => {
     const monthSales = salesInMonth(period).filter(s => s.vendedorId === u.id);
     const leadsMes = state.leads.filter(l => l.vendedorId === u.id && monthKey(l.createdAt || todayISO()) === period);
     const perdidosMes = leadsMes.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
@@ -1757,19 +1994,62 @@ function productivityRows(period = monthKey()) {
     const faltaImplantacao = Math.max((Number(goal.implantacao) || 0) - (Number(done.implantacao) || 0), 0);
     const faltaMensalidade = Math.max((Number(goal.mensalidade) || 0) - (Number(done.mensalidade) || 0), 0);
     const conversion = leadsMes.length ? Math.round((monthSales.length / leadsMes.length) * 100) : 0;
-    return `<tr>
-      <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
-      <td>${leadsMes.length}</td>
-      <td>${perdidosMes.length}</td>
-      <td>${monthSales.length}</td>
-      <td>${conversion}%</td>
-      <td>${money(done.implantacao)}</td>
-      <td>${money(done.mensalidade)}</td>
-      <td>${money(goal.implantacao)}<br><small>MRR: ${money(goal.mensalidade)}</small></td>
-      <td>${progressBar(pct)}<small>sobre implantação</small></td>
-      <td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td>
-    </tr>`;
+    return {
+      html: `<tr>
+        <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
+        <td>${leadsMes.length}</td>
+        <td>${perdidosMes.length}</td>
+        <td>${monthSales.length}</td>
+        <td>${conversion}%</td>
+        <td>${money(done.implantacao)}</td>
+        <td>${money(done.mensalidade)}</td>
+        <td>${money(goal.implantacao)}<br><small>MRR: ${money(goal.mensalidade)}</small></td>
+        <td>${progressBar(pct)}<small>sobre implantação</small></td>
+        <td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td>
+      </tr>`,
+      leads: leadsMes.length,
+      lost: perdidosMes.length,
+      sales: monthSales.length,
+      done,
+      goal,
+      falta: { implantacao: faltaImplantacao, mensalidade: faltaMensalidade }
+    };
   });
+
+  if (rows.length > 1 && canViewAllProductivity()) {
+    const totals = rows.reduce((acc, r) => {
+      acc.leads += r.leads;
+      acc.lost += r.lost;
+      acc.sales += r.sales;
+      acc.done.implantacao += r.done.implantacao;
+      acc.done.mensalidade += r.done.mensalidade;
+      acc.goal.implantacao += r.goal.implantacao;
+      acc.goal.mensalidade += r.goal.mensalidade;
+      return acc;
+    }, { leads: 0, lost: 0, sales: 0, done: { implantacao: 0, mensalidade: 0 }, goal: { implantacao: 0, mensalidade: 0 } });
+
+    const pctTotal = goalPct(totals.done, totals.goal);
+    const faltaImplantacao = Math.max(totals.goal.implantacao - totals.done.implantacao, 0);
+    const faltaMensalidade = Math.max(totals.goal.mensalidade - totals.done.mensalidade, 0);
+    const convTotal = totals.leads ? Math.round((totals.sales / totals.leads) * 100) : 0;
+
+    rows.push({
+      html: `<tr style="background:#f8fafc;font-weight:900">
+        <td>Total equipe</td>
+        <td>${totals.leads}</td>
+        <td>${totals.lost}</td>
+        <td>${totals.sales}</td>
+        <td>${convTotal}%</td>
+        <td>${money(totals.done.implantacao)}</td>
+        <td>${money(totals.done.mensalidade)}</td>
+        <td>${money(totals.goal.implantacao)}<br><small>MRR: ${money(totals.goal.mensalidade)}</small></td>
+        <td>${progressBar(pctTotal)}<small>sobre implantação</small></td>
+        <td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td>
+      </tr>`
+    });
+  }
+
+  return rows.map(r => r.html);
 }
 
 function renderLandingPages() {
@@ -1803,10 +2083,25 @@ function renderEmailHistory() {
 }
 
 function renderProducts() {
-  $("productsTable").innerHTML = state.products.map(p => `
+  populateProductCategoryFilter();
+  const q = norm($("productSearch")?.value || "");
+  const category = $("productCategoryFilter")?.value || "";
+  const rows = state.products
+    .filter(p => !q || norm(`${p.nome} ${p.categoria}`).includes(q))
+    .filter(p => !category || (p.categoria || "Sem categoria") === category)
+    .sort((a,b) => String(a.categoria || "Sem categoria").localeCompare(String(b.categoria || "Sem categoria")) || String(a.nome).localeCompare(String(b.nome)));
+
+  let lastCategory = "";
+  $("productsTable").innerHTML = rows.map(p => {
+    const cat = p.categoria || "Sem categoria";
+    const header = (!category && cat !== lastCategory)
+      ? `<tr style="background:#eff6ff"><td colspan="6"><strong>Categoria: ${escapeHTML(cat)}</strong></td></tr>`
+      : "";
+    lastCategory = cat;
+    return `${header}
     <tr>
       <td><strong>${escapeHTML(p.nome)}</strong></td>
-      <td>${escapeHTML(p.categoria || "—")}</td>
+      <td>${escapeHTML(cat)}</td>
       <td>${money(p.implantacao)}</td>
       <td>${money(p.mensalidade)}</td>
       <td>${statusTag(p.ativo !== false ? "Ativo" : "Inativo")}</td>
@@ -1814,7 +2109,8 @@ function renderProducts() {
         <button class="btn btn-outline btn-sm" onclick="openProductModal('${p.id}')"><i class="fa-solid fa-pen"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')"><i class="fa-solid fa-trash"></i></button>
       </td>
-    </tr>`).join("") || `<tr><td class="empty" colspan="6">Nenhum produto cadastrado.</td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="6">Nenhum produto encontrado no filtro.</td></tr>`;
 }
 
 function renderUsers() {
@@ -2869,7 +3165,20 @@ function exportTable(type) {
     });
     name = "vendas";
   } else if (type === "forecast") {
-    rows = openLeads().map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Campanha: campaignName(l.campaignId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, ForecastImplantacao: forecastValue(l), PrevisaoFechamento: l.previsaoFechamento }));
+    rows = forecastFilteredLeads().map(l => ({
+      Vendedor: userName(l.vendedorId),
+      DataPrevista: l.previsaoFechamento,
+      Cliente: l.empresa,
+      Contato: l.contato || "",
+      Cidade: l.cidade || "",
+      Estado: l.uf || "",
+      Produto: productName(l.produtoId),
+      Campanha: campaignName(l.campaignId),
+      Etapa: l.pipeline,
+      Probabilidade: l.probabilidade,
+      ValorPrevistoFechamento: forecastValue(l),
+      MensalidadePrevista: forecastMrrValue(l)
+    }));
     name = "forecast";
   } else if (type === "goals") {
     rows = state.goals.map(g => ({ Tipo: g.tipo, Origem: g.origem || "Manual", Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, MetaImplantacao: g.implantacao, MetaMensalidade: g.mensalidade }));
