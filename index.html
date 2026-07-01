@@ -231,14 +231,13 @@
       </div>
 
       <div id="authError" class="auth-error"></div>
-      <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" value="admin" />
-      <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" value="1234" />
+      <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" value="" />
+      <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" value="" />
       <button class="btn-auth" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
 
       <div id="authHint" class="auth-hint">
         <strong>Ambiente ativo:</strong> CRM Comercial<br>
-        <strong>Acesso inicial:</strong> admin / 1234<br>
-        Os dados deste ambiente são separados do Portal Revendas em localStorage e Firebase.
+        Informe seu usuário e senha cadastrados para acessar o sistema.
       </div>
     </div>
   </section>
@@ -400,22 +399,16 @@
 
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Filtros do Forecast</div><div class="card-subtitle">Separe o relatório por dia, semana ou mês usando a previsão de fechamento</div></div>
+              <div><div class="card-title">Filtros do Forecast</div><div class="card-subtitle">Relatório mensal: mostra somente oportunidades em Negociação ou Fechamento</div></div>
               <button class="btn btn-outline" onclick="exportTable('forecast')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="toolbar">
-              <select id="forecastPeriodMode" class="select" style="max-width:180px" onchange="updateForecastDateInput();renderForecast()">
-                <option value="week">Semana</option>
-                <option value="month">Mês</option>
-                <option value="day">Dia</option>
-                <option value="all">Todos</option>
-              </select>
-              <span id="forecastDateSlot"></span>
+              <input id="forecastMonthFilter" class="field" type="month" value="" title="Mês do forecast" onchange="renderForecast()" style="max-width:190px" />
               <select id="forecastSellerFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
               <select id="forecastProductFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
               <select id="forecastStageFilter" class="select" style="max-width:220px" onchange="renderForecast()">
-                <option value="">Todas as etapas</option>
-                <option>Captação</option><option>Agendamento</option><option>Apresentação</option><option>Negociação</option><option>Fechamento</option>
+                <option value="">Negociação e Fechamento</option>
+                <option>Negociação</option><option>Fechamento</option>
               </select>
             </div>
           </div>
@@ -819,7 +812,8 @@ function activeRealtimePath(workspace = currentWorkspace) {
   return workspace === "revendas" ? "prospectflow_crm/revendas/database" : FIREBASE_RTDB_PATH;
 }
 function defaultLoginForWorkspace(workspace = currentWorkspace) {
-  return workspace === "revendas" ? { login: "revenda", senha: "1234", hint: "revenda / 1234 ou adminrevenda / 1234" } : { login: "admin", senha: "1234", hint: "admin / 1234" };
+  // Mantido apenas por compatibilidade com versões anteriores; não exibe credenciais na tela.
+  return { login: "", senha: "", hint: "Credenciais cadastradas" };
 }
 function updateWorkspaceUI() {
   const isRevendas = currentWorkspace === "revendas";
@@ -828,12 +822,10 @@ function updateWorkspaceUI() {
   });
   if ($("authTitle")) $("authTitle").textContent = isRevendas ? "Portal Revendas Rensoftware" : "CRM Comercial Rensoftware";
   if ($("authSubtitle")) $("authSubtitle").textContent = workspaceSubtitle();
-  const defaults = defaultLoginForWorkspace();
   if ($("authHint")) {
     $("authHint").innerHTML = `
       <strong>Ambiente ativo:</strong> ${escapeHTML(workspaceLabel())}<br>
-      <strong>Acesso inicial:</strong> ${escapeHTML(defaults.hint)}<br>
-      Os dados deste ambiente são separados do outro portal em localStorage e Firebase.
+      Informe seu usuário e senha cadastrados para acessar o sistema.
     `;
   }
   if ($("sidebarWorkspace")) $("sidebarWorkspace").textContent = workspaceLabel();
@@ -871,9 +863,8 @@ async function selectWorkspace(workspace) {
   currentWorkspace = workspace;
   updateWorkspaceUI();
 
-  const defaults = defaultLoginForWorkspace(workspace);
-  if ($("loginInput")) $("loginInput").value = defaults.login;
-  if ($("passwordInput")) $("passwordInput").value = defaults.senha;
+  if ($("loginInput")) $("loginInput").value = "";
+  if ($("passwordInput")) $("passwordInput").value = "";
 
   if (previous !== workspace) {
     disconnectFirebaseListeners();
@@ -1705,8 +1696,7 @@ async function doLogin() {
   );
 
   if (!user) {
-    const defaults = defaultLoginForWorkspace();
-    showError(`Usuário ou senha inválidos para ${workspaceLabel()}. Acesso inicial: ${defaults.hint}. Se você alterou a senha, entre com a senha cadastrada em Usuários.`);
+    showError(`Usuário ou senha inválidos para ${workspaceLabel()}. Verifique as credenciais cadastradas.`);
     return;
   }
 
@@ -1884,15 +1874,11 @@ function addDays(date, days) {
   return d;
 }
 function forecastReferenceDate() {
-  const mode = $("forecastPeriodMode")?.value || "week";
-  const input = $("forecastDateFilter");
-  if (mode === "month") {
-    const raw = input?.value || monthKey();
-    return safeDate(`${raw}-01`, new Date());
-  }
-  return safeDate(input?.value || todayISO(), new Date());
+  // O forecast principal é mensal: por padrão, mês atual.
+  const raw = $("forecastMonthFilter")?.value || $("forecastDateFilter")?.value || monthKey();
+  return safeDate(`${String(raw).slice(0, 7)}-01`, new Date());
 }
-function forecastRange(mode = $("forecastPeriodMode")?.value || "week", ref = forecastReferenceDate()) {
+function forecastRange(mode = "month", ref = forecastReferenceDate()) {
   if (mode === "all") return { start: "", end: "", label: "Todos" };
 
   const d = safeDate(ref, new Date());
@@ -1918,19 +1904,19 @@ function inDateRange(dateValue, range) {
   return d >= range.start && d <= range.end;
 }
 function updateForecastDateInput() {
+  // Compatibilidade com versões antigas. Nesta versão o filtro visual é mensal.
+  if ($("forecastMonthFilter") && !$("forecastMonthFilter").value) {
+    $("forecastMonthFilter").value = monthKey();
+  }
   const slot = $("forecastDateSlot");
   if (!slot) return;
-  const mode = $("forecastPeriodMode")?.value || "week";
-  if (mode === "all") {
-    slot.innerHTML = "";
-    return;
-  }
-  const type = mode === "month" ? "month" : "date";
-  const value = mode === "month" ? monthKey() : todayISO();
-  const label = mode === "day" ? "Dia" : mode === "month" ? "Mês" : "Semana de referência";
-  slot.innerHTML = `<input id="forecastDateFilter" class="field" type="${type}" value="${value}" title="${label}" onchange="renderForecast()" style="max-width:190px" />`;
+  slot.innerHTML = "";
 }
 function populateForecastFilters() {
+  if ($("forecastMonthFilter") && !$("forecastMonthFilter").value) {
+    $("forecastMonthFilter").value = monthKey();
+  }
+
   const seller = $("forecastSellerFilter");
   if (seller) {
     const selected = seller.value || "";
@@ -1943,27 +1929,32 @@ function populateForecastFilters() {
     const selected = product.value || "";
     product.innerHTML = `<option value="">Todos os produtos</option>` + activeProducts().map(p => `<option value="${p.id}"${selected === p.id ? " selected" : ""}>${escapeHTML(p.nome)}</option>`).join("");
   }
-
-  if ($("forecastPeriodMode") && !$("forecastDateFilter") && $("forecastPeriodMode").value !== "all") {
-    updateForecastDateInput();
-  }
+}
+function isForecastStage(lead) {
+  const stage = String(lead?.pipeline || lead?.status || "").trim().toLowerCase();
+  return stage === "negociação" || stage === "negociacao" || stage === "fechamento";
+}
+function forecastBaseLeads(range = forecastRange("month")) {
+  return openLeads()
+    .filter(l => isForecastStage(l))
+    .filter(l => inDateRange(l.previsaoFechamento, range));
 }
 function forecastFilteredLeads() {
-  const mode = $("forecastPeriodMode")?.value || "week";
-  const range = forecastRange(mode);
+  const range = forecastRange("month");
   const seller = $("forecastSellerFilter")?.value || "";
   const product = $("forecastProductFilter")?.value || "";
   const stage = $("forecastStageFilter")?.value || "";
 
-  return openLeads()
-    .filter(l => inDateRange(l.previsaoFechamento, range))
+  return forecastBaseLeads(range)
     .filter(l => !seller || l.vendedorId === seller)
     .filter(l => !product || l.produtoId === product)
     .filter(l => !stage || l.pipeline === stage);
 }
 function currentWeekForecastLeads() {
   const range = forecastRange("week", new Date());
-  return openLeads().filter(l => inDateRange(l.previsaoFechamento, range));
+  return openLeads()
+    .filter(l => isForecastStage(l))
+    .filter(l => inDateRange(l.previsaoFechamento, range));
 }
 function previousWeekSales() {
   const start = addDays(startOfWeek(new Date()), -7);
@@ -2194,7 +2185,7 @@ function renderForecast() {
     return forecastValue(b) - forecastValue(a);
   });
 
-  const allOpen = openLeads();
+  const allOpen = forecastBaseLeads(forecastRange("month"));
   const totalOpen = allOpen.reduce((s,l) => s + forecastValue(l), 0);
   const forecastTotal = filtered.reduce((s,l) => s + forecastValue(l), 0);
   const mrr = filtered.reduce((s,l) => s + forecastMrrValue(l), 0);
@@ -3652,7 +3643,7 @@ function goalSummary(period = monthKey(), group = goalSubView) {
 function populateMonthFilters() {
   const values = new Set([monthKey(), ...(state.goals || []).map(g => g.periodo), ...(state.sales || []).map(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`))]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
-  ["goalMonthFilter", "saleMonthFilter", "commissionMonthFilter"].forEach(id => {
+  ["goalMonthFilter", "saleMonthFilter", "commissionMonthFilter", "forecastMonthFilter"].forEach(id => {
     if ($(id)) {
       const selected = $(id).value;
       $(id).innerHTML = opts;
@@ -3676,7 +3667,7 @@ function renderForecast() {
     return forecastValue(b) - forecastValue(a);
   });
 
-  const allOpen = openLeads();
+  const allOpen = forecastBaseLeads(forecastRange("month"));
   const totalOpen = allOpen.reduce((s,l) => s + (revendas ? 1 : forecastValue(l)), 0);
   const forecastTotal = filtered.reduce((s,l) => s + (revendas ? 1 : forecastValue(l)), 0);
   const mrr = revendas ? 0 : filtered.reduce((s,l) => s + forecastMrrValue(l), 0);
