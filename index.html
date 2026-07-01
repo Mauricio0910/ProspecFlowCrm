@@ -340,10 +340,12 @@
             </div>
             <div class="toolbar">
               <input id="leadSearch" class="field" placeholder="Buscar por empresa, contato, vendedor ou produto..." oninput="renderLeads()" />
+              <select id="leadMonthFilter" class="select" style="max-width:190px" onchange="renderLeads()" title="Leads abertos ficam visíveis; fechados aparecem apenas no mês do fechamento"></select>
               <select id="leadStageFilter" class="select" style="max-width:220px" onchange="renderLeads()">
-                <option value="">Todas as etapas</option>
+                <option value="">Todas as etapas abertas</option>
                 <option>Captação</option><option>Agendamento</option><option>Apresentação</option><option>Negociação</option><option>Fechamento</option><option>Perdido</option>
               </select>
+              <span class="help">Abertos sempre visíveis; fechados somente no mês selecionado.</span>
               <button class="btn btn-outline" onclick="exportTable('leads')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="table-wrap"><table><thead><tr id="leadsTableHeader"><th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Forecast</th><th>Ações</th></tr></thead><tbody id="leadsTable"></tbody></table></div>
@@ -1666,9 +1668,23 @@ function fillEmailProductFilter() {
   select.innerHTML = `<option value="todos">Todos os produtos</option>${productOptions("", false)}`;
 }
 function populateMonthFilters() {
-  const values = new Set([monthKey(), ...state.goals.map(g => g.periodo), ...state.sales.map(s => monthKey(`${s.dataVenda}T00:00:00`))]);
+  const current = monthKey();
+  const salesMonths = (state.sales || []).map(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`));
+  const closedLeadMonths = (state.leads || [])
+    .filter(l => String(l.status || "") === "Fechado")
+    .map(l => monthKey(`${closingDateForLead(l)}T00:00:00`));
+  const values = new Set([current, ...(state.goals || []).map(g => g.periodo), ...salesMonths, ...closedLeadMonths]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
-  ["goalMonthFilter", "saleMonthFilter"].forEach(id => { if ($(id)) $(id).innerHTML = opts; });
+
+  const applyOptions = (id, defaultValue = current) => {
+    const select = $(id);
+    if (!select) return;
+    const previous = select.value || defaultValue;
+    select.innerHTML = opts;
+    select.value = [...select.options].some(opt => opt.value === previous) ? previous : defaultValue;
+  };
+
+  ["goalMonthFilter", "saleMonthFilter", "leadMonthFilter"].forEach(id => applyOptions(id, current));
 }
 
 async function doLogin() {
@@ -4847,21 +4863,60 @@ function saveSale(id = "") {
 }
 
 // Render de leads mostrando fechamento pelo mês efetivo quando existir.
+function leadClosedForListing(lead) {
+  return String(lead?.status || "") === "Fechado";
+}
+function leadLostForListing(lead) {
+  return String(lead?.status || "") === "Perdido" || String(lead?.pipeline || "") === "Perdido";
+}
+function leadMonthForListing(lead) {
+  return monthKey(`${closingDateForLead(lead)}T00:00:00`);
+}
+function leadAllowedInList(lead, period, stageFilter) {
+  const closed = leadClosedForListing(lead);
+  const lost = leadLostForListing(lead);
+
+  // Fechados só aparecem quando o mês selecionado é o mês efetivo do fechamento.
+  if (closed) return leadMonthForListing(lead) === period;
+
+  // Perdidos ficam reservados para a etapa "Perdido"/remarketing, evitando poluir a fila de leads abertos.
+  if (lost) return stageFilter === "Perdido";
+
+  // Leads em aberto continuam aparecendo normalmente, independentemente do mês.
+  return true;
+}
+
+// Render de leads com filtro mensal para fechamentos.
 function renderLeads() {
   const q = norm($("leadSearch")?.value || "");
   const stage = $("leadStageFilter")?.value || "";
+  const period = $("leadMonthFilter")?.value || monthKey();
   const revendas = isRevendasWorkspace();
+
   if ($("leadsTableHeader")) {
     $("leadsTableHeader").innerHTML = revendas
       ? `<th>Empresa candidata</th><th>Contato e observações</th><th>Programa</th><th>Responsável</th><th>Captação</th><th>Observações de contato</th><th>Etapa</th><th>Status</th><th>Ações</th>`
       : `<th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Previsão / fechamento</th><th>Ações</th>`;
   }
-  let rows = [...(state.leads || [])].sort((a,b) => String(effectiveLeadDate(b)).localeCompare(String(effectiveLeadDate(a))));
-  if (q) rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento, campaignName(l.campaignId), l.contatosObs, l.origem].some(v => norm(v).includes(q)));
-  if (stage) rows = rows.filter(l => l.pipeline === stage);
+
+  let rows = [...(state.leads || [])]
+    .filter(l => leadAllowedInList(l, period, stage))
+    .sort((a,b) => String(leadClosedForListing(b) ? closingDateForLead(b) : effectiveLeadDate(b)).localeCompare(String(leadClosedForListing(a) ? closingDateForLead(a) : effectiveLeadDate(a))));
+
+  if (q) {
+    rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento, campaignName(l.campaignId), l.contatosObs, l.origem]
+      .some(v => norm(v).includes(q)));
+  }
+
+  if (stage) rows = rows.filter(l => (l.pipeline || "Captação") === stage);
+
   $("leadsTable").innerHTML = rows.map(l => {
-    const closed = l.status === "Fechado" || l.pipeline === "Fechamento";
-    const dateInfo = closed ? `<strong>Fechado em ${formatDate(effectiveLeadDate(l))}</strong>` : `${money(forecastValue(l))}<br><small>${formatDate(l.previsaoFechamento)} · ${l.probabilidade || 0}%</small>`;
+    const closed = leadClosedForListing(l);
+    const fechamento = closingDateForLead(l);
+    const dateInfo = closed
+      ? `<strong>Fechado em ${formatDate(fechamento)}</strong>`
+      : `${money(forecastValue(l))}<br><small>${formatDate(l.previsaoFechamento)} · ${l.probabilidade || 0}%</small>`;
+
     return `<tr>
       <td><strong>${escapeHTML(l.empresa)}</strong><br><small>${escapeHTML(l.cidade || "")}${l.uf ? "/" + escapeHTML(l.uf) : ""} · ${escapeHTML(campaignName(l.campaignId))}</small></td>
       <td>${escapeHTML(l.contato || "—")}<br><small>${escapeHTML(l.email || "")}</small>${revendas && l.contatosObs ? `<div class="metric-note"><strong>Contatos:</strong> ${escapeHTML(l.contatosObs)}</div>` : ""}</td>
@@ -4870,7 +4925,7 @@ function renderLeads() {
       <td>${revendas ? "—" : money(l.implantacao)}</td>
       <td>${revendas ? `<small>${escapeHTML(l.contatosObs || "Sem observação")}</small>` : money(l.mensalidade)}</td>
       <td>${stageTag(l.pipeline)}</td>
-      <td>${revendas ? (closed ? `Captado em ${formatDate(effectiveLeadDate(l))}` : statusTag(l.status || "Aberto")) : dateInfo}</td>
+      <td>${revendas ? (closed ? `Captado em ${formatDate(fechamento)}` : statusTag(l.status || "Aberto")) : dateInfo}</td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
         ${l.status !== "Fechado" && l.status !== "Perdido" ? `<button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')" title="${revendas ? "Captar revenda" : "Fechar venda"}"><i class="fa-solid fa-check"></i></button>` : ""}
@@ -4879,7 +4934,7 @@ function renderLeads() {
         <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
       </td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado para o filtro atual.</td></tr>`;
 }
 
 function paidInstallmentEntries(period = monthKey(), sellerFilter = "") {
