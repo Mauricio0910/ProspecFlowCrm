@@ -4397,6 +4397,839 @@ function goToPage(page) {
   $("sidebar").classList.remove("mobile-open");
 }
 
+
+// =============== AJUSTES V12: PARCELAMENTO, COMISSÃO POR PAGAMENTO E PDF ===============
+
+function addMonthsISO(baseDate, months) {
+  const base = safeDate(baseDate || todayISO(), new Date());
+  const d = new Date(base.getFullYear(), base.getMonth() + Number(months || 0), base.getDate());
+  return isoDate(d);
+}
+function effectiveSaleDate(sale) {
+  if (!sale) return todayISO();
+  const lead = saleLead(sale);
+  return String(sale.dataVenda || lead?.fechadoEm || lead?.dataFechamento || sale.createdAt || todayISO()).slice(0, 10);
+}
+function effectiveLeadDate(lead) {
+  if (!lead) return todayISO();
+  if (lead.status === "Fechado" || lead.pipeline === "Fechamento") {
+    const sale = (state.sales || []).find(s => s.leadId === lead.id && s.status !== "Cancelada");
+    return String(lead.fechadoEm || lead.dataFechamento || sale?.dataVenda || lead.previsaoFechamento || todayISO()).slice(0, 10);
+  }
+  if (lead.status === "Perdido" || lead.pipeline === "Perdido") {
+    return String(lead.lostAt || lead.updatedAt || lead.createdAt || todayISO()).slice(0, 10);
+  }
+  return String(lead.createdAt || todayISO()).slice(0, 10);
+}
+function closingDateForLead(lead) {
+  const sale = (state.sales || []).find(s => s.leadId === lead?.id && s.status !== "Cancelada");
+  return String(lead?.fechadoEm || lead?.dataFechamento || sale?.dataVenda || todayISO()).slice(0, 10);
+}
+function paymentPlanType(obj) {
+  return obj?.pagamentoTipo || obj?.formaPagamento || "avista";
+}
+function normalizePaymentItem(item, fallback = {}) {
+  return {
+    descricao: item?.descricao || fallback.descricao || "Pagamento",
+    valor: Number(item?.valor ?? fallback.valor ?? 0) || 0,
+    vencimento: String(item?.vencimento || fallback.vencimento || todayISO()).slice(0, 10),
+    pago: Boolean(item?.pago ?? fallback.pago ?? false),
+    dataPagamento: String(item?.dataPagamento || fallback.dataPagamento || item?.vencimento || fallback.vencimento || todayISO()).slice(0, 10)
+  };
+}
+function buildScheduleFromObject(obj = {}) {
+  const total = Number(obj.implantacao) || 0;
+  if (!total) return [];
+  const tipo = paymentPlanType(obj);
+  if (Array.isArray(obj.paymentSchedule) && obj.paymentSchedule.length) {
+    return obj.paymentSchedule.map((item, idx) => normalizePaymentItem(item, { descricao: idx === 0 ? "Entrada" : `Parcela ${idx}` }));
+  }
+
+  if (tipo !== "parcelado") {
+    const data = String(obj.dataVenda || obj.fechadoEm || obj.previsaoFechamento || todayISO()).slice(0, 10);
+    return [normalizePaymentItem({ descricao: "À vista", valor: total, vencimento: data, pago: true, dataPagamento: data })];
+  }
+
+  const entrada = Math.max(0, Number(obj.entradaValor) || 0);
+  const qtd = Math.max(0, parseInt(obj.parcelasQtd || 0, 10));
+  const firstDate = String(obj.primeiraParcela || obj.dataPrimeiraParcela || obj.dataVenda || obj.fechadoEm || todayISO()).slice(0, 10);
+  const entradaData = String(obj.entradaData || obj.dataVenda || obj.fechadoEm || todayISO()).slice(0, 10);
+  const parcelaValor = Number(obj.parcelasValor) || (qtd ? Math.max(total - entrada, 0) / qtd : 0);
+  const rows = [];
+  if (entrada > 0) rows.push(normalizePaymentItem({ descricao: "Entrada", valor: entrada, vencimento: entradaData, pago: true, dataPagamento: entradaData }));
+  for (let i = 0; i < qtd; i++) {
+    rows.push(normalizePaymentItem({
+      descricao: `Parcela ${i + 1}/${qtd}`,
+      valor: parcelaValor,
+      vencimento: addMonthsISO(firstDate, i),
+      pago: false,
+      dataPagamento: addMonthsISO(firstDate, i)
+    }));
+  }
+  return rows;
+}
+function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
+  if (revendas) return "";
+  const tipo = paymentPlanType(obj);
+  const total = Number(obj.implantacao) || 0;
+  const entrada = Number(obj.entradaValor) || 0;
+  const qtd = parseInt(obj.parcelasQtd || 0, 10) || 0;
+  const parcelaValor = Number(obj.parcelasValor) || (qtd ? Math.max(total - entrada, 0) / qtd : 0);
+  const vendaData = String(obj.dataVenda || obj.fechadoEm || obj.previsaoFechamento || todayISO()).slice(0, 10);
+  const entradaData = String(obj.entradaData || vendaData).slice(0, 10);
+  const primeira = String(obj.primeiraParcela || obj.dataPrimeiraParcela || addMonthsISO(vendaData, 1)).slice(0, 10);
+
+  return `
+    <div class="form-group full">
+      <div class="note" style="margin-top:4px">
+        <strong>Parcelamento da implantação e comissão</strong><br>
+        Quando a venda for parcelada, a comissão do consultor e do gestor entra somente no mês da parcela marcada como paga.
+      </div>
+    </div>
+    <div class="form-group"><label>Forma de pagamento da implantação</label>
+      <select id="${prefix}PagamentoTipo" class="select" onchange="togglePaymentFields('${prefix}')">
+        <option value="avista"${tipo !== "parcelado" ? " selected" : ""}>À vista</option>
+        <option value="parcelado"${tipo === "parcelado" ? " selected" : ""}>Parcelado</option>
+      </select>
+    </div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Valor de entrada</label><input id="${prefix}EntradaValor" class="field" type="number" step="0.01" value="${entrada}"></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Data da entrada</label><input id="${prefix}EntradaData" class="field" type="date" value="${entradaData}"></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Quantidade de parcelas</label><input id="${prefix}ParcelasQtd" class="field" type="number" min="0" value="${qtd}"></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Valor de cada parcela</label><input id="${prefix}ParcelasValor" class="field" type="number" step="0.01" value="${parcelaValor ? parcelaValor.toFixed(2) : 0}"></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Primeiro vencimento</label><input id="${prefix}PrimeiraParcela" class="field" type="date" value="${primeira}"></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>&nbsp;</label><button type="button" class="btn btn-muted" onclick="renderPaymentSchedule('${prefix}')"><i class="fa-solid fa-calculator"></i> Atualizar parcelas</button></div>
+    <div class="form-group full" id="${prefix}ScheduleWrap" style="${tipo === "parcelado" ? "" : "display:none"}"></div>
+  `;
+}
+function togglePaymentFields(prefix) {
+  const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
+  document.querySelectorAll(`.payment-${prefix}`).forEach(el => el.style.display = tipo === "parcelado" ? "" : "none");
+  const wrap = $(`${prefix}ScheduleWrap`);
+  if (wrap) wrap.style.display = tipo === "parcelado" ? "" : "none";
+  renderPaymentSchedule(prefix);
+}
+function currentFormInstallmentTotal(prefix) {
+  const field = prefix === "f" ? $("fImplantacao") : $("sImplantacao");
+  return number(field?.value || 0);
+}
+function currentFormBaseDate(prefix) {
+  if (prefix === "f") return $("fDataFechamento")?.value || $("fPrevisao")?.value || todayISO();
+  return $("sData")?.value || todayISO();
+}
+function buildScheduleFromForm(prefix) {
+  const total = currentFormInstallmentTotal(prefix);
+  if (!total) return [];
+  const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
+  const baseDate = currentFormBaseDate(prefix);
+  if (tipo !== "parcelado") {
+    return [normalizePaymentItem({ descricao: "À vista", valor: total, vencimento: baseDate, pago: true, dataPagamento: baseDate })];
+  }
+  const entrada = Math.max(0, number($(`${prefix}EntradaValor`)?.value || 0));
+  const qtd = Math.max(0, parseInt($(`${prefix}ParcelasQtd`)?.value || "0", 10) || 0);
+  const parcelaValor = number($(`${prefix}ParcelasValor`)?.value || 0) || (qtd ? Math.max(total - entrada, 0) / qtd : 0);
+  const entradaData = $(`${prefix}EntradaData`)?.value || baseDate;
+  const primeira = $(`${prefix}PrimeiraParcela`)?.value || addMonthsISO(baseDate, 1);
+  const rows = [];
+  if (entrada > 0) rows.push(normalizePaymentItem({ descricao: "Entrada", valor: entrada, vencimento: entradaData, pago: true, dataPagamento: entradaData }));
+  for (let i = 0; i < qtd; i++) {
+    rows.push(normalizePaymentItem({
+      descricao: `Parcela ${i + 1}/${qtd}`,
+      valor: parcelaValor,
+      vencimento: addMonthsISO(primeira, i),
+      pago: false,
+      dataPagamento: addMonthsISO(primeira, i)
+    }));
+  }
+  return rows;
+}
+function renderPaymentSchedule(prefix, existingSchedule = null) {
+  const wrap = $(`${prefix}ScheduleWrap`);
+  if (!wrap) return;
+  const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
+  if (tipo !== "parcelado") {
+    wrap.innerHTML = "";
+    return;
+  }
+  const rows = existingSchedule || buildScheduleFromForm(prefix);
+  wrap.innerHTML = `
+    <label>Cronograma de pagamento da implantação</label>
+    <div class="table-wrap" style="margin-top:6px">
+      <table>
+        <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago?</th><th>Data do pagamento</th></tr></thead>
+        <tbody>
+          ${rows.map((r, idx) => `
+            <tr>
+              <td>${escapeHTML(r.descricao)}</td>
+              <td><input id="${prefix}ParcVenc_${idx}" class="field" type="date" value="${r.vencimento}"></td>
+              <td><input id="${prefix}ParcValor_${idx}" class="field" type="number" step="0.01" value="${Number(r.valor || 0).toFixed(2)}"></td>
+              <td style="text-align:center"><input id="${prefix}ParcPago_${idx}" type="checkbox"${r.pago ? " checked" : ""}></td>
+              <td><input id="${prefix}ParcData_${idx}" class="field" type="date" value="${r.dataPagamento || r.vencimento}"></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function collectPaymentSchedule(prefix) {
+  const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
+  if (tipo !== "parcelado") return buildScheduleFromForm(prefix);
+  const generated = buildScheduleFromForm(prefix);
+  return generated.map((row, idx) => normalizePaymentItem({
+    descricao: row.descricao,
+    vencimento: $(`${prefix}ParcVenc_${idx}`)?.value || row.vencimento,
+    valor: number($(`${prefix}ParcValor_${idx}`)?.value || row.valor),
+    pago: Boolean($(`${prefix}ParcPago_${idx}`)?.checked),
+    dataPagamento: $(`${prefix}ParcData_${idx}`)?.value || row.dataPagamento || row.vencimento
+  }));
+}
+function applyPaymentPlanFromForm(data, prefix) {
+  const revendas = isRevendasWorkspace();
+  data.pagamentoTipo = revendas ? "avista" : ($(`${prefix}PagamentoTipo`)?.value || "avista");
+  data.entradaValor = revendas ? 0 : number($(`${prefix}EntradaValor`)?.value || 0);
+  data.entradaData = revendas ? "" : ($(`${prefix}EntradaData`)?.value || "");
+  data.parcelasQtd = revendas ? 0 : (parseInt($(`${prefix}ParcelasQtd`)?.value || "0", 10) || 0);
+  data.parcelasValor = revendas ? 0 : number($(`${prefix}ParcelasValor`)?.value || 0);
+  data.primeiraParcela = revendas ? "" : ($(`${prefix}PrimeiraParcela`)?.value || "");
+  data.paymentSchedule = revendas ? [] : collectPaymentSchedule(prefix);
+  return data;
+}
+function transferPaymentPlan(from, to = {}) {
+  return {
+    ...to,
+    pagamentoTipo: from?.pagamentoTipo || to.pagamentoTipo || "avista",
+    entradaValor: Number(from?.entradaValor ?? to.entradaValor ?? 0) || 0,
+    entradaData: from?.entradaData || to.entradaData || "",
+    parcelasQtd: Number(from?.parcelasQtd ?? to.parcelasQtd ?? 0) || 0,
+    parcelasValor: Number(from?.parcelasValor ?? to.parcelasValor ?? 0) || 0,
+    primeiraParcela: from?.primeiraParcela || to.primeiraParcela || "",
+    paymentSchedule: Array.isArray(to.paymentSchedule) && to.paymentSchedule.length
+      ? to.paymentSchedule
+      : (Array.isArray(from?.paymentSchedule) ? from.paymentSchedule.map(item => ({ ...item })) : [])
+  };
+}
+
+// Recria venda a partir do lead fechado preservando parcelas já marcadas como pagas.
+function saleFromLead(lead, existing = {}) {
+  const dataVenda = lead.fechadoEm || lead.dataFechamento || existing.dataVenda || todayISO();
+  const sale = {
+    ...existing,
+    id: existing.id || uid("s"),
+    leadId: lead.id,
+    cliente: lead.empresa,
+    produtoId: lead.produtoId,
+    vendedorId: lead.vendedorId,
+    campaignId: lead.campaignId || existing.campaignId || "",
+    implantacao: Number(lead.implantacao) || 0,
+    mensalidade: Number(lead.mensalidade) || 0,
+    dataVenda,
+    status: "Fechada",
+    observacao: existing.observacao || "Criada automaticamente a partir do lead fechado",
+    origem: lead.origem || existing.origem || "",
+    updatedAt: new Date().toISOString()
+  };
+  return transferPaymentPlan(lead, sale);
+}
+
+function salesInMonth(period = monthKey()) {
+  return (state.sales || []).filter(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`) === period && s.status !== "Cancelada");
+}
+function monthlyLeadsByGroup(period, group = goalSubView) {
+  return (state.leads || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period && leadMatchesGroup(l, group));
+}
+function previousWeekSales() {
+  const start = addDays(startOfWeek(new Date()), -7);
+  const end = addDays(start, 6);
+  const range = { start: isoDate(start), end: isoDate(end) };
+  return (state.sales || []).filter(s => s.status !== "Cancelada" && inDateRange(effectiveSaleDate(s), range));
+}
+
+// Modal de leads com data de fechamento e condição de pagamento.
+function openLeadModal(id = "") {
+  const revendas = isRevendasWorkspace();
+  const firstProduct = activeProducts()[0] || {};
+  const lead = id ? findById(state.leads, id) : {
+    id: "", empresa: "", contato: "", email: "", telefone: "", cidade: "", uf: "", segmento: "",
+    produtoId: firstProduct.id || "", vendedorId: sellers()[0]?.id || "", campaignId: "",
+    implantacao: firstProduct.implantacao || 0, mensalidade: revendas ? 0 : (firstProduct.mensalidade || 0),
+    pipeline: "Captação", status: "Aberto", probabilidade: 10, previsaoFechamento: todayISO(),
+    fechadoEm: "", origem: "", motivoPerda: "", remarketingStatus: "", contatosObs: "", pagamentoTipo: "avista"
+  };
+  if (!lead) return showToast("Lead não encontrado.", "fa-triangle-exclamation");
+  const fechamentoData = closingDateForLead(lead);
+  openModal(id ? "Editar Lead" : (revendas ? "Novo Lead de Revenda" : "Novo Lead"), `
+    <div class="form-grid">
+      <div class="form-group"><label>${revendas ? "Empresa candidata à revenda" : "Empresa"}</label><input id="fEmpresa" class="field" value="${escapeHTML(lead.empresa || "")}"></div>
+      <div class="form-group"><label>Contato</label><input id="fContato" class="field" value="${escapeHTML(lead.contato || "")}"></div>
+      <div class="form-group"><label>E-mail</label><input id="fEmail" class="field" type="email" value="${escapeHTML(lead.email || "")}"></div>
+      <div class="form-group"><label>Telefone</label><input id="fTelefone" class="field" value="${escapeHTML(lead.telefone || "")}"></div>
+      <div class="form-group"><label>Cidade</label><input id="fCidade" class="field" value="${escapeHTML(lead.cidade || "")}"></div>
+      <div class="form-group"><label>UF</label><input id="fUf" class="field" maxlength="2" value="${escapeHTML(lead.uf || "")}"></div>
+      <div class="form-group"><label>Segmento</label><input id="fSegmento" class="field" value="${escapeHTML(lead.segmento || "")}"></div>
+      <div class="form-group"><label>Origem / fonte de captação</label><input id="fOrigem" class="field" value="${escapeHTML(lead.origem || "")}"></div>
+      <div class="form-group"><label>Campanha</label><select id="fCampanha" class="select">${campaignOptions(lead.campaignId || "")}</select></div>
+      <div class="form-group"><label>Produto / plano vendido</label><select id="fProduto" class="select" onchange="fillProductValues()">${productOptions(lead.produtoId)}</select></div>
+      <div class="form-group"><label>${revendas ? "Responsável" : "Vendedor"}</label><select id="fVendedor" class="select">${sellerOptions(lead.vendedorId)}</select></div>
+      <div class="form-group ${revendas ? "hide-revendas-monthly" : ""}"><label>Valor implantação</label><input id="fImplantacao" class="field" type="number" step="0.01" value="${revendas ? 0 : (lead.implantacao || 0)}"></div>
+      <div class="form-group ${revendas ? "hide-revendas-monthly" : ""}"><label>Valor mensalidade</label><input id="fMensalidade" class="field" type="number" step="0.01" value="${revendas ? 0 : (lead.mensalidade || 0)}"></div>
+      ${revendas ? `<input id="fImplantacao" type="hidden" value="0"><input id="fMensalidade" type="hidden" value="0">` : paymentFieldsHTML("f", { ...lead, fechadoEm: fechamentoData }, revendas)}
+      <div class="form-group"><label>Etapa</label><select id="fPipeline" class="select" onchange="setProbabilityFromStage()">${PIPELINE.map(p => `<option value="${p.nome}"${lead.pipeline === p.nome ? " selected" : ""}>${p.nome}</option>`).join("")}</select></div>
+      <div class="form-group"><label>Probabilidade (%)</label><input id="fProbabilidade" class="field" type="number" min="0" max="100" value="${lead.probabilidade || 0}"></div>
+      <div class="form-group"><label>${revendas ? "Previsão de captação" : "Previsão fechamento"}</label><input id="fPrevisao" class="field" type="date" value="${lead.previsaoFechamento || todayISO()}"></div>
+      <div class="form-group"><label>Data efetiva de fechamento</label><input id="fDataFechamento" class="field" type="date" value="${lead.status === "Fechado" ? fechamentoData : ""}" placeholder="Use quando o status for Fechado"></div>
+      <div class="form-group"><label>Status</label><select id="fStatus" class="select"><option${lead.status === "Aberto" ? " selected" : ""}>Aberto</option><option${lead.status === "Fechado" ? " selected" : ""}>Fechado</option><option${lead.status === "Perdido" ? " selected" : ""}>Perdido</option></select></div>
+      <div class="form-group"><label>Motivo da perda</label><input id="fMotivoPerda" class="field" value="${escapeHTML(lead.motivoPerda || "")}"></div>
+      <div class="form-group"><label>Status remarketing</label><select id="fRemarketingStatus" class="select"><option value="">Não enviado</option><option${lead.remarketingStatus === "Aguardando" ? " selected" : ""}>Aguardando</option><option${lead.remarketingStatus === "Em retrabalho" ? " selected" : ""}>Em retrabalho</option><option${lead.remarketingStatus === "Reativado" ? " selected" : ""}>Reativado</option></select></div>
+      <div class="form-group full"><label>Observações sobre contatos feitos</label><textarea id="fContatosObs" class="field" rows="4" placeholder="Registre ligações, WhatsApp, retornos, objeções e próximos passos.">${escapeHTML(lead.contatosObs || "")}</textarea></div>
+    </div>
+  `, `
+    <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveLead('${id}')"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+  `);
+  if (!revendas) renderPaymentSchedule("f", buildScheduleFromObject(lead));
+}
+
+function saveLead(id = "") {
+  const empresa = $("fEmpresa").value.trim();
+  if (!empresa) return showToast("Informe a empresa do lead.", "fa-triangle-exclamation");
+  const revendas = isRevendasWorkspace();
+  const oldLead = id ? findById(state.leads, id) : null;
+  const data = {
+    id: id || uid("l"),
+    empresa,
+    contato: $("fContato").value.trim(),
+    email: $("fEmail").value.trim(),
+    telefone: $("fTelefone").value.trim(),
+    cidade: $("fCidade").value.trim(),
+    uf: $("fUf").value.trim().toUpperCase(),
+    segmento: $("fSegmento").value.trim(),
+    origem: $("fOrigem").value.trim(),
+    campaignId: $("fCampanha").value,
+    produtoId: $("fProduto").value,
+    vendedorId: $("fVendedor").value,
+    implantacao: revendas ? 0 : number($("fImplantacao")?.value || 0),
+    mensalidade: revendas ? 0 : number($("fMensalidade")?.value || 0),
+    pipeline: $("fPipeline").value,
+    probabilidade: Math.max(0, Math.min(100, number($("fProbabilidade").value))),
+    previsaoFechamento: $("fPrevisao").value,
+    fechadoEm: $("fDataFechamento")?.value || oldLead?.fechadoEm || "",
+    status: $("fStatus").value,
+    motivoPerda: $("fMotivoPerda").value.trim(),
+    remarketingStatus: $("fRemarketingStatus").value,
+    contatosObs: $("fContatosObs")?.value.trim() || "",
+    updatedAt: new Date().toISOString()
+  };
+  if (!revendas) applyPaymentPlanFromForm(data, "f");
+  if (data.status === "Fechado") {
+    data.pipeline = "Fechamento";
+    data.probabilidade = 100;
+    data.fechadoEm = $("fDataFechamento")?.value || oldLead?.fechadoEm || todayISO();
+    if (Array.isArray(data.paymentSchedule)) {
+      data.paymentSchedule = data.paymentSchedule.map(item => item.descricao === "À vista"
+        ? { ...item, vencimento: data.fechadoEm, dataPagamento: item.pago ? data.fechadoEm : item.dataPagamento }
+        : item
+      );
+    }
+  }
+  if (data.status === "Perdido") {
+    data.pipeline = "Perdido";
+    data.probabilidade = 0;
+    data.lostAt = oldLead?.lostAt || todayISO();
+    data.remarketingStatus = data.remarketingStatus || "Aguardando";
+  }
+  if (id) {
+    const idx = state.leads.findIndex(l => l.id === id);
+    if (idx >= 0) state.leads[idx] = { ...state.leads[idx], ...data };
+    else state.leads.push(data);
+  } else {
+    data.createdAt = new Date().toISOString();
+    state.leads.push(data);
+  }
+  const saved = findById(state.leads, data.id);
+  if (saved?.status === "Fechado") syncClosedLeadsIntoSales(state, true);
+  persist();
+  closeModal();
+  renderAll();
+  showToast(revendas ? "Lead de revenda salvo com observações de contato." : (data.status === "Perdido" ? "Lead salvo e enviado para Remarketing." : "Lead salvo com sucesso."));
+}
+
+// Modal de vendas com controle de parcelas pagas.
+function openSaleModal(id = "") {
+  const revendas = isRevendasWorkspace();
+  const firstProduct = activeProducts()[0] || {};
+  const sale = id ? findById(state.sales, id) : {
+    id: "", leadId: "", cliente: "", produtoId: firstProduct.id || "", vendedorId: sellers()[0]?.id || "", campaignId: "",
+    implantacao: revendas ? 0 : (firstProduct.implantacao || 0), mensalidade: 0, dataVenda: todayISO(),
+    status: "Fechada", observacao: "", origem: "", pagamentoTipo: "avista"
+  };
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+  openModal(id ? (revendas ? "Editar Revenda Captada" : "Editar Venda") : (revendas ? "Nova Revenda Captada" : "Nova Venda"), `
+    <div class="form-grid">
+      <div class="form-group full"><label>Lead vinculado</label><select id="sLead" class="select" onchange="fillSaleFromLead()">${leadOptionsForSale(sale.leadId || "")}</select></div>
+      <div class="form-group"><label>${revendas ? "Revenda captada" : "Cliente / empresa"}</label><input id="sCliente" class="field" value="${escapeHTML(sale.cliente || "")}"></div>
+      <div class="form-group"><label>Data de fechamento</label><input id="sData" class="field" type="date" value="${effectiveSaleDate(sale)}"></div>
+      <div class="form-group"><label>Produto / plano vendido</label><select id="sProduto" class="select" onchange="fillSaleProductValues()">${productOptions(sale.produtoId)}</select></div>
+      <div class="form-group"><label>${revendas ? "Responsável" : "Vendedor"}</label><select id="sVendedor" class="select">${sellerOptions(sale.vendedorId)}</select></div>
+      <div class="form-group"><label>Campanha</label><select id="sCampanha" class="select">${campaignOptions(sale.campaignId || saleLead(sale)?.campaignId || "")}</select></div>
+      <div class="form-group"><label>Origem / fonte de captação</label><input id="sOrigem" class="field" value="${escapeHTML(sale.origem || "")}"></div>
+      <div class="form-group ${revendas ? "hide-revendas-monthly" : ""}"><label>Valor implantação</label><input id="sImplantacao" class="field" type="number" step="0.01" value="${revendas ? 0 : (sale.implantacao || 0)}"></div>
+      <div class="form-group ${revendas ? "hide-revendas-monthly" : ""}"><label>Valor mensalidade</label><input id="sMensalidade" class="field" type="number" step="0.01" value="${revendas ? 0 : (sale.mensalidade || 0)}"></div>
+      ${revendas ? `<input id="sImplantacao" type="hidden" value="0"><input id="sMensalidade" type="hidden" value="0">` : paymentFieldsHTML("s", sale, revendas)}
+      <div class="form-group"><label>Status</label><select id="sStatus" class="select"><option${sale.status === "Fechada" ? " selected" : ""}>Fechada</option><option${sale.status === "Cancelada" ? " selected" : ""}>Cancelada</option></select></div>
+      <div class="form-group"><label>Observação</label><input id="sObs" class="field" value="${escapeHTML(sale.observacao || "")}"></div>
+    </div>
+  `, `
+    <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveSale('${id}')"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+  `);
+  if (!revendas) renderPaymentSchedule("s", buildScheduleFromObject(sale));
+}
+function fillSaleFromLead() {
+  const lead = findById(state.leads, $("sLead").value);
+  if (!lead) return;
+  $("sCliente").value = lead.empresa || "";
+  $("sProduto").value = lead.produtoId || "";
+  $("sVendedor").value = lead.vendedorId || "";
+  if ($("sImplantacao")) $("sImplantacao").value = Number(lead.implantacao) || 0;
+  if ($("sMensalidade")) $("sMensalidade").value = Number(lead.mensalidade) || 0;
+  $("sOrigem").value = lead.origem || campaignName(lead.campaignId) || "";
+  $("sData").value = lead.fechadoEm || lead.dataFechamento || todayISO();
+  if ($("sPagamentoTipo")) $("sPagamentoTipo").value = paymentPlanType(lead);
+  if ($("sEntradaValor")) $("sEntradaValor").value = Number(lead.entradaValor || 0);
+  if ($("sEntradaData")) $("sEntradaData").value = lead.entradaData || $("sData").value;
+  if ($("sParcelasQtd")) $("sParcelasQtd").value = Number(lead.parcelasQtd || 0);
+  if ($("sParcelasValor")) $("sParcelasValor").value = Number(lead.parcelasValor || 0);
+  if ($("sPrimeiraParcela")) $("sPrimeiraParcela").value = lead.primeiraParcela || addMonthsISO($("sData").value, 1);
+  togglePaymentFields("s");
+  renderPaymentSchedule("s", buildScheduleFromObject(lead));
+}
+function saveSale(id = "") {
+  const cliente = $("sCliente").value.trim();
+  if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
+  const revendas = isRevendasWorkspace();
+  const lead = findById(state.leads, $("sLead").value);
+  const data = {
+    id: id || uid("s"),
+    leadId: $("sLead").value,
+    cliente,
+    produtoId: $("sProduto").value,
+    vendedorId: $("sVendedor").value,
+    campaignId: $("sCampanha").value || lead?.campaignId || "",
+    implantacao: revendas ? 0 : number($("sImplantacao")?.value || 0),
+    mensalidade: revendas ? 0 : number($("sMensalidade")?.value || 0),
+    dataVenda: $("sData").value || todayISO(),
+    status: $("sStatus").value,
+    observacao: $("sObs").value.trim(),
+    origem: $("sOrigem").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (!revendas) applyPaymentPlanFromForm(data, "s");
+  if (id) {
+    const idx = state.sales.findIndex(s => s.id === id);
+    if (idx >= 0) state.sales[idx] = { ...state.sales[idx], ...data };
+    else state.sales.push(data);
+  } else {
+    data.createdAt = new Date().toISOString();
+    state.sales.push(data);
+  }
+  if (lead && data.status === "Fechada") {
+    lead.status = "Fechado";
+    lead.pipeline = "Fechamento";
+    lead.probabilidade = 100;
+    lead.fechadoEm = data.dataVenda;
+    lead.updatedAt = new Date().toISOString();
+    Object.assign(lead, transferPaymentPlan(data, lead));
+  }
+  persist();
+  closeModal();
+  renderAll();
+  showToast(revendas ? "Revenda captada registrada." : "Venda salva. Parcelas pagas entrarão no comissionamento do mês correspondente.");
+}
+
+// Render de leads mostrando fechamento pelo mês efetivo quando existir.
+function renderLeads() {
+  const q = norm($("leadSearch")?.value || "");
+  const stage = $("leadStageFilter")?.value || "";
+  const revendas = isRevendasWorkspace();
+  if ($("leadsTableHeader")) {
+    $("leadsTableHeader").innerHTML = revendas
+      ? `<th>Empresa candidata</th><th>Contato e observações</th><th>Programa</th><th>Responsável</th><th>Captação</th><th>Observações de contato</th><th>Etapa</th><th>Status</th><th>Ações</th>`
+      : `<th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Previsão / fechamento</th><th>Ações</th>`;
+  }
+  let rows = [...(state.leads || [])].sort((a,b) => String(effectiveLeadDate(b)).localeCompare(String(effectiveLeadDate(a))));
+  if (q) rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento, campaignName(l.campaignId), l.contatosObs, l.origem].some(v => norm(v).includes(q)));
+  if (stage) rows = rows.filter(l => l.pipeline === stage);
+  $("leadsTable").innerHTML = rows.map(l => {
+    const closed = l.status === "Fechado" || l.pipeline === "Fechamento";
+    const dateInfo = closed ? `<strong>Fechado em ${formatDate(effectiveLeadDate(l))}</strong>` : `${money(forecastValue(l))}<br><small>${formatDate(l.previsaoFechamento)} · ${l.probabilidade || 0}%</small>`;
+    return `<tr>
+      <td><strong>${escapeHTML(l.empresa)}</strong><br><small>${escapeHTML(l.cidade || "")}${l.uf ? "/" + escapeHTML(l.uf) : ""} · ${escapeHTML(campaignName(l.campaignId))}</small></td>
+      <td>${escapeHTML(l.contato || "—")}<br><small>${escapeHTML(l.email || "")}</small>${revendas && l.contatosObs ? `<div class="metric-note"><strong>Contatos:</strong> ${escapeHTML(l.contatosObs)}</div>` : ""}</td>
+      <td>${escapeHTML(productName(l.produtoId))}</td>
+      <td>${escapeHTML(userName(l.vendedorId))}</td>
+      <td>${revendas ? "—" : money(l.implantacao)}</td>
+      <td>${revendas ? `<small>${escapeHTML(l.contatosObs || "Sem observação")}</small>` : money(l.mensalidade)}</td>
+      <td>${stageTag(l.pipeline)}</td>
+      <td>${revendas ? (closed ? `Captado em ${formatDate(effectiveLeadDate(l))}` : statusTag(l.status || "Aberto")) : dateInfo}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        ${l.status !== "Fechado" && l.status !== "Perdido" ? `<button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')" title="${revendas ? "Captar revenda" : "Fechar venda"}"><i class="fa-solid fa-check"></i></button>` : ""}
+        ${l.status !== "Perdido" && l.status !== "Fechado" ? `<button class="btn btn-warning btn-sm" onclick="markLeadLost('${l.id}')" title="Enviar para remarketing"><i class="fa-solid fa-rotate-left"></i></button>` : ""}
+        ${l.status === "Perdido" ? `<button class="btn btn-muted btn-sm" onclick="openRemarketingModal('${l.id}')" title="Remarketing"><i class="fa-solid fa-bullhorn"></i></button>` : ""}
+        <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado.</td></tr>`;
+}
+
+function paidInstallmentEntries(period = monthKey(), sellerFilter = "") {
+  const rows = [];
+  (state.sales || []).filter(s => s.status !== "Cancelada").forEach(sale => {
+    if (sellerFilter && sale.vendedorId !== sellerFilter) return;
+    const schedule = buildScheduleFromObject(sale);
+    schedule.forEach(item => {
+      if (!item.pago) return;
+      const payDate = String(item.dataPagamento || item.vencimento || effectiveSaleDate(sale)).slice(0, 10);
+      if (monthKey(`${payDate}T00:00:00`) !== period) return;
+      rows.push({ sale, item: { ...item, dataPagamento: payDate }, valor: Number(item.valor) || 0 });
+    });
+  });
+  return rows;
+}
+function commissionDetailRows(period = monthKey(), sellerFilter = "") {
+  const installPayments = paidInstallmentEntries(period, sellerFilter)
+    .filter(entry => productGroup(entry.sale.produtoId) === "instalacao")
+    .map(entry => {
+      const sale = entry.sale;
+      const lead = saleLead(sale);
+      const indicators = hitIndicatorsForSeller(sale.vendedorId, period);
+      const rate = consultantCommissionRate(indicators.count);
+      return {
+        tipo: "Implantação recebida",
+        empresa: sale.cliente,
+        vendedorId: sale.vendedorId,
+        vendedor: userName(sale.vendedorId),
+        produto: productName(sale.produtoId),
+        plano: productName(sale.produtoId),
+        fonte: sale.origem || campaignName(sale.campaignId || lead?.campaignId) || lead?.origem || "—",
+        dataFechamento: effectiveSaleDate(sale),
+        dataPagamento: entry.item.dataPagamento,
+        parcela: entry.item.descricao,
+        implantacaoTotal: Number(sale.implantacao) || 0,
+        mensalidade: Number(sale.mensalidade) || 0,
+        baseComissao: entry.valor,
+        taxaConsultor: rate,
+        comissaoConsultor: entry.valor * rate,
+        comissaoGestor: entry.valor * 0.25
+      };
+    });
+
+  const rensoft = salesInMonth(period)
+    .filter(s => (!sellerFilter || s.vendedorId === sellerFilter) && productGroup(s.produtoId) === "rensoftware")
+    .map(sale => {
+      const lead = saleLead(sale);
+      const mensalidade = Number(sale.mensalidade) || 0;
+      return {
+        tipo: "Produto Rensoftware",
+        empresa: sale.cliente,
+        vendedorId: sale.vendedorId,
+        vendedor: userName(sale.vendedorId),
+        produto: productName(sale.produtoId),
+        plano: productName(sale.produtoId),
+        fonte: sale.origem || campaignName(sale.campaignId || lead?.campaignId) || lead?.origem || "—",
+        dataFechamento: effectiveSaleDate(sale),
+        dataPagamento: effectiveSaleDate(sale),
+        parcela: "1ª mensalidade",
+        implantacaoTotal: Number(sale.implantacao) || 0,
+        mensalidade,
+        baseComissao: mensalidade,
+        taxaConsultor: 1,
+        comissaoConsultor: mensalidade,
+        comissaoGestor: 0
+      };
+    });
+
+  return [...installPayments, ...rensoft].sort((a,b) => `${a.vendedor}${a.plano}${a.dataPagamento}`.localeCompare(`${b.vendedor}${b.plano}${b.dataPagamento}`));
+}
+function commissionRows(period = monthKey(), sellerFilter = "") {
+  const consultants = eligibleGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
+  const details = commissionDetailRows(period, sellerFilter);
+  return consultants.map(u => {
+    const rows = details.filter(r => r.vendedorId === u.id);
+    const salesIds = new Set(rows.map(r => {
+      const sale = (state.sales || []).find(s => s.cliente === r.empresa && s.vendedorId === u.id && productName(s.produtoId) === r.produto);
+      return sale?.id || `${r.empresa}_${r.produto}_${r.dataFechamento}`;
+    }));
+    const installBase = rows.filter(r => r.tipo === "Implantação recebida").reduce((sum, r) => sum + r.baseComissao, 0);
+    const rensoftCommission = rows.filter(r => r.tipo === "Produto Rensoftware").reduce((sum, r) => sum + r.comissaoConsultor, 0);
+    const installCommission = rows.filter(r => r.tipo === "Implantação recebida").reduce((sum, r) => sum + r.comissaoConsultor, 0);
+    const mrrTotal = salesInMonth(period).filter(s => s.vendedorId === u.id).reduce((sum, s) => sum + (Number(s.mensalidade) || 0), 0);
+    const indicators = hitIndicatorsForSeller(u.id, period);
+    const rate = consultantCommissionRate(indicators.count);
+    return {
+      user: u,
+      sales: [...salesIds],
+      installBase,
+      mrrTotal,
+      indicators,
+      rate,
+      installCommission,
+      rensoftCommission,
+      totalCommission: installCommission + rensoftCommission,
+      details: rows
+    };
+  });
+}
+function ensureCommissionV12Ui() {
+  const card = document.querySelector("#page-comissoes .card");
+  if (!card) return;
+  const header = card.querySelector(".card-header");
+  if (header && !$("btnCommissionPdf")) {
+    const actions = document.createElement("div");
+    actions.style.display = "flex";
+    actions.style.gap = "8px";
+    actions.style.flexWrap = "wrap";
+    actions.innerHTML = `
+      <button id="btnCommissionPdf" class="btn btn-primary" onclick="exportCommissionsPdf()"><i class="fa-solid fa-file-pdf"></i> Gerar PDF</button>
+    `;
+    header.appendChild(actions);
+  }
+  if (!$("commissionDetailTable")) {
+    const holder = document.createElement("div");
+    holder.innerHTML = `
+      <h3 style="font-size:14px;margin:18px 0 8px">Relatório analítico por pagamento</h3>
+      <div class="note" style="margin-bottom:10px">A comissão parcelada aparece no mês da parcela marcada como paga. Vendas à vista legadas continuam entrando integralmente no mês do fechamento.</div>
+      <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Vendedor</th><th>Plano</th><th>Fonte</th><th>Fechamento</th><th>Pagamento</th><th>Implantação</th><th>Mensalidade</th><th>Base comissão</th><th>Consultor</th><th>Gestor</th></tr></thead><tbody id="commissionDetailTable"></tbody></table></div>
+    `;
+    card.appendChild(holder);
+  }
+}
+function renderCommissions() {
+  if (!$("consultantCommissionTable")) return;
+  ensureCommissionV12Ui();
+  const period = $("commissionMonthFilter")?.value || $("goalMonthFilter")?.value || monthKey();
+  const sellerFilter = $("commissionSellerFilter")?.value || "";
+  const rows = commissionRows(period, sellerFilter);
+  const details = commissionDetailRows(period, sellerFilter);
+  const installDetails = details.filter(r => r.tipo === "Implantação recebida");
+  const baseTotal = installDetails.reduce((sum, r) => sum + r.baseComissao, 0);
+  const consultantsTotal = rows.reduce((sum, r) => sum + r.totalCommission, 0);
+  const managersTotalEach = baseTotal * 0.25;
+  const salesCount = new Set(details.map(r => `${r.empresa}_${r.vendedor}_${r.plano}_${r.dataFechamento}`)).size;
+
+  $("commissionConsultantsTotal").textContent = money(consultantsTotal);
+  $("commissionManagersTotal").textContent = money(managersTotalEach);
+  $("commissionBaseTotal").textContent = money(baseTotal);
+  $("commissionSalesCount").textContent = String(salesCount);
+
+  $("consultantCommissionTable").innerHTML = rows.map(r => {
+    const indicatorText = [
+      r.indicators.hitImplantacao ? "Implantação" : "",
+      r.indicators.hitMensalidade ? "Mensalidade" : ""
+    ].filter(Boolean).join(" + ") || "Nenhum";
+    return `<tr>
+      <td><strong>${escapeHTML(r.user.nome)}</strong><br><small>${escapeHTML(r.user.perfil)}</small></td>
+      <td>${r.sales.length}</td>
+      <td>${money(r.installBase)}<br><small>somente parcelas pagas no mês</small></td>
+      <td>${money(r.mrrTotal)}</td>
+      <td>${escapeHTML(indicatorText)}</td>
+      <td><span class="commission-rate">${Math.round(r.rate * 100)}%</span><br><small>${productGroupTextForCommission(r)}</small></td>
+      <td><strong>${money(r.totalCommission)}</strong><br><small>Instalação: ${money(r.installCommission)} · Produtos: ${money(r.rensoftCommission)}</small></td>
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="7">Nenhum consultor com comissão no período.</td></tr>`;
+
+  const managers = commissionManagers();
+  $("managerCommissionTable").innerHTML = managers.map(u => `<tr>
+    <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
+    <td>${salesCount}</td>
+    <td>${money(baseTotal)}</td>
+    <td>25%</td>
+    <td><strong>${money(managersTotalEach)}</strong></td>
+  </tr>`).join("") || `<tr><td class="empty" colspan="5">Cadastre um usuário com perfil Gerente para visualizar a comissão do gestor.</td></tr>`;
+
+  if ($("commissionDetailTable")) {
+    $("commissionDetailTable").innerHTML = details.map(r => `<tr>
+      <td><strong>${escapeHTML(r.empresa || "—")}</strong><br><small>${escapeHTML(r.tipo)} · ${escapeHTML(r.parcela)}</small></td>
+      <td>${escapeHTML(r.vendedor)}</td>
+      <td>${escapeHTML(r.plano)}</td>
+      <td>${escapeHTML(r.fonte || "—")}</td>
+      <td>${formatDate(r.dataFechamento)}</td>
+      <td>${formatDate(r.dataPagamento)}</td>
+      <td>${money(r.implantacaoTotal)}</td>
+      <td>${money(r.mensalidade)}</td>
+      <td>${money(r.baseComissao)}</td>
+      <td>${r.taxaConsultor === 1 ? "1ª mensalidade" : Math.round(r.taxaConsultor * 100) + "%"}<br><strong>${money(r.comissaoConsultor)}</strong></td>
+      <td>${r.comissaoGestor ? `25%<br><strong>${money(r.comissaoGestor)}</strong>` : "—"}</td>
+    </tr>`).join("") || `<tr><td class="empty" colspan="11">Nenhuma parcela paga ou produto com comissão no período.</td></tr>`;
+  }
+}
+function productGroupTextForCommission(row) {
+  const parts = [];
+  if (row.installBase > 0) parts.push(`${Math.round(row.rate * 100)}% sobre parcelas pagas de implantação`);
+  if (row.rensoftCommission > 0) parts.push("1ª mensalidade em Produtos Rensoftware");
+  return parts.join(" + ") || `${Math.round(row.rate * 100)}% sobre implantação paga`;
+}
+function exportCommissions() {
+  const period = $("commissionMonthFilter")?.value || monthKey();
+  const rows = commissionDetailRows(period, $("commissionSellerFilter")?.value || "").map(r => ({
+    Periodo: period,
+    Empresa: r.empresa,
+    Vendedor: r.vendedor,
+    PlanoVendido: r.plano,
+    FonteCaptacao: r.fonte,
+    DataFechamento: r.dataFechamento,
+    DataPagamento: r.dataPagamento,
+    Parcela: r.parcela,
+    ValorImplantacaoTotal: r.implantacaoTotal,
+    ValorMensalidade: r.mensalidade,
+    BaseComissaoNoMes: r.baseComissao,
+    TaxaConsultor: r.taxaConsultor === 1 ? "Primeira mensalidade" : `${Math.round(r.taxaConsultor * 100)}%`,
+    ComissaoConsultor: r.comissaoConsultor,
+    ComissaoGestor: r.comissaoGestor
+  }));
+  exportXlsx(rows, `comissoes_analitico_${period}.xlsx`, "Comissoes");
+}
+function exportCommissionsPdf() {
+  const period = $("commissionMonthFilter")?.value || monthKey();
+  const sellerFilter = $("commissionSellerFilter")?.value || "";
+  const details = commissionDetailRows(period, sellerFilter);
+  const grouped = {};
+  details.forEach(r => {
+    const key = `${r.vendedor}|||${r.plano}`;
+    grouped[key] = grouped[key] || { vendedor: r.vendedor, plano: r.plano, base: 0, consultor: 0, gestor: 0 };
+    grouped[key].base += r.baseComissao;
+    grouped[key].consultor += r.comissaoConsultor;
+    grouped[key].gestor += r.comissaoGestor;
+  });
+  const summaryRows = Object.values(grouped).map(g => `<tr><td>${escapeHTML(g.vendedor)}</td><td>${escapeHTML(g.plano)}</td><td>${money(g.base)}</td><td>${money(g.consultor)}</td><td>${money(g.gestor)}</td></tr>`).join("");
+  const detailRows = details.map(r => `<tr>
+    <td>${escapeHTML(r.empresa || "—")}</td>
+    <td>${escapeHTML(r.vendedor)}</td>
+    <td>${escapeHTML(r.plano)}</td>
+    <td>${escapeHTML(r.fonte || "—")}</td>
+    <td>${formatDate(r.dataFechamento)}</td>
+    <td>${formatDate(r.dataPagamento)}</td>
+    <td>${escapeHTML(r.parcela)}</td>
+    <td>${money(r.implantacaoTotal)}</td>
+    <td>${money(r.mensalidade)}</td>
+    <td>${money(r.baseComissao)}</td>
+    <td>${money(r.comissaoConsultor)}</td>
+    <td>${money(r.comissaoGestor)}</td>
+  </tr>`).join("");
+  const totalConsultor = details.reduce((s,r) => s + r.comissaoConsultor, 0);
+  const totalGestor = details.reduce((s,r) => s + r.comissaoGestor, 0);
+  const totalBase = details.reduce((s,r) => s + r.baseComissao, 0);
+  const w = window.open("", "_blank");
+  if (!w) return showToast("Pop-up bloqueado. Libere pop-ups para gerar o PDF.", "fa-triangle-exclamation");
+  w.document.write(`
+    <!doctype html><html><head><meta charset="utf-8"><title>Relatório de Comissionamento ${period}</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#0f172a;margin:24px}
+      h1{font-size:22px;margin:0 0 4px;color:#075db3}
+      h2{font-size:16px;margin:24px 0 8px;color:#075db3}
+      .muted{color:#64748b;font-size:12px}
+      .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+      .card{border:1px solid #dbeafe;border-radius:10px;padding:12px;background:#eff6ff}
+      .value{font-size:18px;font-weight:800}
+      table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+      th,td{border:1px solid #d1d5db;padding:6px;text-align:left;vertical-align:top}
+      th{background:#075db3;color:#fff}
+      @media print{button{display:none} body{margin:10mm}}
+    </style></head><body>
+    <button onclick="window.print()" style="float:right;padding:8px 12px">Imprimir / salvar PDF</button>
+    <h1>Rensoftware CRM — Relatório de Comissionamento</h1>
+    <div class="muted">Período: ${escapeHTML(period)} · Gerado em ${formatDate(todayISO())}</div>
+    <div class="cards">
+      <div class="card"><div class="muted">Base de implantação recebida</div><div class="value">${money(totalBase)}</div></div>
+      <div class="card"><div class="muted">Comissão consultores</div><div class="value">${money(totalConsultor)}</div></div>
+      <div class="card"><div class="muted">Comissão gestor</div><div class="value">${money(totalGestor)}</div></div>
+    </div>
+    <h2>Resumo por vendedor e plano vendido</h2>
+    <table><thead><tr><th>Vendedor</th><th>Plano vendido</th><th>Base no mês</th><th>Comissão consultor</th><th>Comissão gestor</th></tr></thead><tbody>${summaryRows || `<tr><td colspan="5">Sem comissão no período.</td></tr>`}</tbody></table>
+    <h2>Detalhamento das comissões</h2>
+    <table><thead><tr><th>Empresa</th><th>Vendedor</th><th>Plano vendido</th><th>Fonte de captação</th><th>Fechamento</th><th>Pagamento</th><th>Parcela</th><th>Valor implantação</th><th>Valor mensalidade</th><th>Base comissão</th><th>Comissão consultor</th><th>Comissão gestor</th></tr></thead><tbody>${detailRows || `<tr><td colspan="12">Sem comissão no período.</td></tr>`}</tbody></table>
+    <script>setTimeout(()=>window.print(),500)<\/script>
+    </body></html>
+  `);
+  w.document.close();
+}
+
+// Dashboard e produtividade com o mês correto do fechamento.
+function renderDashboard() {
+  const period = monthKey();
+  const sales = salesInMonth(period);
+  const totalImplantacao = sales.reduce((s, v) => s + Number(v.implantacao || 0), 0);
+  const totalMensalidade = sales.reduce((s, v) => s + Number(v.mensalidade || 0), 0);
+  const monthLeads = (state.leads || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period);
+  if ($("statLeads")) $("statLeads").textContent = monthLeads.length;
+  if ($("statVendas")) $("statVendas").textContent = sales.length;
+  if ($("statImplantacao")) $("statImplantacao").textContent = money(totalImplantacao);
+  if ($("statMensalidade")) $("statMensalidade").textContent = money(totalMensalidade);
+  document.querySelectorAll("#page-dashboard .stat-label").forEach((el, idx) => {
+    const labels = ["Leads do mês", "Vendas fechadas no mês", "Implantação fechada no mês", "MRR fechado no mês"];
+    if (labels[idx]) el.textContent = labels[idx];
+  });
+
+  const globalGoal = (state.goals || []).find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
+  const done = sumSales(sales);
+  const realized = Number(done.implantacao) || 0;
+  const target = Number(globalGoal.implantacao || 0);
+  drawChart("dashboardGoalChart", "doughnut", ["Realizado", "Falta atingir"], [realized, Math.max(target - realized, 0)]);
+
+  const stages = PIPELINE.filter(p => p.nome !== "Perdido").map(p => p.nome);
+  const forecastByStage = stages.map(stage => openLeads().filter(l => l.pipeline === stage).reduce((sum, l) => sum + forecastValue(l), 0));
+  drawChart("dashboardForecastChart", "bar", stages, forecastByStage);
+  if ($("dashboardProdutividade")) {
+    $("dashboardProdutividade").innerHTML = productivityRows(period).slice(0, 8).join("") || `<tr><td class="empty" colspan="10">Cadastre vendedores em Usuários para visualizar produtividade.</td></tr>`;
+  }
+}
+
+function productivityRows(period = monthKey()) {
+  const revendas = isRevendasWorkspace();
+  const group = revendas ? "revendas" : goalSubView;
+  const rows = productivitySellers().map(u => {
+    const monthSales = salesInMonth(period).filter(s => s.vendedorId === u.id && saleMatchesGroup(s, group));
+    const leadsMes = monthlyLeadsByGroup(period, group).filter(l => l.vendedorId === u.id);
+    const perdidosMes = leadsMes.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
+    const done = sumGoalSales(monthSales);
+    const goal = sellerGoalForProductivity(u.id, period, group);
+    const pct = goalPct(done, goal);
+    const faltaImplantacao = Math.max((Number(goal.implantacao) || 0) - (Number(done.implantacao) || 0), 0);
+    const faltaMensalidade = Math.max((Number(goal.mensalidade) || 0) - (Number(done.mensalidade) || 0), 0);
+    const conversion = leadsMes.length ? Math.round((monthSales.length / leadsMes.length) * 100) : 0;
+    const html = revendas
+      ? `<tr><td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td><td>${leadsMes.length}</td><td>${perdidosMes.length}</td><td>${monthSales.length}</td><td>${conversion}%</td><td>${Math.round(goal.implantacao || 0)}</td><td>${progressBar(pct)}</td><td>${Math.round(faltaImplantacao || 0)}</td></tr>`
+      : `<tr>
+        <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
+        <td>${leadsMes.length}</td><td>${perdidosMes.length}</td><td>${monthSales.length}</td><td>${conversion}%</td>
+        <td>${money(done.implantacao)}</td><td>${money(done.mensalidade)}</td>
+        <td>${money(goal.implantacao)}<br><small>MRR: ${money(goal.mensalidade)}</small></td>
+        <td>${progressBar(pct)}<small>sobre implantação</small></td>
+        <td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td>
+      </tr>`;
+    return { html, leads: leadsMes.length, lost: perdidosMes.length, sales: monthSales.length, done, goal, falta: { implantacao: faltaImplantacao, mensalidade: faltaMensalidade } };
+  });
+
+  if (rows.length > 1 && canViewAllProductivity()) {
+    const totals = rows.reduce((acc, r) => {
+      acc.leads += r.leads; acc.lost += r.lost; acc.sales += r.sales;
+      acc.done.implantacao += r.done.implantacao; acc.done.mensalidade += r.done.mensalidade;
+      acc.goal.implantacao += r.goal.implantacao; acc.goal.mensalidade += r.goal.mensalidade;
+      return acc;
+    }, { leads: 0, lost: 0, sales: 0, done: { implantacao: 0, mensalidade: 0 }, goal: { implantacao: 0, mensalidade: 0 } });
+    const pctTotal = goalPct(totals.done, totals.goal);
+    const faltaImplantacao = Math.max(totals.goal.implantacao - totals.done.implantacao, 0);
+    const faltaMensalidade = Math.max(totals.goal.mensalidade - totals.done.mensalidade, 0);
+    const convTotal = totals.leads ? Math.round((totals.sales / totals.leads) * 100) : 0;
+    rows.push({ html: revendas
+      ? `<tr style="background:#f8fafc;font-weight:900"><td>Total equipe</td><td>${totals.leads}</td><td>${totals.lost}</td><td>${totals.sales}</td><td>${convTotal}%</td><td>${Math.round(totals.goal.implantacao || 0)}</td><td>${progressBar(pctTotal)}</td><td>${Math.round(faltaImplantacao || 0)}</td></tr>`
+      : `<tr style="background:#f8fafc;font-weight:900"><td>Total equipe</td><td>${totals.leads}</td><td>${totals.lost}</td><td>${totals.sales}</td><td>${convTotal}%</td><td>${money(totals.done.implantacao)}</td><td>${money(totals.done.mensalidade)}</td><td>${money(totals.goal.implantacao)}<br><small>MRR: ${money(totals.goal.mensalidade)}</small></td><td>${progressBar(pctTotal)}<small>sobre implantação</small></td><td>${money(faltaImplantacao)}<br><small>MRR: ${money(faltaMensalidade)}</small></td></tr>`
+    });
+  }
+  return rows.map(r => r.html);
+}
+
+
 // =============== EVENTOS ===============
 document.addEventListener("keydown", event => {
   if (event.key === "Enter" && $("authScreen").style.display !== "none") doLogin();
