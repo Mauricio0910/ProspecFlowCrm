@@ -5276,6 +5276,324 @@ function productivityRows(period = monthKey()) {
 }
 
 
+
+
+// =============== AJUSTES V15: RELATÓRIOS MENSAIS E EDIÇÃO/EXCLUSÃO DE VENDAS FECHADAS ===============
+function monthOptionsValues() {
+  const current = monthKey();
+  const salesMonths = (state.sales || []).map(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`));
+  const leadMonths = (state.leads || []).map(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`));
+  const goalMonths = (state.goals || []).map(g => g.periodo);
+  return [...new Set([current, ...goalMonths, ...salesMonths, ...leadMonths].filter(Boolean))].sort().reverse();
+}
+
+function applyMonthOptions(id, defaultValue = monthKey()) {
+  const el = $(id);
+  if (!el) return;
+  const values = monthOptionsValues();
+  const previous = el.value || defaultValue;
+
+  if (String(el.tagName || "").toUpperCase() === "SELECT") {
+    el.innerHTML = values.map(m => `<option value="${m}">${m}</option>`).join("");
+    el.value = values.includes(previous) ? previous : defaultValue;
+    return;
+  }
+
+  if (el.type === "month" && !el.value) {
+    el.value = values.includes(previous) ? previous : defaultValue;
+  }
+}
+
+// Reescreve o carregamento dos filtros mensais para incluir Relatórios e usar a data efetiva de fechamento.
+function populateMonthFilters() {
+  const current = monthKey();
+  ["goalMonthFilter", "saleMonthFilter", "leadMonthFilter", "commissionMonthFilter", "forecastMonthFilter", "reportMonthFilter"].forEach(id => applyMonthOptions(id, current));
+
+  if ($("commissionSellerFilter")) {
+    const selected = $("commissionSellerFilter").value || "";
+    $("commissionSellerFilter").innerHTML = `<option value="">Todos os consultores</option>` + eligibleGoalSellers().map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`).join("");
+  }
+}
+
+function ensureReportsV15Ui() {
+  const card = document.querySelector("#page-relatorios .card");
+  if (!card) return;
+  const header = card.querySelector(".card-header");
+  if (!header) return;
+
+  const title = header.querySelector(".card-subtitle");
+  if (title) title.textContent = "Resumo mensal por vendedor e produto";
+
+  let actions = header.querySelector(".report-actions-v15");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "report-actions-v15";
+    actions.style.display = "flex";
+    actions.style.gap = "8px";
+    actions.style.flexWrap = "wrap";
+    actions.style.alignItems = "center";
+
+    const oldActions = header.lastElementChild;
+    if (oldActions && oldActions !== header.firstElementChild) oldActions.remove();
+
+    actions.innerHTML = `
+      <input id="reportMonthFilter" class="field" type="month" onchange="renderReports()" title="Mês do relatório" style="max-width:180px">
+      <button class="btn btn-outline" onclick="exportAllReports()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
+      <button class="btn btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir/PDF</button>
+    `;
+    header.appendChild(actions);
+  }
+
+  applyMonthOptions("reportMonthFilter", monthKey());
+  if (!$("reportMonthFilter").value) $("reportMonthFilter").value = monthKey();
+}
+
+function reportPeriod() {
+  return $("reportMonthFilter")?.value || monthKey();
+}
+
+function salesForReportMonth(period = reportPeriod()) {
+  return (state.sales || [])
+    .filter(s => s.status !== "Cancelada")
+    .filter(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`) === period);
+}
+
+function leadsForReportMonth(period = reportPeriod()) {
+  return (state.leads || [])
+    .filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period);
+}
+
+function renderReports() {
+  ensureReportsV15Ui();
+  const period = reportPeriod();
+  const sales = salesForReportMonth(period);
+  const leads = leadsForReportMonth(period);
+  const total = sumSales(sales);
+  const conversion = leads.length ? Math.round((sales.length / leads.length) * 100) : 0;
+  const ticket = sales.length ? total.implantacao / sales.length : 0;
+
+  $("reportTotalImplantacao").textContent = money(total.implantacao);
+  $("reportTotalMensalidade").textContent = money(total.mensalidade);
+  $("reportConversion").textContent = `${conversion}%`;
+  $("reportTicket").textContent = money(ticket);
+
+  const cardLabels = document.querySelectorAll("#page-relatorios .stat-label");
+  const labels = [
+    `Implantação vendida em ${period}`,
+    `MRR vendido em ${period}`,
+    `Conversão mensal`,
+    `Ticket médio mensal`
+  ];
+  cardLabels.forEach((el, idx) => { if (labels[idx]) el.textContent = labels[idx]; });
+
+  const bySeller = groupSales(sales, "vendedorId", userName);
+  $("reportSellerTable").innerHTML = bySeller.map(r => `<tr><td>${escapeHTML(r.nome)}</td><td>${r.count}</td><td>${money(r.implantacao)}</td><td>${money(r.mensalidade)}</td></tr>`).join("") || `<tr><td class="empty" colspan="4">Sem vendas no mês selecionado.</td></tr>`;
+
+  const byProduct = groupSales(sales, "produtoId", productName);
+  $("reportProductTable").innerHTML = byProduct.map(r => `<tr><td>${escapeHTML(r.nome)}</td><td>${r.count}</td><td>${money(r.implantacao)}</td><td>${money(r.mensalidade)}</td></tr>`).join("") || `<tr><td class="empty" colspan="4">Sem vendas no mês selecionado.</td></tr>`;
+}
+
+function exportAllReports() {
+  if (!window.XLSX) return showToast("Biblioteca XLSX não carregou.", "fa-triangle-exclamation");
+  const period = reportPeriod();
+  const wb = XLSX.utils.book_new();
+  const reportSales = salesForReportMonth(period);
+  const reportLeads = leadsForReportMonth(period);
+
+  const sheets = {
+    Vendas: reportSales.map(s => {
+      const life = saleLifecycleRow(s);
+      return {
+        Periodo: period,
+        Cliente: s.cliente,
+        Lead: life.lead?.empresa || "",
+        Produto: productName(s.produtoId),
+        Vendedor: userName(s.vendedorId),
+        Campanha: campaignName(s.campaignId || life.lead?.campaignId),
+        Implantacao: s.implantacao,
+        Mensalidade: s.mensalidade,
+        DataFechamento: effectiveSaleDate(s),
+        Ciclo: life.cycle,
+        Status: s.status
+      };
+    }),
+    Leads: reportLeads.map(l => ({
+      Periodo: period,
+      Empresa: l.empresa,
+      Produto: productName(l.produtoId),
+      Vendedor: userName(l.vendedorId),
+      Campanha: campaignName(l.campaignId),
+      Etapa: l.pipeline,
+      Status: l.status,
+      DataReferencia: effectiveLeadDate(l),
+      Implantacao: l.implantacao,
+      Mensalidade: l.mensalidade,
+      ForecastImplantacao: forecastValue(l)
+    })),
+    Metas: (state.goals || []).filter(g => g.periodo === period).map(g => ({
+      Periodo: period,
+      Tipo: g.tipo,
+      Origem: g.origem || "Manual",
+      Grupo: g.grupo || goalGroup(g),
+      Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId),
+      Produto: productName(g.produtoId),
+      Implantacao: g.implantacao,
+      Mensalidade: g.mensalidade
+    })),
+    Campanhas: (state.campaigns || []).filter(c => {
+      const ini = c.dataInicio || "";
+      const fim = c.dataFim || ini;
+      return !ini || monthKey(`${ini}T00:00:00`) === period || monthKey(`${fim}T00:00:00`) === period;
+    }).map(c => ({ Periodo: period, Campanha: c.nome, Produto: productName(c.produtoId), Canal: c.canal, Status: c.status, Inicio: c.dataInicio, Fim: c.dataFim, Orcamento: c.orcamento })),
+    Remarketing: lostLeads().filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period).map(l => ({ Periodo: period, Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Campanha: campaignName(l.campaignId), Motivo: l.motivoPerda, Status: l.remarketingStatus })),
+    Usuarios: (state.users || []).map(u => ({ Nome: u.nome, Login: u.login, Perfil: u.perfil, Equipe: u.equipe, Ativo: u.ativo !== false }))
+  };
+
+  Object.entries(sheets).forEach(([name, rows]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name));
+  XLSX.writeFile(wb, `relatorio_executivo_${period}.xlsx`);
+  showToast(`Relatório mensal ${period} gerado.`);
+}
+
+// Evita que uma venda fechada editada manualmente seja sobrescrita pelo lead fechado
+// e impede que vendas excluídas sejam recriadas automaticamente.
+function syncClosedLeadsIntoSales(data = state, silent = true) {
+  const leads = data?.leads || [];
+  data.sales = Array.isArray(data.sales) ? data.sales : [];
+  let changed = false;
+
+  leads
+    .filter(l => l.status === "Fechado" && !l.saleDeletedAt && !l.vendaExcluida)
+    .forEach(lead => {
+      const existing = data.sales.find(s => s.leadId === lead.id);
+      if (existing) {
+        if (existing.manualEdit || existing.editadoManualmente) return;
+        const before = JSON.stringify(existing);
+        Object.assign(existing, saleFromLead(lead, existing));
+        if (before !== JSON.stringify(existing)) changed = true;
+      } else {
+        data.sales.push(saleFromLead(lead));
+        changed = true;
+      }
+    });
+
+  if (data === state && changed) persist();
+  if (data === state && !silent) showToast(changed ? "Leads fechados sincronizados com Gestão de Vendas." : "Nenhum lead fechado pendente de sincronização.");
+}
+
+function saveSale(id = "") {
+  const cliente = $("sCliente").value.trim();
+  if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
+  const revendas = isRevendasWorkspace();
+  const lead = findById(state.leads, $("sLead").value);
+  const oldSale = id ? findById(state.sales, id) : null;
+  const data = {
+    id: id || uid("s"),
+    leadId: $("sLead").value,
+    cliente,
+    produtoId: $("sProduto").value,
+    vendedorId: $("sVendedor").value,
+    campaignId: $("sCampanha").value || lead?.campaignId || "",
+    implantacao: revendas ? 0 : number($("sImplantacao")?.value || 0),
+    mensalidade: revendas ? 0 : number($("sMensalidade")?.value || 0),
+    dataVenda: $("sData").value || todayISO(),
+    status: $("sStatus").value,
+    observacao: $("sObs").value.trim(),
+    origem: $("sOrigem").value.trim(),
+    manualEdit: true,
+    editadoManualmente: true,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!revendas) applyPaymentPlanFromForm(data, "s");
+
+  if (id) {
+    const idx = state.sales.findIndex(s => s.id === id);
+    if (idx >= 0) state.sales[idx] = { ...state.sales[idx], ...oldSale, ...data };
+    else state.sales.push(data);
+  } else {
+    data.createdAt = new Date().toISOString();
+    state.sales.push(data);
+  }
+
+  if (lead && data.status === "Fechada") {
+    lead.status = "Fechado";
+    lead.pipeline = "Fechamento";
+    lead.probabilidade = 100;
+    lead.fechadoEm = data.dataVenda;
+    lead.updatedAt = new Date().toISOString();
+    delete lead.saleDeletedAt;
+    delete lead.vendaExcluida;
+    Object.assign(lead, transferPaymentPlan(data, lead));
+  }
+
+  persist();
+  closeModal();
+  renderAll();
+  showToast(revendas ? "Revenda captada atualizada." : "Venda concluída salva. Alterações manuais não serão sobrescritas pela sincronização do lead.");
+}
+
+function deleteSale(id) {
+  const sale = findById(state.sales || [], id);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+  if (!confirm("Excluir esta venda concluída? Ela não será recriada automaticamente pelo lead vinculado.")) return;
+
+  if (sale.leadId) {
+    const lead = findById(state.leads || [], sale.leadId);
+    if (lead) {
+      lead.saleDeletedAt = new Date().toISOString();
+      lead.vendaExcluida = true;
+      lead.updatedAt = new Date().toISOString();
+    }
+  }
+
+  state.sales = (state.sales || []).filter(s => s.id !== id);
+  persist();
+  renderAll();
+  showToast("Venda excluída. O lead vinculado permanecerá no histórico, sem recriar a venda automaticamente.");
+}
+
+// Reforça o render da gestão de vendas com data efetiva e ações sempre disponíveis.
+function renderSales() {
+  const period = $("saleMonthFilter")?.value || monthKey();
+  const sales = salesInMonth(period).sort((a,b) => String(effectiveSaleDate(b)).localeCompare(String(effectiveSaleDate(a))));
+  const total = sumSales(sales);
+  const revendas = isRevendasWorkspace();
+
+  if ($("salesTableHeader")) {
+    $("salesTableHeader").innerHTML = revendas
+      ? `<th>Revenda / Parceiro</th><th>Origem</th><th>Programa</th><th>Responsável</th><th>Data captação</th><th>Ciclo</th><th>Resultado</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`
+      : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
+  }
+
+  $("salesClosedCount").textContent = String(sales.length);
+  $("salesClosedImplantacao").textContent = revendas ? String(sales.length) : money(total.implantacao);
+  $("salesClosedMrr").textContent = revendas ? "—" : money(total.mensalidade);
+  $("salesAvgTicket").textContent = revendas ? "—" : money(sales.length ? total.implantacao / sales.length : 0);
+
+  $("salesTable").innerHTML = sales.map(s => {
+    const life = saleLifecycleRow(s);
+    const lead = life.lead;
+    const origem = s.origem || lead?.origem || "—";
+    return `<tr>
+      <td><strong>${escapeHTML(s.cliente || lead?.empresa || "Cliente não informado")}</strong><br><small>${lead ? `Lead: ${escapeHTML(lead.empresa)}` : "Venda manual"}${s.manualEdit ? " · editada manualmente" : ""}</small></td>
+      <td>${escapeHTML(origem)}<br><small>${escapeHTML(campaignName(s.campaignId || lead?.campaignId))}</small></td>
+      <td>${escapeHTML(productName(s.produtoId))}</td>
+      <td>${escapeHTML(userName(s.vendedorId))}</td>
+      <td>${formatDate(effectiveSaleDate(s))}</td>
+      <td>${escapeHTML(life.cycle)}</td>
+      <td>${revendas ? "Captado" : money(s.implantacao)}</td>
+      <td>${revendas ? "—" : money(s.mensalidade)}</td>
+      <td>${statusTag(s.status)}</td>
+      <td>
+        ${lead ? `<button class="btn btn-muted btn-sm" onclick="openLeadModal('${lead.id}')" title="Ver lead"><i class="fa-solid fa-user"></i></button>` : ""}
+        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')" title="Editar venda concluída"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')" title="Excluir venda concluída"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="10">${revendas ? "Nenhuma revenda captada no período." : "Nenhuma venda no período."}</td></tr>`;
+}
+
+
 // =============== EVENTOS ===============
 document.addEventListener("keydown", event => {
   if (event.key === "Enter" && $("authScreen").style.display !== "none") doLogin();
