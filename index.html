@@ -560,6 +560,8 @@
             <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-handshake"></i></div><div id="statVendas" class="stat-value">0</div><div class="stat-label">Vendas fechadas no mês</div></div>
             <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-coins"></i></div><div id="statImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Implantação vendida no mês</div></div>
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-repeat"></i></div><div id="statMensalidade" class="stat-value">R$ 0</div><div class="stat-label">MRR mensalidade no mês</div></div>
+            <div id="dashboardCommissionSellerCard" class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-wallet"></i></div><div id="statCommissionSeller" class="stat-value">R$ 0</div><div id="statCommissionSellerLabel" class="stat-label">Comissionamento do mês</div></div>
+            <div id="dashboardCommissionManagerCard" class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div><div id="statCommissionManager" class="stat-value">R$ 0</div><div class="stat-label">Comissão gestor no mês</div></div>
           </div>
 
           <div class="grid two-col">
@@ -669,9 +671,9 @@
 
         <section id="page-comissionamento" class="page">
           <div class="grid stats-grid">
-            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-coins"></i></div><div id="commissionTotal" class="stat-value">R$ 0</div><div class="stat-label">Comissão total no filtro</div></div>
-            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div id="commissionImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Comissão sobre implantação</div></div>
-            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-repeat"></i></div><div id="commissionMensalidade" class="stat-value">R$ 0</div><div class="stat-label">Comissão sobre mensalidade</div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-coins"></i></div><div id="commissionTotal" class="stat-value">R$ 0</div><div class="stat-label">Comissão vendedores</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div id="commissionImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Base implantação</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div><div id="commissionMensalidade" class="stat-value">R$ 0</div><div class="stat-label">Comissão do gestor</div></div>
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-handshake"></i></div><div id="commissionSalesCount" class="stat-value">0</div><div class="stat-label">Vendas consideradas</div></div>
           </div>
 
@@ -679,7 +681,7 @@
             <div class="card-header">
               <div>
                 <div class="card-title">Comissionamento</div>
-                <div class="card-subtitle">Administrador visualiza todos. Consultor/vendedor visualiza somente as próprias vendas.</div>
+                <div class="card-subtitle">Administrador/Gerente visualiza todos. Consultor/vendedor visualiza somente o próprio comissionamento.</div>
               </div>
               <button class="btn btn-outline" onclick="exportTable('commission')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
@@ -702,21 +704,19 @@
             </div>
 
             <div class="note" style="margin-bottom:14px">
-              Fórmula aplicada: <strong id="commissionRateLabel">Comissionamento escalonado por atingimento mensal da meta</strong>.
-              Implantação é calculada uma única vez. Mensalidade/MRR é calculada pelo percentual e prazo da faixa atingida.
+              Fórmula aplicada: <strong id="commissionRateLabel">Comissão sobre implantação conforme metas de mensalidade e implantação</strong>.
+              A mensalidade não gera comissão direta; ela define o indicador. A comissão do vendedor é paga sobre implantação: 20% sem bater indicadores, 25% ao bater um indicador e 30% ao bater mensalidade e implantação. Gestor: 25% sobre a implantação da equipe.
             </div>
 
             <div class="table-wrap" style="margin-bottom:14px">
               <table>
                 <thead>
-                  <tr><th>Atingimento mensal</th><th>% Implantação</th><th>% MRR</th><th>Prazo MRR</th></tr>
+                  <tr><th>Indicadores batidos</th><th>Regra vendedor</th><th>Base</th><th>Gestor</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td>Até 69%</td><td>3%</td><td>0%</td><td>Sem recorrência</td></tr>
-                  <tr><td>70% a 99%</td><td>5%</td><td>3%</td><td>3 mensalidades</td></tr>
-                  <tr><td>100% a 119%</td><td>7%</td><td>5%</td><td>6 mensalidades</td></tr>
-                  <tr><td>120% a 149%</td><td>9%</td><td>7%</td><td>9 mensalidades</td></tr>
-                  <tr><td>150% ou mais</td><td>12%</td><td>10%</td><td>12 mensalidades</td></tr>
+                  <tr><td>Nenhum</td><td>20%</td><td>Sobre implantação</td><td rowspan="3">25% sobre implantação da equipe</td></tr>
+                  <tr><td>Implantação ou mensalidade</td><td>25%</td><td>Sobre implantação</td></tr>
+                  <tr><td>Implantação e mensalidade</td><td>30%</td><td>Sobre implantação</td></tr>
                 </tbody>
               </table>
             </div>
@@ -726,8 +726,8 @@
                 <thead>
                   <tr>
                     <th>Data</th><th>Cliente</th><th>Produto</th><th>Vendedor</th>
-                    <th>Atingimento</th><th>Implantação</th><th>% Impl.</th><th>Comissão Impl.</th>
-                    <th>Mensalidade</th><th>% Mens.</th><th>Prazo</th><th>Comissão Mens.</th><th>Total Comissão</th><th>Status</th>
+                    <th>Indicadores</th><th>Implantação</th><th>Mensalidade</th><th>Meta Impl.</th>
+                    <th>Meta Mens.</th><th>% Vendedor</th><th>Comissão Vendedor</th><th>Comissão Gestor</th><th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="commissionTable"></tbody>
@@ -989,17 +989,23 @@ function currentRole() {
 function isAdmin() {
   return currentRole() === "administrador";
 }
+function isManager() {
+  return currentRole() === "gerente" || currentRole() === "gestor";
+}
 function canViewAllCommercialData() {
-  return ["administrador", "gerente", "sdr"].includes(currentRole());
+  return ["administrador", "gerente", "gestor", "sdr"].includes(currentRole());
 }
 function canViewTeamProductivity() {
-  return ["administrador", "gerente", "sdr"].includes(currentRole());
+  return ["administrador", "gerente", "gestor", "sdr"].includes(currentRole());
 }
 function canManageGoals() {
-  return ["administrador", "gerente"].includes(currentRole());
+  return ["administrador", "gerente", "gestor"].includes(currentRole());
+}
+function canViewManagerCommission() {
+  return isAdmin() || isManager();
 }
 function canAccessCommission() {
-  return isAdmin() || isSalesConsultant(currentUser);
+  return isAdmin() || isManager() || isSalesConsultant(currentUser);
 }
 function canAccessPage(page) {
   if (["vendas", "usuarios"].includes(page)) return isAdmin();
@@ -1616,7 +1622,7 @@ function fillCommissionSellerFilter(id) {
   const select = $(id);
   if (!select || select.dataset.loadedFor === `${currentUser?.id || ""}:${state.users.length}`) return;
 
-  if (isAdmin()) {
+  if (isAdmin() || isManager()) {
     const usersWithSales = state.users
       .filter(u => u.ativo !== false && state.sales.some(s => s.vendedorId === u.id));
     const map = new Map();
@@ -2069,6 +2075,19 @@ function renderDashboard() {
   $("statImplantacao").textContent = money(totalImplantacao);
   $("statMensalidade").textContent = money(totalMensalidade);
 
+  const commissionDash = commissionTotalsForDashboard(range);
+  const sellerCard = $("dashboardCommissionSellerCard");
+  const managerCard = $("dashboardCommissionManagerCard");
+  if (sellerCard) sellerCard.style.display = canAccessCommission() ? "" : "none";
+  if (managerCard) managerCard.style.display = canViewManagerCommission() ? "" : "none";
+  if ($("statCommissionSeller")) $("statCommissionSeller").textContent = money(commissionDash.sellerTotal);
+  if ($("statCommissionManager")) $("statCommissionManager").textContent = money(commissionDash.managerTotal);
+  if ($("statCommissionSellerLabel")) {
+    $("statCommissionSellerLabel").textContent = canViewManagerCommission()
+      ? "Comissionamento geral do mês"
+      : "Seu comissionamento no mês";
+  }
+
   const globalGoal = state.goals.find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
   const done = sumSales(sales);
   const realized = done.implantacao + done.mensalidade;
@@ -2265,53 +2284,6 @@ function productivityRows(periodInfo = monthKey()) {
 }
 
 
-function commissionTierByAchievement(pct) {
-  const value = Number(pct) || 0;
-  if (value >= 150) {
-    return {
-      label: "150% ou mais",
-      implantacaoPercent: 12,
-      mensalidadePercent: 10,
-      mensalidadeMeses: 12,
-      descricao: "Alta performance"
-    };
-  }
-  if (value >= 120) {
-    return {
-      label: "120% a 149%",
-      implantacaoPercent: 9,
-      mensalidadePercent: 7,
-      mensalidadeMeses: 9,
-      descricao: "Acelerador"
-    };
-  }
-  if (value >= 100) {
-    return {
-      label: "100% a 119%",
-      implantacaoPercent: 7,
-      mensalidadePercent: 5,
-      mensalidadeMeses: 6,
-      descricao: "Meta batida"
-    };
-  }
-  if (value >= 70) {
-    return {
-      label: "70% a 99%",
-      implantacaoPercent: 5,
-      mensalidadePercent: 3,
-      mensalidadeMeses: 3,
-      descricao: "Rota de meta"
-    };
-  }
-  return {
-    label: "Até 69%",
-    implantacaoPercent: 3,
-    mensalidadePercent: 0,
-    mensalidadeMeses: 0,
-    descricao: "Sem recorrência"
-  };
-}
-
 function commissionSaleMonthKey(sale) {
   const date = String(sale?.dataVenda || todayISO());
   return /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : monthKey();
@@ -2329,28 +2301,53 @@ function commissionEligibleSalesForMonth(sellerId, month) {
   });
 }
 
-function commissionAchievementForSale(sale) {
-  const month = commissionSaleMonthKey(sale);
+function commissionPolicyForSellerMonth(sellerId, month) {
   const range = monthRange(month);
-  const sellerId = sale?.vendedorId || "";
   const done = sumSales(commissionEligibleSalesForMonth(sellerId, month));
   const goal = totalGoalForSellerRange(sellerId, range.start, range.end);
-  const pct = goalPct(done, goal);
-  const goalTotal = (Number(goal.implantacao) || 0) + (Number(goal.mensalidade) || 0);
+
+  const metaImplantacao = Number(goal.implantacao) || 0;
+  const metaMensalidade = Number(goal.mensalidade) || 0;
+  const realizadoImplantacao = Number(done.implantacao) || 0;
+  const realizadoMensalidade = Number(done.mensalidade) || 0;
+
+  const bateuImplantacao = metaImplantacao > 0 && realizadoImplantacao >= metaImplantacao;
+  const bateuMensalidade = metaMensalidade > 0 && realizadoMensalidade >= metaMensalidade;
+  const indicadoresBatidos = (bateuImplantacao ? 1 : 0) + (bateuMensalidade ? 1 : 0);
+  const vendedorPercent = indicadoresBatidos >= 2 ? 30 : indicadoresBatidos === 1 ? 25 : 20;
+  const managerPercent = 25;
+
+  const pctImplantacao = metaImplantacao > 0 ? Math.round((realizadoImplantacao / metaImplantacao) * 100) : 0;
+  const pctMensalidade = metaMensalidade > 0 ? Math.round((realizadoMensalidade / metaMensalidade) * 100) : 0;
+  const label = indicadoresBatidos >= 2
+    ? "Bateu implantação e mensalidade"
+    : indicadoresBatidos === 1
+      ? (bateuImplantacao ? "Bateu implantação" : "Bateu mensalidade")
+      : "Não bateu indicadores";
+
   return {
     month,
-    pct,
     done,
     goal,
-    goalTotal,
-    tier: commissionTierByAchievement(pct)
+    metaImplantacao,
+    metaMensalidade,
+    realizadoImplantacao,
+    realizadoMensalidade,
+    pctImplantacao,
+    pctMensalidade,
+    bateuImplantacao,
+    bateuMensalidade,
+    indicadoresBatidos,
+    vendedorPercent,
+    managerPercent,
+    label
   };
 }
 
 function commissionSales() {
   const range = filterRange("commission", "month");
   let sellerId = $("commissionSellerFilter")?.value || "";
-  if (!isAdmin() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
+  if (!canViewManagerCommission() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
   const productId = $("commissionProductFilter")?.value || "";
   const status = $("commissionStatusFilter")?.value ?? "Fechada";
   return filteredVisibleSales({ start: range.start, end: range.end, sellerId, productId, status })
@@ -2363,79 +2360,108 @@ function commissionRowsData() {
   return commissionSales().map(s => {
     const implantacao = Number(s.implantacao || 0);
     const mensalidade = Number(s.mensalidade || 0);
-    const achievement = commissionAchievementForSale(s);
-    const tier = achievement.tier;
-    const comImpl = implantacao * (tier.implantacaoPercent / 100);
-    const comMensParcela = mensalidade * (tier.mensalidadePercent / 100);
-    const comMens = comMensParcela * tier.mensalidadeMeses;
+    const policy = commissionPolicyForSellerMonth(s.vendedorId, commissionSaleMonthKey(s));
+    const comVendedor = implantacao * (policy.vendedorPercent / 100);
+    const comGestor = implantacao * (policy.managerPercent / 100);
+
     return {
       sale: s,
       implantacao,
       mensalidade,
-      atingimento: achievement.pct,
-      faixa: tier.label,
-      metaTotal: achievement.goalTotal,
-      realizadoTotal: (Number(achievement.done.implantacao) || 0) + (Number(achievement.done.mensalidade) || 0),
-      implantacaoPercent: tier.implantacaoPercent,
-      mensalidadePercent: tier.mensalidadePercent,
-      mensalidadeMeses: tier.mensalidadeMeses,
-      comImpl,
-      comMensParcela,
-      comMens,
-      total: comImpl + comMens
+      policy,
+      faixa: policy.label,
+      metaImplantacao: policy.metaImplantacao,
+      metaMensalidade: policy.metaMensalidade,
+      realizadoImplantacao: policy.realizadoImplantacao,
+      realizadoMensalidade: policy.realizadoMensalidade,
+      pctImplantacao: policy.pctImplantacao,
+      pctMensalidade: policy.pctMensalidade,
+      vendedorPercent: policy.vendedorPercent,
+      managerPercent: policy.managerPercent,
+      comImpl: comVendedor,
+      comMens: 0,
+      comGestor,
+      total: comVendedor
     };
   });
+}
+
+function commissionTotalsForDashboard(range = periodRange("month")) {
+  const sales = (state.sales || [])
+    .filter(s => {
+      const status = String(s.status || "").toLowerCase();
+      return (status === "fechada" || status === "fechado")
+        && inDateRange(s.dataVenda || todayISO(), range.start, range.end)
+        && isSalesConsultant(findById(state.users, s.vendedorId));
+    })
+    .filter(s => {
+      if (canViewManagerCommission()) return true;
+      if (isSalesConsultant(currentUser)) return s.vendedorId === currentUser.id;
+      return false;
+    });
+
+  const sellerTotal = sales.reduce((sum, s) => {
+    const policy = commissionPolicyForSellerMonth(s.vendedorId, commissionSaleMonthKey(s));
+    return sum + ((Number(s.implantacao) || 0) * (policy.vendedorPercent / 100));
+  }, 0);
+
+  const managerTotal = canViewManagerCommission()
+    ? sales.reduce((sum, s) => sum + ((Number(s.implantacao) || 0) * 0.25), 0)
+    : 0;
+
+  return { sales, sellerTotal, managerTotal };
 }
 
 function renderCommission() {
   if (!$("commissionTable")) return;
 
   if (!canAccessCommission()) {
-    $("commissionTable").innerHTML = `<tr><td class="empty" colspan="14">Comissionamento disponível apenas para Administrador e Consultores/Vendedores.</td></tr>`;
+    $("commissionTable").innerHTML = `<tr><td class="empty" colspan="13">Comissionamento disponível apenas para Administrador, Gerente e Consultores/Vendedores.</td></tr>`;
     ["commissionTotal", "commissionImplantacao", "commissionMensalidade"].forEach(id => { if ($(id)) $(id).textContent = money(0); });
     if ($("commissionSalesCount")) $("commissionSalesCount").textContent = "0";
     return;
   }
 
   if ($("commissionRateLabel")) {
-    $("commissionRateLabel").textContent = "Faixas: 3/5/7/9/12% na implantação e 0/3/5/7/10% no MRR, conforme atingimento mensal";
+    $("commissionRateLabel").textContent = "Vendedor: 20% sem indicadores, 25% com um indicador, 30% com implantação e mensalidade. Gestor: 25% sobre implantação da equipe.";
   }
 
   const rows = commissionRowsData();
-  const totalImpl = rows.reduce((s,r) => s + r.comImpl, 0);
-  const totalMens = rows.reduce((s,r) => s + r.comMens, 0);
-  $("commissionImplantacao").textContent = money(totalImpl);
-  $("commissionMensalidade").textContent = money(totalMens);
-  $("commissionTotal").textContent = money(totalImpl + totalMens);
+  const totalSellerCommission = rows.reduce((s,r) => s + r.comImpl, 0);
+  const totalImplantacao = rows.reduce((s,r) => s + r.implantacao, 0);
+  const totalGestor = canViewManagerCommission() ? rows.reduce((s,r) => s + r.comGestor, 0) : 0;
+
+  $("commissionImplantacao").textContent = money(totalImplantacao);
+  $("commissionMensalidade").textContent = canViewManagerCommission() ? money(totalGestor) : "—";
+  $("commissionTotal").textContent = money(totalSellerCommission);
   $("commissionSalesCount").textContent = String(rows.length);
 
   $("commissionTable").innerHTML = rows.map(r => {
     const s = r.sale;
-    const prazo = r.mensalidadeMeses > 0 ? `${r.mensalidadeMeses}x` : "—";
-    const goalInfo = r.metaTotal > 0
-      ? `<small>Meta: ${money(r.metaTotal)} · Realizado: ${money(r.realizadoTotal)}</small>`
-      : `<small>Sem meta cadastrada no mês</small>`;
+    const indicadores = `
+      <strong>${escapeHTML(r.faixa)}</strong><br>
+      <small>Impl.: ${r.pctImplantacao}% · Mens.: ${r.pctMensalidade}%</small>
+    `;
     return `<tr>
       <td>${formatDate(s.dataVenda)}</td>
       <td><strong>${escapeHTML(s.cliente)}</strong><br><small>${escapeHTML(s.observacao || "")}</small></td>
       <td>${escapeHTML(productName(s.produtoId))}</td>
       <td>${escapeHTML(userName(s.vendedorId))}</td>
-      <td><strong>${r.atingimento}%</strong><br><small>${escapeHTML(r.faixa)}</small><br>${goalInfo}</td>
+      <td>${indicadores}</td>
       <td>${money(r.implantacao)}</td>
-      <td>${r.implantacaoPercent}%</td>
-      <td><strong>${money(r.comImpl)}</strong></td>
       <td>${money(r.mensalidade)}</td>
-      <td>${r.mensalidadePercent}%</td>
-      <td>${prazo}</td>
-      <td><strong>${money(r.comMens)}</strong><br><small>${r.mensalidadeMeses ? `${money(r.comMensParcela)} por mês` : "Sem recorrência"}</small></td>
-      <td><strong>${money(r.total)}</strong></td>
+      <td>${money(r.metaImplantacao)}</td>
+      <td>${money(r.metaMensalidade)}</td>
+      <td><strong>${r.vendedorPercent}%</strong></td>
+      <td><strong>${money(r.comImpl)}</strong></td>
+      <td>${canViewManagerCommission() ? `<strong>${money(r.comGestor)}</strong><br><small>25% gestor</small>` : "—"}</td>
       <td>${statusTag(s.status)}</td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="14">Nenhuma venda encontrada para comissionamento no filtro selecionado.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="13">Nenhuma venda encontrada para comissionamento no filtro selecionado.</td></tr>`;
 }
 
 function saveCommissionConfig() {
-  showToast("A política de comissionamento agora é fixa e escalonada por atingimento mensal.", "fa-circle-info");
+  showToast("A política de comissionamento é fixa: 20% / 25% / 30% ao vendedor e 25% ao gestor.", "fa-circle-info");
   renderCommission();
 }
 
@@ -3108,19 +3134,19 @@ function exportTable(type) {
         Cliente: s.cliente,
         Produto: productName(s.produtoId),
         Vendedor: userName(s.vendedorId),
-        AtingimentoMensal: r.atingimento,
-        Faixa: r.faixa,
-        MetaMensalTotal: r.metaTotal,
-        RealizadoMensalTotal: r.realizadoTotal,
-        Implantacao: r.implantacao,
-        PercentualImplantacao: r.implantacaoPercent,
-        ComissaoImplantacao: r.comImpl,
-        Mensalidade: r.mensalidade,
-        PercentualMensalidade: r.mensalidadePercent,
-        PrazoMensalidades: r.mensalidadeMeses,
-        ComissaoMensalidadeParcela: r.comMensParcela,
-        ComissaoMensalidadeTotalPrazo: r.comMens,
-        ComissaoTotal: r.total,
+        Indicadores: r.faixa,
+        AtingimentoImplantacao: `${r.pctImplantacao}%`,
+        AtingimentoMensalidade: `${r.pctMensalidade}%`,
+        MetaImplantacao: r.metaImplantacao,
+        MetaMensalidade: r.metaMensalidade,
+        RealizadoImplantacaoMes: r.realizadoImplantacao,
+        RealizadoMensalidadeMes: r.realizadoMensalidade,
+        ImplantacaoVenda: r.implantacao,
+        MensalidadeVenda: r.mensalidade,
+        PercentualVendedor: `${r.vendedorPercent}%`,
+        ComissaoVendedor: r.comImpl,
+        PercentualGestor: canViewManagerCommission() ? "25%" : "",
+        ComissaoGestor: canViewManagerCommission() ? r.comGestor : "",
         Status: s.status
       };
     });
