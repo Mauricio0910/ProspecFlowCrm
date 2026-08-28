@@ -497,6 +497,8 @@
       <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" />
       <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" />
       <button class="btn-auth" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+      <button class="btn btn-outline" style="width:100%;margin-top:12px;justify-content:center" onclick="openFirebaseConfigModal()"><i class="fa-solid fa-database"></i> Configurar Firebase</button>
+      <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM carrega o Firestore quando a configuração web do Firebase está preenchida no arquivo ou salva neste botão.</div>
     </div>
   </section>
 
@@ -580,7 +582,7 @@
               <div><div class="card-title">Resumo de produtividade</div><div class="card-subtitle">Mês atual · consultores de vendas cadastrados em Usuários</div></div>
               <button class="btn btn-primary" onclick="goToPage('metas')"><i class="fa-solid fa-bullseye"></i> Ver metas</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Consultor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="dashboardProdutividade"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Consultor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th><th>Meta</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="dashboardProdutividade"></tbody></table></div>
           </div>
         </section>
 
@@ -592,6 +594,13 @@
             </div>
             <div class="toolbar">
               <input id="leadSearch" class="field" placeholder="Buscar por empresa, contato, vendedor ou produto..." oninput="renderLeads()" />
+              <select id="leadPeriodFilter" class="select" style="max-width:170px" onchange="togglePeriodControls('lead'); renderLeads()">
+                <option value="month" selected>Mês atual</option>
+                <option value="year">Ano atual</option>
+                <option value="all">Todo histórico</option>
+              </select>
+              <input id="leadMonthFilter" class="field" type="month" style="max-width:160px" onchange="renderLeads()" />
+              <input id="leadYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderLeads()" />
               <select id="leadStageFilter" class="select" style="max-width:220px" onchange="renderLeads()">
                 <option value="">Todas as etapas</option>
                 <option>Captação</option><option>Agendamento</option><option>Apresentação</option><option>Negociação</option><option>Fechamento</option><option>Perdido</option>
@@ -639,6 +648,13 @@
               <button class="btn btn-outline" onclick="exportTable('forecast')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="toolbar">
+              <select id="forecastPeriodFilter" class="select" style="max-width:170px" onchange="togglePeriodControls('forecast'); renderForecast()">
+                <option value="month" selected>Mês atual</option>
+                <option value="year">Ano atual</option>
+                <option value="all">Todo histórico</option>
+              </select>
+              <input id="forecastMonthFilter" class="field" type="month" style="max-width:160px" onchange="renderForecast()" />
+              <input id="forecastYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderForecast()" />
               <select id="forecastSellerFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
               <select id="forecastProductFilter" class="select" style="max-width:220px" onchange="renderForecast()"></select>
               <select id="forecastStageFilter" class="select" style="max-width:220px" onchange="renderForecast()">
@@ -663,11 +679,14 @@
               <button class="btn btn-outline" onclick="exportTable('projections')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="toolbar">
-              <select id="projectionPeriod" class="select" style="max-width:180px" onchange="renderProjections()">
+              <select id="projectionPeriod" class="select" style="max-width:180px" onchange="togglePeriodControls('projection'); renderProjections()">
                 <option value="week">Semanal</option>
                 <option value="month" selected>Mensal</option>
                 <option value="year">Anual</option>
               </select>
+              <input id="projectionWeekRef" class="field" type="date" style="max-width:160px" onchange="renderProjections()" />
+              <input id="projectionMonthFilter" class="field" type="month" style="max-width:160px" onchange="renderProjections()" />
+              <input id="projectionYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderProjections()" />
               <select id="projectionSellerFilter" class="select" style="max-width:220px" onchange="renderProjections()"></select>
               <select id="projectionProductFilter" class="select" style="max-width:220px" onchange="renderProjections()"></select>
             </div>
@@ -683,7 +702,12 @@
               <button class="btn btn-primary" data-action="manage-goals" onclick="openGoalModal()"><i class="fa-solid fa-plus"></i> Nova Meta</button>
             </div>
             <div class="toolbar">
+              <select id="goalPeriodFilter" class="select" style="max-width:170px" onchange="togglePeriodControls('goal'); renderGoals()">
+                <option value="month" selected>Mensal</option>
+                <option value="year">Anual</option>
+              </select>
               <select id="goalMonthFilter" class="select" style="max-width:220px" onchange="renderGoals()"></select>
+              <input id="goalYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderGoals()" />
               <button class="btn btn-outline" onclick="exportTable('goals')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Consultor</th><th>Produto</th><th>Meta Implantação</th><th>Meta Mensalidade</th><th>Realizado</th><th>Atingimento</th><th>Falta atingir</th><th>Ações</th></tr></thead><tbody id="goalsTable"></tbody></table></div>
@@ -762,8 +786,16 @@
               <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-outline" onclick="exportAllReports()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button><button class="btn btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir/PDF</button></div>
             </div>
             <div class="toolbar">
-              <input id="reportStartDate" class="field" type="date" style="max-width:170px" onchange="renderReports()" />
-              <input id="reportEndDate" class="field" type="date" style="max-width:170px" onchange="renderReports()" />
+              <select id="reportPeriodFilter" class="select" style="max-width:170px" onchange="applyReportPeriodPreset(); renderReports()">
+                <option value="month" selected>Mês atual</option>
+                <option value="year">Ano atual</option>
+                <option value="custom">Personalizado</option>
+                <option value="all">Todo histórico</option>
+              </select>
+              <input id="reportMonthFilter" class="field" type="month" style="max-width:160px" onchange="applyReportPeriodPreset(); renderReports()" />
+              <input id="reportYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="applyReportPeriodPreset(); renderReports()" />
+              <input id="reportStartDate" class="field" type="date" style="max-width:170px" onchange="markReportCustom(); renderReports()" />
+              <input id="reportEndDate" class="field" type="date" style="max-width:170px" onchange="markReportCustom(); renderReports()" />
               <select id="reportSellerFilter" class="select" style="max-width:220px" onchange="renderReports()"></select>
               <select id="reportProductFilter" class="select" style="max-width:220px" onchange="renderReports()"></select>
               <select id="reportStatusFilter" class="select" style="max-width:190px" onchange="renderReports()">
@@ -817,10 +849,19 @@
   Para produção, aplique autenticação e regras por usuário/perfil.
 */
 
-// =============== FIREBASE WEB CONFIG ===============
-// Cole aqui a configuração web do seu app Firebase.
-// No console Firebase: Configurações do projeto > Seus apps > App Web > Configuração do SDK.
-const firebaseConfig = {
+// =============== FIREBASE WEB CONFIG GERAL ===============
+// PREENCHA ESTE BLOCO UMA ÚNICA VEZ NO CÓDIGO.
+// Depois de subir este index.html no GitHub, todos os computadores/navegadores
+// usarão automaticamente o mesmo Firebase/Firestore.
+// Caminho no Firebase Console:
+// Configurações do projeto > Geral > Seus apps > App Web > Configuração do SDK.
+//
+// IMPORTANTE:
+// 1) A regra do Firestore NÃO entra aqui.
+// 2) Cole aqui somente os dados do objeto firebaseConfig do SDK Web.
+// 3) Enquanto este bloco estiver vazio, o CRM continuará em modo local,
+//    ou aceitará configuração temporária pelo botão "Configurar Firebase".
+const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
   authDomain: "prospectflow-crm-5775a.firebaseapp.com",
   databaseURL: "https://prospectflow-crm-5775a-default-rtdb.firebaseio.com",
@@ -831,6 +872,8 @@ const firebaseConfig = {
   measurementId: "G-TSB9CV1WF2"
 };
 
+
+const FIREBASE_CONFIG_STORAGE_KEY = "rensoftware_firebase_config";
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
@@ -1136,47 +1179,70 @@ function normalizeState(raw) {
   return data;
 }
 
-function hasFirebaseConfig() {
-  return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
+function hasFirebaseConfig(config = loadFirebaseConfig()) {
+  return Boolean(config && config.apiKey && config.projectId && config.appId);
+}
+
+function loadFirebaseConfig() {
+  // Prioridade 1: configuração fixa no código.
+  // Use esta opção para todos os usuários acessarem o mesmo banco pelo GitHub.
+  const fixedConfig = { ...DEFAULT_FIREBASE_CONFIG };
+  if (hasFirebaseConfig(fixedConfig)) return fixedConfig;
+
+  // Prioridade 2: configuração temporária salva apenas neste navegador.
+  // Mantida como fallback para testes, mas não é necessária quando o bloco acima estiver preenchido.
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || "{}"); } catch (_) { saved = {}; }
+  return { ...fixedConfig, ...saved };
+}
+async function connectFirestore(config = loadFirebaseConfig()) {
+  if (!hasFirebaseConfig(config) || !window.firebase) {
+    firebaseReady = false;
+    setSyncStatus(false, "Local: Firebase sem config");
+    return false;
+  }
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    firestore = firebase.firestore();
+    firebaseReady = true;
+
+    const docRef = firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
+    const snapshot = await docRef.get();
+
+    if (snapshot.exists) {
+      state = migrateOldShape(snapshot.data());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } else {
+      // Cria o documento somente se ainda não existir no Firestore.
+      await docRef.set(state, { merge: true });
+    }
+
+    if (unsubscribeFirestore) unsubscribeFirestore();
+    unsubscribeFirestore = docRef.onSnapshot(snap => {
+      if (snap.exists) {
+        state = migrateOldShape(snap.data());
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        populateMonthFilters();
+        if (currentUser) renderAll();
+      }
+    });
+
+    setSyncStatus(true, "Firestore conectado");
+    return true;
+  } catch (error) {
+    console.error(error);
+    firebaseReady = false;
+    setSyncStatus(false, "Local: erro Firebase");
+    showToast("Não foi possível conectar ao Firestore. Confira a configuração web do app Firebase.", "fa-triangle-exclamation");
+    return false;
+  }
 }
 
 async function initData() {
   const local = localStorage.getItem(STORAGE_KEY);
   state = local ? migrateOldShape(JSON.parse(local)) : seedData();
 
-  if (hasFirebaseConfig() && window.firebase) {
-    try {
-      firebase.initializeApp(firebaseConfig);
-      firestore = firebase.firestore();
-      firebaseReady = true;
-
-      const docRef = firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
-      const snapshot = await docRef.get();
-
-      if (snapshot.exists) {
-        state = migrateOldShape(snapshot.data());
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      } else {
-        await docRef.set(state, { merge: true });
-      }
-
-      unsubscribeFirestore = docRef.onSnapshot(snap => {
-        if (snap.exists) {
-          state = migrateOldShape(snap.data());
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          if (currentUser) renderAll();
-        }
-      });
-
-      setSyncStatus(true, "Firestore");
-    } catch (error) {
-      console.error(error);
-      firebaseReady = false;
-      setSyncStatus(false, "Local: erro Firebase");
-    }
-  } else {
-    setSyncStatus(false, "Local");
-  }
+  await connectFirestore(loadFirebaseConfig());
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   populateMonthFilters();
@@ -1238,9 +1304,25 @@ function fillEmailProductFilter() {
   select.innerHTML = `<option value="todos">Todos os produtos</option>${productOptions("", false)}`;
 }
 function populateMonthFilters() {
-  const values = new Set([monthKey(), ...state.goals.map(g => g.periodo), ...visibleSales().map(s => monthKey(`${s.dataVenda}T00:00:00`))]);
+  const values = new Set([monthKey(), ...state.goals.map(g => g.periodo), ...visibleSales().map(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`))]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
-  ["goalMonthFilter", "saleMonthFilter"].forEach(id => { if ($(id)) $(id).innerHTML = opts; });
+  ["goalMonthFilter", "saleMonthFilter"].forEach(id => {
+    if ($(id)) {
+      const oldValue = $(id).value || monthKey();
+      $(id).innerHTML = opts;
+      $(id).value = [...values].has(oldValue) ? oldValue : monthKey();
+    }
+  });
+
+  ["leadMonthFilter", "forecastMonthFilter", "projectionMonthFilter", "reportMonthFilter"].forEach(id => {
+    if ($(id) && !$(id).value) $(id).value = monthKey();
+  });
+  ["leadYearFilter", "forecastYearFilter", "projectionYearFilter", "goalYearFilter", "reportYearFilter"].forEach(id => {
+    if ($(id) && !$(id).value) $(id).value = String(new Date().getFullYear());
+  });
+  if ($("projectionWeekRef") && !$("projectionWeekRef").value) $("projectionWeekRef").value = todayISO();
+
+  ["lead", "forecast", "projection", "goal"].forEach(prefix => togglePeriodControls(prefix));
   fillCommonFilters();
 }
 function fillCommonFilters() {
@@ -1251,6 +1333,10 @@ function fillCommonFilters() {
   fillProductFilter("projectionProductFilter");
   fillProductFilter("forecastProductFilter");
   ensureReportDefaultDates();
+  togglePeriodControls("lead");
+  togglePeriodControls("forecast");
+  togglePeriodControls("projection");
+  togglePeriodControls("goal");
 }
 function fillSellerFilter(id) {
   const select = $(id);
@@ -1273,12 +1359,45 @@ function fillProductFilter(id) {
   select.dataset.loadedFor = String(state.products.length);
 }
 function ensureReportDefaultDates() {
+  if ($("reportMonthFilter") && !$("reportMonthFilter").value) $("reportMonthFilter").value = monthKey();
+  if ($("reportYearFilter") && !$("reportYearFilter").value) $("reportYearFilter").value = String(new Date().getFullYear());
   const start = $("reportStartDate");
   const end = $("reportEndDate");
   if (!start || !end || start.value || end.value) return;
-  const range = periodRange("month");
-  start.value = isoFromDate(range.start);
-  end.value = isoFromDate(range.end);
+  applyReportPeriodPreset();
+}
+function applyReportPeriodPreset() {
+  const type = $("reportPeriodFilter")?.value || "month";
+  const month = $("reportMonthFilter");
+  const year = $("reportYearFilter");
+  const startInput = $("reportStartDate");
+  const endInput = $("reportEndDate");
+  if (month) month.style.display = type === "month" ? "" : "none";
+  if (year) year.style.display = type === "year" ? "" : "none";
+  if (!startInput || !endInput) return;
+
+  startInput.disabled = type !== "custom";
+  endInput.disabled = type !== "custom";
+
+  if (type === "all") {
+    startInput.value = "";
+    endInput.value = "";
+  } else if (type === "year") {
+    const range = yearRange(year?.value || new Date().getFullYear());
+    startInput.value = isoFromDate(range.start);
+    endInput.value = isoFromDate(range.end);
+  } else if (type === "month") {
+    const range = monthRange(month?.value || monthKey());
+    startInput.value = isoFromDate(range.start);
+    endInput.value = isoFromDate(range.end);
+  }
+}
+function markReportCustom() {
+  if ($("reportPeriodFilter")) $("reportPeriodFilter").value = "custom";
+  if ($("reportMonthFilter")) $("reportMonthFilter").style.display = "none";
+  if ($("reportYearFilter")) $("reportYearFilter").style.display = "none";
+  if ($("reportStartDate")) $("reportStartDate").disabled = false;
+  if ($("reportEndDate")) $("reportEndDate").disabled = false;
 }
 
 function doLogin() {
@@ -1377,11 +1496,26 @@ function goToPage(page) {
 function salesInMonth(period = monthKey()) {
   return state.sales.filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period && s.status !== "Cancelada");
 }
+function salesInRange(start, end) {
+  return state.sales.filter(s => s.status !== "Cancelada" && inDateRange(s.dataVenda || todayISO(), start, end));
+}
+function goalInRange(goal, start, end) {
+  if (!goal?.periodo) return false;
+  const range = monthRange(goal.periodo);
+  return range.start <= end && range.end >= start;
+}
 function salesForGoal(goal) {
   return salesInMonth(goal.periodo).filter(s => {
     const sellerOk = goal.tipo === "Global" || !goal.vendedorId || s.vendedorId === goal.vendedorId;
     const productOk = !goal.produtoId || goal.produtoId === "todos" || s.produtoId === goal.produtoId;
-    return sellerOk && productOk;
+    return sellerOk && productOk && isSalesConsultant(findById(state.users, s.vendedorId));
+  });
+}
+function salesForGoalRange(goal, start, end) {
+  return salesInRange(start, end).filter(s => {
+    const sellerOk = goal.tipo === "Global" || !goal.vendedorId || s.vendedorId === goal.vendedorId;
+    const productOk = !goal.produtoId || goal.produtoId === "todos" || s.produtoId === goal.produtoId;
+    return sellerOk && productOk && isSalesConsultant(findById(state.users, s.vendedorId));
   });
 }
 function sumSales(list) {
@@ -1393,11 +1527,18 @@ function sumSales(list) {
 }
 function totalGoalForSeller(sellerId, period = monthKey()) {
   const goals = state.goals.filter(g => g.periodo === period && g.tipo === "Individual" && g.vendedorId === sellerId && isValidGoal(g));
+  return sumGoals(goals);
+}
+function sumGoals(goals) {
   return goals.reduce((acc, g) => {
     acc.implantacao += Number(g.implantacao) || 0;
     acc.mensalidade += Number(g.mensalidade) || 0;
     return acc;
   }, { implantacao: 0, mensalidade: 0 });
+}
+function totalGoalForSellerRange(sellerId, start, end) {
+  const goals = state.goals.filter(g => goalInRange(g, start, end) && g.tipo === "Individual" && g.vendedorId === sellerId && isValidGoal(g));
+  return sumGoals(goals);
 }
 function goalPct(done, goal) {
   const target = (Number(goal.implantacao) || 0) + (Number(goal.mensalidade) || 0);
@@ -1459,9 +1600,63 @@ function periodRange(type = "month", base = new Date()) {
   end.setHours(23,59,59,999);
   return { start, end };
 }
+function monthRange(monthValue = monthKey()) {
+  const [year, month] = String(monthValue || monthKey()).split("-").map(Number);
+  const base = new Date(year || new Date().getFullYear(), (month || 1) - 1, 1);
+  return periodRange("month", base);
+}
+function yearRange(yearValue = new Date().getFullYear()) {
+  const year = Number(yearValue) || new Date().getFullYear();
+  const start = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  start.setHours(0,0,0,0);
+  end.setHours(23,59,59,999);
+  return { start, end };
+}
+function rangeMonths(start, end) {
+  const result = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const limit = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cursor <= limit) {
+    result.push(monthKey(cursor));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return result;
+}
 function inDateRange(dateValue, start, end) {
+  if (!start || !end) return true;
   const d = parseLocalDate(dateValue);
   return d >= start && d <= end;
+}
+function filterRange(prefix, fallbackType = "month") {
+  const type = $(`${prefix}PeriodFilter`)?.value || fallbackType;
+  if (type === "all") return { type, start: null, end: null, label: "Todo histórico" };
+  if (type === "year") {
+    const year = $(`${prefix}YearFilter`)?.value || new Date().getFullYear();
+    return { type, ...yearRange(year), label: `Ano ${year}` };
+  }
+  const month = $(`${prefix}MonthFilter`)?.value || monthKey();
+  return { type: "month", ...monthRange(month), label: `Mês ${month}` };
+}
+function projectionRange() {
+  const type = $("projectionPeriod")?.value || "month";
+  if (type === "year") return { type, ...yearRange($("projectionYearFilter")?.value || new Date().getFullYear()) };
+  if (type === "week") return periodRange("week", $("projectionWeekRef")?.value || todayISO());
+  return { type, ...monthRange($("projectionMonthFilter")?.value || monthKey()) };
+}
+function goalRange() {
+  const type = $("goalPeriodFilter")?.value || "month";
+  if (type === "year") return { type, ...yearRange($("goalYearFilter")?.value || new Date().getFullYear()) };
+  return { type, ...monthRange($("goalMonthFilter")?.value || monthKey()) };
+}
+function togglePeriodControls(prefix) {
+  const type = $(`${prefix}PeriodFilter`)?.value || $("projectionPeriod")?.value || "month";
+  const month = $(`${prefix}MonthFilter`);
+  const year = $(`${prefix}YearFilter`);
+  const week = $(`${prefix}WeekRef`);
+  if (month) month.style.display = type === "month" ? "" : "none";
+  if (year) year.style.display = type === "year" ? "" : "none";
+  if (week) week.style.display = type === "week" ? "" : "none";
 }
 function leadCreatedDate(lead) {
   // Dashboard e conversão usam a data de entrada do lead, para não misturar meses anteriores.
@@ -1479,46 +1674,41 @@ function filteredVisibleSales({ start = null, end = null, sellerId = "", product
     return dateOk && sellerOk && productOk && statusOk;
   });
 }
-function filteredVisibleLeads({ sellerId = "", productId = "", stage = "", start = null, end = null } = {}) {
+function filteredVisibleLeads({ sellerId = "", productId = "", stage = "", start = null, end = null, dateField = "previsao" } = {}) {
   return visibleLeads(openLeads()).filter(l => {
     const sellerOk = !sellerId || l.vendedorId === sellerId;
     const productOk = !productId || l.produtoId === productId;
     const stageOk = !stage || l.pipeline === stage;
-    const dateOk = (!start || !end) || inDateRange(l.previsaoFechamento || todayISO(), start, end);
+    const dateValue = dateField === "created" ? leadCreatedDate(l) : (l.previsaoFechamento || todayISO());
+    const dateOk = (!start || !end) || inDateRange(dateValue, start, end);
     return sellerOk && productOk && stageOk && dateOk;
   });
 }
 function projectionGoal(periodType, sellerId = "", productId = "") {
-  const range = periodRange(periodType);
-  const relevant = state.goals.filter(g => isValidGoal(g) && (!productId || g.produtoId === "todos" || g.produtoId === productId));
-  let goal = { implantacao: 0, mensalidade: 0 };
-  if (periodType === "year") {
-    relevant
-      .filter(g => String(g.periodo || "").startsWith(String(range.start.getFullYear())))
-      .filter(g => !sellerId ? g.tipo === "Global" : (g.tipo === "Individual" && g.vendedorId === sellerId))
-      .forEach(g => { goal.implantacao += Number(g.implantacao) || 0; goal.mensalidade += Number(g.mensalidade) || 0; });
-  } else {
-    const mk = monthKey(range.start);
-    relevant
-      .filter(g => g.periodo === mk)
-      .filter(g => !sellerId ? g.tipo === "Global" : (g.tipo === "Individual" && g.vendedorId === sellerId))
-      .forEach(g => { goal.implantacao += Number(g.implantacao) || 0; goal.mensalidade += Number(g.mensalidade) || 0; });
+  const range = projectionRange();
+  const relevant = state.goals
+    .filter(g => isValidGoal(g) && goalInRange(g, range.start, range.end))
+    .filter(g => !productId || g.produtoId === "todos" || g.produtoId === productId)
+    .filter(g => !sellerId ? g.tipo === "Global" : (g.tipo === "Individual" && g.vendedorId === sellerId));
+  let goal = sumGoals(relevant);
 
-    if (periodType === "week") {
-      const monthStart = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
-      const monthEnd = new Date(range.start.getFullYear(), range.start.getMonth() + 1, 0);
-      const ratio = daysBetweenInclusive(range.start, range.end) / daysBetweenInclusive(monthStart, monthEnd);
-      goal.implantacao *= ratio;
-      goal.mensalidade *= ratio;
-    }
+  if (periodType === "week") {
+    // Se a meta cadastrada é mensal, distribui proporcionalmente para a semana selecionada.
+    const monthStart = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
+    const monthEnd = new Date(range.start.getFullYear(), range.start.getMonth() + 1, 0);
+    const ratio = daysBetweenInclusive(range.start, range.end) / daysBetweenInclusive(monthStart, monthEnd);
+    goal.implantacao *= ratio;
+    goal.mensalidade *= ratio;
   }
+
   return goal;
 }
+
 function projectionData() {
   const type = $("projectionPeriod")?.value || "month";
   const sellerId = $("projectionSellerFilter")?.value || "";
   const productId = $("projectionProductFilter")?.value || "";
-  const range = periodRange(type);
+  const range = projectionRange();
   const today = new Date();
   const cutoff = clampDate(today, range.start, range.end);
   const elapsedDays = daysBetweenInclusive(range.start, cutoff);
@@ -1589,14 +1779,17 @@ function renderDashboard() {
   const weightedByStage = stages.map(stage => forecastLeads.filter(l => (l.pipeline || "Captação") === stage).reduce((sum, l) => sum + forecastValue(l), 0));
   drawChart("dashboardForecastChart", "bar", stages, weightedByStage);
 
-  const rows = productivityRows(period).slice(0, canViewTeamProductivity() ? 8 : 1);
-  $("dashboardProdutividade").innerHTML = rows.join("") || `<tr><td class="empty" colspan="7">Sem produtividade disponível para o seu perfil.</td></tr>`;
+  const rows = productivityRows(range).slice(0, canViewTeamProductivity() ? 8 : 1);
+  $("dashboardProdutividade").innerHTML = rows.join("") || `<tr><td class="empty" colspan="8">Sem produtividade disponível para o seu perfil.</td></tr>`;
 }
 
 function renderLeads() {
   const q = norm($("leadSearch")?.value || "");
   const stage = $("leadStageFilter")?.value || "";
-  let rows = visibleLeads().sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const range = filterRange("lead", "month");
+  let rows = visibleLeads()
+    .filter(l => !range.start || inDateRange(leadCreatedDate(l), range.start, range.end))
+    .sort((a,b) => String(leadCreatedDate(b) || "").localeCompare(String(leadCreatedDate(a) || "")));
   if (q) {
     rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento].some(v => norm(v).includes(q)));
   }
@@ -1616,7 +1809,7 @@ function renderLeads() {
         ${l.status !== "Fechado" ? `<button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')" title="Fechar venda"><i class="fa-solid fa-check"></i></button>` : ""}
         <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
       </td>
-    </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado.</td></tr>`;
+    </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado no período/filtro selecionado.</td></tr>`;
 }
 
 function renderPipeline() {
@@ -1669,7 +1862,9 @@ function renderForecast() {
   const sellerId = $("forecastSellerFilter")?.value || "";
   const productId = $("forecastProductFilter")?.value || "";
   const stage = $("forecastStageFilter")?.value || "";
-  const leads = filteredVisibleLeads({ sellerId, productId, stage }).sort((a,b) => forecastValue(b) - forecastValue(a));
+  const range = filterRange("forecast", "month");
+  const leads = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end })
+    .sort((a,b) => forecastValue(b) - forecastValue(a));
   const openImplantacao = leads.reduce((s,l) => s + Number(l.implantacao || 0), 0);
   const weighted = leads.reduce((s,l) => s + forecastValue(l), 0);
   const mrr = leads.reduce((s,l) => s + forecastMensalidadeValue(l), 0);
@@ -1690,22 +1885,28 @@ function renderForecast() {
       <td>${l.probabilidade || 0}%</td>
       <td><strong>${money(forecastValue(l))}</strong></td>
       <td>${formatDate(l.previsaoFechamento)}</td>
-    </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhuma oportunidade aberta para forecast dentro do filtro e permissão atual.</td></tr>`;
+    </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhuma oportunidade aberta para forecast no período/filtro selecionado.</td></tr>`;
 }
 
 function renderGoals() {
-  const period = $("goalMonthFilter")?.value || monthKey();
+  const rangeInfo = goalRange();
   const canManage = canManageGoals();
+  const isYear = rangeInfo.type === "year";
+  const selectedMonth = $("goalMonthFilter")?.value || monthKey();
+  const periodLabel = isYear ? `ano ${rangeInfo.start.getFullYear()}` : `mês ${selectedMonth}`;
+
   const goals = state.goals
-    .filter(g => g.periodo === period && isValidGoal(g))
+    .filter(g => isValidGoal(g))
+    .filter(g => isYear ? goalInRange(g, rangeInfo.start, rangeInfo.end) : g.periodo === selectedMonth)
     .filter(g => canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)
-    .sort((a,b) => a.tipo.localeCompare(b.tipo));
+    .sort((a,b) => `${a.tipo}-${userName(a.vendedorId)}-${productName(a.produtoId)}`.localeCompare(`${b.tipo}-${userName(b.vendedorId)}-${productName(b.produtoId)}`));
 
   const newGoalButton = document.querySelector("#page-metas .card-header .btn-primary");
   if (newGoalButton) newGoalButton.style.display = canManage ? "" : "none";
 
   $("goalsTable").innerHTML = goals.map(g => {
-    const done = sumSales(salesForGoal(g).filter(s => canViewAllCommercialData() || s.vendedorId === currentUser?.id));
+    const done = sumSales((isYear ? salesForGoalRange(g, rangeInfo.start, rangeInfo.end) : salesForGoal(g))
+      .filter(s => canViewAllCommercialData() || s.vendedorId === currentUser?.id));
     const target = { implantacao: g.implantacao, mensalidade: g.mensalidade };
     const pct = goalPct(done, target);
     const falta = {
@@ -1726,21 +1927,24 @@ function renderGoals() {
         <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>` : "—"}
       </td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="9">Nenhuma meta cadastrada para o período.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="9">Nenhuma meta cadastrada para o ${periodLabel}.</td></tr>`;
 
-  $("productivityTable").innerHTML = productivityRows(period).join("") || `<tr><td class="empty" colspan="8">Nenhum consultor de vendas ativo disponível para seu perfil.</td></tr>`;
+  $("productivityTable").innerHTML = productivityRows(rangeInfo).join("") || `<tr><td class="empty" colspan="8">Nenhum consultor de vendas ativo disponível para seu perfil.</td></tr>`;
 }
 
-function productivityRows(period = monthKey()) {
+function productivityRows(periodInfo = monthKey()) {
+  const rangeInfo = typeof periodInfo === "string" ? { type: "month", ...monthRange(periodInfo) } : periodInfo;
   const users = canViewTeamProductivity()
     ? salesConsultants()
     : (isSalesConsultant(currentUser) ? [currentUser] : []);
 
   return users.map(u => {
-    const sales = salesInMonth(period).filter(s => s.vendedorId === u.id);
-    const leads = visibleLeads().filter(l => l.vendedorId === u.id);
+    const sales = salesInRange(rangeInfo.start, rangeInfo.end).filter(s => s.vendedorId === u.id);
+    const leads = visibleLeads()
+      .filter(l => l.vendedorId === u.id)
+      .filter(l => inDateRange(leadCreatedDate(l), rangeInfo.start, rangeInfo.end));
     const done = sumSales(sales);
-    const goal = totalGoalForSeller(u.id, period);
+    const goal = totalGoalForSellerRange(u.id, rangeInfo.start, rangeInfo.end);
     const pct = goalPct(done, goal);
     const faltaTotal = Math.max((goal.implantacao + goal.mensalidade) - (done.implantacao + done.mensalidade), 0);
     return `<tr>
@@ -1865,9 +2069,10 @@ function renderReports() {
     .join("") || `<tr><td class="empty" colspan="7">Nenhuma venda encontrada com os filtros atuais.</td></tr>`;
 }
 function clearReportFilters() {
-  const range = periodRange("month");
-  if ($("reportStartDate")) $("reportStartDate").value = isoFromDate(range.start);
-  if ($("reportEndDate")) $("reportEndDate").value = isoFromDate(range.end);
+  if ($("reportPeriodFilter")) $("reportPeriodFilter").value = "month";
+  if ($("reportMonthFilter")) $("reportMonthFilter").value = monthKey();
+  if ($("reportYearFilter")) $("reportYearFilter").value = String(new Date().getFullYear());
+  applyReportPeriodPreset();
   if ($("reportProductFilter")) $("reportProductFilter").value = "";
   if ($("reportStatusFilter")) $("reportStatusFilter").value = "";
   if ($("reportSellerFilter") && canViewAllCommercialData()) $("reportSellerFilter").value = "";
@@ -1898,6 +2103,46 @@ function drawChart(id, type, labels, data) {
 }
 
 // =============== MODAIS ===============
+async function openFirebaseConfigModal() {
+  const cfg = loadFirebaseConfig();
+  openModal("Configurar Firebase", `
+    <div class="note warning" style="margin-bottom:14px">
+      Esta é a configuração web do app Firebase. Para uso geral, prefira preencher o bloco
+      DEFAULT_FIREBASE_CONFIG diretamente no código. Este formulário salva apenas neste navegador.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>apiKey</label><input id="fbApiKey" class="field" value="${escapeHTML(cfg.apiKey || "")}" placeholder="AIza..." /></div>
+      <div class="form-group"><label>authDomain</label><input id="fbAuthDomain" class="field" value="${escapeHTML(cfg.authDomain || "")}" placeholder="seu-projeto.firebaseapp.com" /></div>
+      <div class="form-group"><label>projectId</label><input id="fbProjectId" class="field" value="${escapeHTML(cfg.projectId || "")}" placeholder="seu-projeto" /></div>
+      <div class="form-group"><label>storageBucket</label><input id="fbStorageBucket" class="field" value="${escapeHTML(cfg.storageBucket || "")}" placeholder="seu-projeto.appspot.com" /></div>
+      <div class="form-group"><label>messagingSenderId</label><input id="fbMessagingSenderId" class="field" value="${escapeHTML(cfg.messagingSenderId || "")}" /></div>
+      <div class="form-group"><label>appId</label><input id="fbAppId" class="field" value="${escapeHTML(cfg.appId || "")}" placeholder="1:..." /></div>
+    </div>
+  `, `<button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveFirebaseConfigFromModal()"><i class="fa-solid fa-database"></i> Salvar e conectar</button>`);
+}
+async function saveFirebaseConfigFromModal() {
+  const cfg = {
+    apiKey: $("fbApiKey")?.value.trim() || "",
+    authDomain: $("fbAuthDomain")?.value.trim() || "",
+    projectId: $("fbProjectId")?.value.trim() || "",
+    storageBucket: $("fbStorageBucket")?.value.trim() || "",
+    messagingSenderId: $("fbMessagingSenderId")?.value.trim() || "",
+    appId: $("fbAppId")?.value.trim() || ""
+  };
+  if (!hasFirebaseConfig(cfg)) {
+    showToast("Preencha pelo menos apiKey, projectId e appId.", "fa-triangle-exclamation");
+    return;
+  }
+  localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
+  closeModal();
+  const ok = await connectFirestore(cfg);
+  if (ok) {
+    populateMonthFilters();
+    if (currentUser) renderAll();
+    showToast("Firestore conectado e dados carregados.");
+  }
+}
+
 function openModal(title, body, footer, large = false) {
   $("modalTitle").textContent = title;
   $("modalBody").innerHTML = body;
@@ -2394,7 +2639,14 @@ function exportTable(type) {
   let rows = [];
   let name = type;
   if (type === "leads") {
-    rows = visibleLeads().map(l => ({ Empresa: l.empresa, Contato: l.contato, Email: l.email, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Status: l.status, Probabilidade: l.probabilidade, Forecast: forecastValue(l) }));
+    const q = norm($("leadSearch")?.value || "");
+    const stage = $("leadStageFilter")?.value || "";
+    const range = filterRange("lead", "month");
+    rows = visibleLeads()
+      .filter(l => !range.start || inDateRange(leadCreatedDate(l), range.start, range.end))
+      .filter(l => !stage || l.pipeline === stage)
+      .filter(l => !q || [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento].some(v => norm(v).includes(q)))
+      .map(l => ({ Empresa: l.empresa, Contato: l.contato, Email: l.email, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Status: l.status, Probabilidade: l.probabilidade, Forecast: forecastValue(l), DataCadastro: leadCreatedDate(l) }));
     name = "leads";
   } else if (type === "sales") {
     if (!isAdmin()) return showToast("Exportação de vendas é restrita ao Administrador.", "fa-lock");
@@ -2404,10 +2656,14 @@ function exportTable(type) {
     const sellerId = $("forecastSellerFilter")?.value || "";
     const productId = $("forecastProductFilter")?.value || "";
     const stage = $("forecastStageFilter")?.value || "";
-    rows = filteredVisibleLeads({ sellerId, productId, stage }).map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, Forecast: forecastValue(l), PrevisaoFechamento: l.previsaoFechamento }));
+    const range = filterRange("forecast", "month");
+    rows = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end }).map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, Forecast: forecastValue(l), PrevisaoFechamento: l.previsaoFechamento }));
     name = "forecast";
   } else if (type === "goals") {
-    rows = state.goals.filter(g => isValidGoal(g) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)).map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, MetaImplantacao: g.implantacao, MetaMensalidade: g.mensalidade }));
+    const rangeInfo = goalRange();
+    rows = state.goals
+      .filter(g => isValidGoal(g) && goalInRange(g, rangeInfo.start, rangeInfo.end) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id))
+      .map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, MetaImplantacao: g.implantacao, MetaMensalidade: g.mensalidade }));
     name = "metas";
   } else if (type === "projections") {
     const d = projectionData();
@@ -2430,7 +2686,12 @@ function exportAllReports() {
   const productId = $("reportProductFilter")?.value || "";
   const status = $("reportStatusFilter")?.value || "";
   const reportSales = filteredVisibleSales({ start, end, sellerId, productId, status });
-  const reportLeads = visibleLeads().filter(l => (!sellerId || l.vendedorId === sellerId) && (!productId || l.produtoId === productId));
+  const reportLeads = visibleLeads().filter(l => {
+    const sellerOk = !sellerId || l.vendedorId === sellerId;
+    const productOk = !productId || l.produtoId === productId;
+    const dateOk = (!start || !end) || inDateRange(leadCreatedDate(l), start, end);
+    return sellerOk && productOk && dateOk;
+  });
 
   const wb = XLSX.utils.book_new();
   const sheets = {
