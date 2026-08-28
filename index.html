@@ -497,8 +497,7 @@
       <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" />
       <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" />
       <button class="btn-auth" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
-      <button class="btn btn-outline" style="width:100%;margin-top:12px;justify-content:center" onclick="openFirebaseConfigModal()"><i class="fa-solid fa-database"></i> Configurar Firebase</button>
-      <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM carrega o Firestore quando a configuração web do Firebase está preenchida no arquivo ou salva neste botão.</div>
+      <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM conecta automaticamente ao Firestore quando o objeto firebaseConfig está preenchido no código.</div>
     </div>
   </section>
 
@@ -851,29 +850,24 @@
 
 // =============== FIREBASE WEB CONFIG GERAL ===============
 // PREENCHA ESTE BLOCO UMA ÚNICA VEZ NO CÓDIGO.
-// Depois de subir este index.html no GitHub, todos os computadores/navegadores
-// usarão automaticamente o mesmo Firebase/Firestore.
+// Use exatamente o objeto padrão gerado pelo Firebase Web App.
 // Caminho no Firebase Console:
 // Configurações do projeto > Geral > Seus apps > App Web > Configuração do SDK.
 //
 // IMPORTANTE:
 // 1) A regra do Firestore NÃO entra aqui.
 // 2) Cole aqui somente os dados do objeto firebaseConfig do SDK Web.
-// 3) Enquanto este bloco estiver vazio, o CRM continuará em modo local,
-//    ou aceitará configuração temporária pelo botão "Configurar Firebase".
+// 3) Quando este bloco estiver preenchido, todos os computadores/navegadores
+//    usarão automaticamente o mesmo Firebase/Firestore pelo GitHub.
 const firebaseConfig = {
-  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
-  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
-  databaseURL: "https://prospectflow-crm-5775a-default-rtdb.firebaseio.com",
-  projectId: "prospectflow-crm-5775a",
-  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
-  messagingSenderId: "278911416959",
-  appId: "1:278911416959:web:4413b269567eb6646b1d4a",
-  measurementId: "G-TSB9CV1WF2"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
-
-const FIREBASE_CONFIG_STORAGE_KEY = "rensoftware_firebase_config";
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
@@ -1179,97 +1173,114 @@ function normalizeState(raw) {
   return data;
 }
 
-function hasFirebaseConfig(config = loadFirebaseConfig()) {
-  return Boolean(config && config.apiKey && config.projectId && config.appId);
+function hasFirebaseConfig(config) {
+  return Boolean(
+    config &&
+    String(config.apiKey || "").trim() &&
+    String(config.projectId || "").trim() &&
+    String(config.appId || "").trim()
+  );
 }
 
 function loadFirebaseConfig() {
-  // Prioridade 1: configuração fixa no código.
-  // Use esta opção para todos os usuários acessarem o mesmo banco pelo GitHub.
-  const fixedConfig = { ...DEFAULT_FIREBASE_CONFIG };
-  if (hasFirebaseConfig(fixedConfig)) return fixedConfig;
-
-  // Prioridade 2: configuração temporária salva apenas neste navegador.
-  // Mantida como fallback para testes, mas não é necessária quando o bloco acima estiver preenchido.
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(FIREBASE_CONFIG_STORAGE_KEY) || "{}"); } catch (_) { saved = {}; }
-  return { ...fixedConfig, ...saved };
+  // Usa somente a configuração geral declarada no código.
+  // Não depende de localStorage nem de botão de configuração.
+  return { ...firebaseConfig };
 }
+
+function buildFirestorePayload(data) {
+  // Garante que o documento gravado no Firestore tenha apenas dados serializáveis.
+  return JSON.parse(JSON.stringify({
+    ...data,
+    updatedAt: new Date().toISOString()
+  }));
+}
+
 async function connectFirestore(config = loadFirebaseConfig()) {
-  if (!hasFirebaseConfig(config) || !window.firebase) {
+  if (!hasFirebaseConfig(config)) {
     firebaseReady = false;
-    setSyncStatus(false, "Local: Firebase sem config");
+    setSyncStatus(false, "Firebase não configurado");
     return false;
   }
+
+  if (!window.firebase) {
+    firebaseReady = false;
+    setSyncStatus(false, "Firebase SDK não carregou");
+    showToast("O SDK do Firebase não carregou. Verifique conexão com internet/CDN no GitHub Pages.", "fa-triangle-exclamation");
+    return false;
+  }
+
   try {
-    if (!firebase.apps.length) firebase.initializeApp(config);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    } else {
+      const activeOptions = firebase.app().options || {};
+      if (activeOptions.projectId && activeOptions.projectId !== config.projectId) {
+        throw new Error("Já existe um Firebase inicializado com outro projectId nesta página.");
+      }
+    }
+
     firestore = firebase.firestore();
     firebaseReady = true;
 
     const docRef = firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC);
-    const snapshot = await docRef.get();
+    const snapshot = await docRef.get({ source: "server" }).catch(async () => docRef.get());
 
     if (snapshot.exists) {
-      state = migrateOldShape(snapshot.data());
+      const remoteData = snapshot.data();
+      state = migrateOldShape(remoteData);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setSyncStatus(true, `Firestore conectado: ${config.projectId}`);
     } else {
-      // Cria o documento somente se ainda não existir no Firestore.
-      await docRef.set(state, { merge: true });
+      // Primeira execução: cria o documento central do CRM no Firestore.
+      state = migrateOldShape(state || seedData());
+      await docRef.set(buildFirestorePayload(state), { merge: true });
+      setSyncStatus(true, `Firestore criado: ${config.projectId}`);
     }
 
     if (unsubscribeFirestore) unsubscribeFirestore();
-    unsubscribeFirestore = docRef.onSnapshot(snap => {
-      if (snap.exists) {
-        state = migrateOldShape(snap.data());
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        populateMonthFilters();
-        if (currentUser) renderAll();
+    unsubscribeFirestore = docRef.onSnapshot(
+      snap => {
+        if (snap.exists) {
+          state = migrateOldShape(snap.data());
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          populateMonthFilters();
+          if (currentUser) renderAll();
+          setSyncStatus(true, `Firestore sincronizado: ${config.projectId}`);
+        }
+      },
+      error => {
+        console.error(error);
+        firebaseReady = false;
+        setSyncStatus(false, "Firestore sem permissão/conexão");
+        showToast("Não foi possível acompanhar mudanças no Firestore. Confira as regras e o projectId.", "fa-triangle-exclamation");
       }
-    });
+    );
 
-    setSyncStatus(true, "Firestore conectado");
     return true;
   } catch (error) {
     console.error(error);
     firebaseReady = false;
-    setSyncStatus(false, "Local: erro Firebase");
-    showToast("Não foi possível conectar ao Firestore. Confira a configuração web do app Firebase.", "fa-triangle-exclamation");
+    firestore = null;
+    setSyncStatus(false, "Erro ao conectar Firebase");
+    showToast(`Erro ao conectar Firebase: ${error.message || "confira firebaseConfig e regras do Firestore."}`, "fa-triangle-exclamation");
     return false;
   }
 }
 
 async function initData() {
+  // Carrega um estado inicial apenas para permitir abertura do app.
+  // Se o firebaseConfig estiver preenchido, o Firestore substitui este estado logo abaixo.
   const local = localStorage.getItem(STORAGE_KEY);
   state = local ? migrateOldShape(JSON.parse(local)) : seedData();
 
-  await connectFirestore(loadFirebaseConfig());
+  const connected = await connectFirestore(loadFirebaseConfig());
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (!connected) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
   populateMonthFilters();
-}
-
-function setSyncStatus(ok, text) {
-  $("syncBadge").className = `sync-badge ${ok ? "ok" : "warn"}`;
-  $("syncBadge").innerHTML = `<i class="fa-solid fa-database"></i> ${escapeHTML(text)}`;
-  $("sidebarSync").textContent = text;
-}
-
-function persist() {
-  state.updatedAt = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-  if (!firebaseReady || !firestore) return;
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    try {
-      await firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set(state, { merge: true });
-      setSyncStatus(true, "Firestore sincronizado");
-    } catch (error) {
-      console.error(error);
-      setSyncStatus(false, "Local: falha sync");
-      showToast("Falha ao sincronizar com Firestore. Dados mantidos localmente.", "fa-triangle-exclamation");
-    }
-  }, 450);
 }
 
 function activeProducts() { return state.products.filter(p => p.ativo !== false); }
@@ -2103,45 +2114,7 @@ function drawChart(id, type, labels, data) {
 }
 
 // =============== MODAIS ===============
-async function openFirebaseConfigModal() {
-  const cfg = loadFirebaseConfig();
-  openModal("Configurar Firebase", `
-    <div class="note warning" style="margin-bottom:14px">
-      Esta é a configuração web do app Firebase. Para uso geral, prefira preencher o bloco
-      DEFAULT_FIREBASE_CONFIG diretamente no código. Este formulário salva apenas neste navegador.
-    </div>
-    <div class="form-grid">
-      <div class="form-group"><label>apiKey</label><input id="fbApiKey" class="field" value="${escapeHTML(cfg.apiKey || "")}" placeholder="AIza..." /></div>
-      <div class="form-group"><label>authDomain</label><input id="fbAuthDomain" class="field" value="${escapeHTML(cfg.authDomain || "")}" placeholder="seu-projeto.firebaseapp.com" /></div>
-      <div class="form-group"><label>projectId</label><input id="fbProjectId" class="field" value="${escapeHTML(cfg.projectId || "")}" placeholder="seu-projeto" /></div>
-      <div class="form-group"><label>storageBucket</label><input id="fbStorageBucket" class="field" value="${escapeHTML(cfg.storageBucket || "")}" placeholder="seu-projeto.appspot.com" /></div>
-      <div class="form-group"><label>messagingSenderId</label><input id="fbMessagingSenderId" class="field" value="${escapeHTML(cfg.messagingSenderId || "")}" /></div>
-      <div class="form-group"><label>appId</label><input id="fbAppId" class="field" value="${escapeHTML(cfg.appId || "")}" placeholder="1:..." /></div>
-    </div>
-  `, `<button class="btn btn-outline" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="saveFirebaseConfigFromModal()"><i class="fa-solid fa-database"></i> Salvar e conectar</button>`);
-}
-async function saveFirebaseConfigFromModal() {
-  const cfg = {
-    apiKey: $("fbApiKey")?.value.trim() || "",
-    authDomain: $("fbAuthDomain")?.value.trim() || "",
-    projectId: $("fbProjectId")?.value.trim() || "",
-    storageBucket: $("fbStorageBucket")?.value.trim() || "",
-    messagingSenderId: $("fbMessagingSenderId")?.value.trim() || "",
-    appId: $("fbAppId")?.value.trim() || ""
-  };
-  if (!hasFirebaseConfig(cfg)) {
-    showToast("Preencha pelo menos apiKey, projectId e appId.", "fa-triangle-exclamation");
-    return;
-  }
-  localStorage.setItem(FIREBASE_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
-  closeModal();
-  const ok = await connectFirestore(cfg);
-  if (ok) {
-    populateMonthFilters();
-    if (currentUser) renderAll();
-    showToast("Firestore conectado e dados carregados.");
-  }
-}
+// A configuração do Firebase agora é feita somente no bloco const firebaseConfig no código.
 
 function openModal(title, body, footer, large = false) {
   $("modalTitle").textContent = title;
