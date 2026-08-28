@@ -570,7 +570,7 @@
             </div>
             <div class="card">
               <div class="card-header">
-                <div><div class="card-title">Forecast por etapa</div><div class="card-subtitle">Mês atual, por previsão de fechamento</div></div>
+                <div><div class="card-title">Forecast de implantação por etapa</div><div class="card-subtitle">Mês atual, sem somar mensalidade/MRR</div></div>
               </div>
               <canvas id="dashboardForecastChart" height="120"></canvas>
             </div>
@@ -606,7 +606,7 @@
               </select>
               <button class="btn btn-outline" onclick="exportTable('leads')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Forecast</th><th>Ações</th></tr></thead><tbody id="leadsTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Impl. Prevista / MRR</th><th>Ações</th></tr></thead><tbody id="leadsTable"></tbody></table></div>
           </div>
         </section>
 
@@ -636,14 +636,14 @@
 
         <section id="page-forecast" class="page">
           <div class="grid stats-grid">
-            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-scale-balanced"></i></div><div id="forecastWeighted" class="stat-value">R$ 0</div><div class="stat-label">Forecast ponderado</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-scale-balanced"></i></div><div id="forecastWeighted" class="stat-value">R$ 0</div><div class="stat-label">Implantação ponderada</div></div>
             <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-file-invoice-dollar"></i></div><div id="forecastOpen" class="stat-value">R$ 0</div><div class="stat-label">Implantação aberta</div></div>
-            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div><div id="forecastMrr" class="stat-value">R$ 0</div><div class="stat-label">MRR previsto</div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div><div id="forecastMrr" class="stat-value">R$ 0</div><div class="stat-label">MRR ponderado</div></div>
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-percent"></i></div><div id="forecastAvgProb" class="stat-value">0%</div><div class="stat-label">Probabilidade média</div></div>
           </div>
           <div class="card">
             <div class="card-header">
-              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Leads abertos com peso por etapa/probabilidade e previsão de fechamento</div></div>
+              <div><div class="card-title">Relatório de Forecast</div><div class="card-subtitle">Implantação e mensalidade/MRR calculados separadamente por probabilidade e previsão de fechamento</div></div>
               <button class="btn btn-outline" onclick="exportTable('forecast')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="toolbar">
@@ -661,7 +661,7 @@
                 <option>Captação</option><option>Agendamento</option><option>Apresentação</option><option>Negociação</option><option>Fechamento</option>
               </select>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Prob.</th><th>Forecast</th><th>Prev. Fechamento</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Prob.</th><th>Impl. Prevista / MRR</th><th>Prev. Fechamento</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
           </div>
         </section>
 
@@ -1724,14 +1724,16 @@ function progressBar(pct) {
 function openLeads() {
   return state.leads.filter(l => l.status !== "Fechado" && l.status !== "Perdido");
 }
-function forecastValue(lead) {
-  return ((Number(lead.implantacao) || 0) + (Number(lead.mensalidade) || 0)) * ((Number(lead.probabilidade) || 0) / 100);
-}
 function forecastImplantacaoValue(lead) {
   return (Number(lead.implantacao) || 0) * ((Number(lead.probabilidade) || 0) / 100);
 }
 function forecastMensalidadeValue(lead) {
   return (Number(lead.mensalidade) || 0) * ((Number(lead.probabilidade) || 0) / 100);
+}
+function forecastValue(lead) {
+  // Compatibilidade: forecast principal é somente implantação.
+  // Mensalidade/MRR é calculada separadamente por forecastMensalidadeValue().
+  return forecastImplantacaoValue(lead);
 }
 function parseLocalDate(value) {
   const d = value ? new Date(String(value).includes("T") ? value : `${value}T00:00:00`) : new Date();
@@ -1948,7 +1950,7 @@ function renderDashboard() {
 
   const stages = PIPELINE.filter(p => p.nome !== "Perdido").map(p => p.nome);
   const forecastLeads = filteredVisibleLeads({ start: range.start, end: range.end });
-  const weightedByStage = stages.map(stage => forecastLeads.filter(l => (l.pipeline || "Captação") === stage).reduce((sum, l) => sum + forecastValue(l), 0));
+  const weightedByStage = stages.map(stage => forecastLeads.filter(l => (l.pipeline || "Captação") === stage).reduce((sum, l) => sum + forecastImplantacaoValue(l), 0));
   drawChart("dashboardForecastChart", "bar", stages, weightedByStage);
 
   const rows = productivityRows(range).slice(0, canViewTeamProductivity() ? 8 : 1);
@@ -1975,7 +1977,7 @@ function renderLeads() {
       <td>${money(l.implantacao)}</td>
       <td>${money(l.mensalidade)}</td>
       <td>${stageTag(l.pipeline)}</td>
-      <td>${money(forecastValue(l))}<br><small>${l.probabilidade || 0}%</small></td>
+      <td>${money(forecastImplantacaoValue(l))}<br><small>MRR: ${money(forecastMensalidadeValue(l))} · ${l.probabilidade || 0}%</small></td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
         ${l.status !== "Fechado" ? `<button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')" title="Fechar venda"><i class="fa-solid fa-check"></i></button>` : ""}
@@ -1987,15 +1989,16 @@ function renderLeads() {
 function renderPipeline() {
   $("pipelineBoard").innerHTML = PIPELINE.map(stage => {
     const leads = visibleLeads().filter(l => (l.pipeline || "Captação") === stage.nome && (stage.nome === "Perdido" || l.status !== "Fechado"));
-    const total = leads.reduce((s, l) => s + forecastValue(l), 0);
+    const totalImplantacao = leads.reduce((s, l) => s + forecastImplantacaoValue(l), 0);
+    const totalMensalidade = leads.reduce((s, l) => s + forecastMensalidadeValue(l), 0);
     return `<div class="pipeline-col">
       <div class="pipeline-title"><span>${escapeHTML(stage.nome)}</span><span class="tag tag-info">${leads.length}</span></div>
-      <div class="help" style="margin-bottom:10px">Forecast: <strong>${money(total)}</strong></div>
+      <div class="help" style="margin-bottom:10px">Impl. prevista: <strong>${money(totalImplantacao)}</strong><br>MRR previsto: <strong>${money(totalMensalidade)}</strong></div>
       ${leads.map(l => `
         <div class="lead-card">
           <strong>${escapeHTML(l.empresa)}</strong>
           <small>${escapeHTML(productName(l.produtoId))} · ${escapeHTML(userName(l.vendedorId))}</small>
-          <small>${money(l.implantacao)} + ${money(l.mensalidade)} · ${l.probabilidade || stage.prob}%</small>
+          <small>Impl.: ${money(l.implantacao)} · MRR: ${money(l.mensalidade)} · ${l.probabilidade || stage.prob}%</small>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
             <button class="btn btn-outline btn-sm" onclick="moveLead('${l.id}', -1)"><i class="fa-solid fa-arrow-left"></i></button>
             <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')"><i class="fa-solid fa-pen"></i></button>
@@ -2036,14 +2039,16 @@ function renderForecast() {
   const stage = $("forecastStageFilter")?.value || "";
   const range = filterRange("forecast", "month");
   const leads = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end })
-    .sort((a,b) => forecastValue(b) - forecastValue(a));
+    .sort((a,b) => forecastImplantacaoValue(b) - forecastImplantacaoValue(a) || forecastMensalidadeValue(b) - forecastMensalidadeValue(a));
+
   const openImplantacao = leads.reduce((s,l) => s + Number(l.implantacao || 0), 0);
-  const weighted = leads.reduce((s,l) => s + forecastValue(l), 0);
-  const mrr = leads.reduce((s,l) => s + forecastMensalidadeValue(l), 0);
+  const weightedImplantacao = leads.reduce((s,l) => s + forecastImplantacaoValue(l), 0);
+  const weightedMensalidade = leads.reduce((s,l) => s + forecastMensalidadeValue(l), 0);
   const avg = leads.length ? Math.round(leads.reduce((s,l) => s + Number(l.probabilidade || 0), 0) / leads.length) : 0;
-  $("forecastWeighted").textContent = money(weighted);
+
+  $("forecastWeighted").textContent = money(weightedImplantacao);
   $("forecastOpen").textContent = money(openImplantacao);
-  $("forecastMrr").textContent = money(mrr);
+  $("forecastMrr").textContent = money(weightedMensalidade);
   $("forecastAvgProb").textContent = `${avg}%`;
 
   $("forecastTable").innerHTML = leads.map(l => `
@@ -2055,7 +2060,7 @@ function renderForecast() {
       <td>${money(l.mensalidade)}</td>
       <td>${stageTag(l.pipeline)}</td>
       <td>${l.probabilidade || 0}%</td>
-      <td><strong>${money(forecastValue(l))}</strong></td>
+      <td><strong>${money(forecastImplantacaoValue(l))}</strong><br><small>MRR: ${money(forecastMensalidadeValue(l))}</small></td>
       <td>${formatDate(l.previsaoFechamento)}</td>
     </tr>`).join("") || `<tr><td class="empty" colspan="9">Nenhuma oportunidade aberta para forecast no período/filtro selecionado.</td></tr>`;
 }
@@ -2780,7 +2785,7 @@ function exportTable(type) {
       .filter(l => !range.start || inDateRange(leadCreatedDate(l), range.start, range.end))
       .filter(l => !stage || l.pipeline === stage)
       .filter(l => !q || [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento].some(v => norm(v).includes(q)))
-      .map(l => ({ Empresa: l.empresa, Contato: l.contato, Email: l.email, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Status: l.status, Probabilidade: l.probabilidade, Forecast: forecastValue(l), DataCadastro: leadCreatedDate(l) }));
+      .map(l => ({ Empresa: l.empresa, Contato: l.contato, Email: l.email, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Status: l.status, Probabilidade: l.probabilidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l), DataCadastro: leadCreatedDate(l) }));
     name = "leads";
   } else if (type === "sales") {
     if (!isAdmin()) return showToast("Exportação de vendas é restrita ao Administrador.", "fa-lock");
@@ -2791,7 +2796,7 @@ function exportTable(type) {
     const productId = $("forecastProductFilter")?.value || "";
     const stage = $("forecastStageFilter")?.value || "";
     const range = filterRange("forecast", "month");
-    rows = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end }).map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, Forecast: forecastValue(l), PrevisaoFechamento: l.previsaoFechamento }));
+    rows = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end }).map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l), PrevisaoFechamento: l.previsaoFechamento }));
     name = "forecast";
   } else if (type === "goals") {
     const rangeInfo = goalRange();
@@ -2830,7 +2835,7 @@ function exportAllReports() {
   const wb = XLSX.utils.book_new();
   const sheets = {
     Vendas: reportSales.map(s => ({ Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, Status: s.status })),
-    Leads: reportLeads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Etapa: l.pipeline, Implantacao: l.implantacao, Mensalidade: l.mensalidade, Forecast: forecastValue(l) })),
+    Leads: reportLeads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Etapa: l.pipeline, Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l) })),
     Metas: state.goals.filter(g => isValidGoal(g) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)).map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Implantacao: g.implantacao, Mensalidade: g.mensalidade }))
   };
   if (isAdmin()) {
