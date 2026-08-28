@@ -1347,12 +1347,18 @@ async function connectFirestore(config = loadFirebaseConfig()) {
     if (unsubscribeFirestore) unsubscribeFirestore();
     unsubscribeFirestore = docRef.onSnapshot(
       snap => {
-        if (snap.exists) {
-          state = migrateOldShape(snap.data());
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
-          populateMonthFilters();
-          if (currentUser) renderAll();
-          setSyncStatus(true, `Firestore sincronizado: ${config.projectId}`);
+        try {
+          if (snap.exists) {
+            state = migrateOldShape(snap.data());
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
+            populateMonthFilters();
+            if (currentUser) renderAll();
+            setSyncStatus(true, `Firestore sincronizado: ${config.projectId}`);
+          }
+        } catch (error) {
+          console.error("Erro ao aplicar snapshot do Firestore:", error);
+          setSyncStatus(true, `Firestore conectado: ${config.projectId}`);
+          showToast("Dados carregados do Firestore, mas houve ajuste interno nos filtros. Atualize a página se necessário.", "fa-triangle-exclamation");
         }
       },
       error => {
@@ -1438,22 +1444,41 @@ function fillEmailProductFilter() {
   select.innerHTML = `<option value="todos">Todos os produtos</option>${productOptions("", false)}`;
 }
 function populateMonthFilters() {
-  const values = new Set([monthKey(), ...state.goals.map(g => g.periodo), ...visibleSales().map(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`))]);
-  const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
+  // Mantém os filtros mensais seguros mesmo quando Firestore retorna listas vazias
+  // ou documentos antigos com campos incompletos.
+  const currentMonth = monthKey();
+  const values = new Set([currentMonth]);
+
+  (state.goals || []).forEach(g => {
+    if (g && g.periodo) values.add(g.periodo);
+  });
+
+  visibleSales().forEach(s => {
+    if (s && s.dataVenda) values.add(monthKey(`${s.dataVenda}T00:00:00`));
+  });
+
+  const sortedValues = [...values].filter(Boolean).sort().reverse();
+  const opts = sortedValues.map(m => `<option value="${m}">${m}</option>`).join("");
+
   ["goalMonthFilter", "saleMonthFilter"].forEach(id => {
-    if ($(id)) {
-      const oldValue = $(id).value || monthKey();
-      $(id).innerHTML = opts;
-      $(id).value = [...values].has(oldValue) ? oldValue : monthKey();
-    }
+    const el = $(id);
+    if (!el) return;
+    const oldValue = el.value || currentMonth;
+    el.innerHTML = opts;
+    el.value = values.has(oldValue) ? oldValue : currentMonth;
   });
 
   ["leadMonthFilter", "forecastMonthFilter", "projectionMonthFilter", "reportMonthFilter"].forEach(id => {
-    if ($(id) && !$(id).value) $(id).value = monthKey();
+    const el = $(id);
+    if (el && !el.value) el.value = currentMonth;
   });
+
+  const currentYear = String(new Date().getFullYear());
   ["leadYearFilter", "forecastYearFilter", "projectionYearFilter", "goalYearFilter", "reportYearFilter"].forEach(id => {
-    if ($(id) && !$(id).value) $(id).value = String(new Date().getFullYear());
+    const el = $(id);
+    if (el && !el.value) el.value = currentYear;
   });
+
   if ($("projectionWeekRef") && !$("projectionWeekRef").value) $("projectionWeekRef").value = todayISO();
 
   ["lead", "forecast", "projection", "goal"].forEach(prefix => togglePeriodControls(prefix));
