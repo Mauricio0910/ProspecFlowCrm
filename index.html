@@ -496,7 +496,7 @@
       <div id="authError" class="auth-error"></div>
       <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" />
       <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" />
-      <button class="btn-auth" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+      <button id="loginButton" class="btn-auth" onclick="doLogin()" disabled><i class="fa-solid fa-spinner fa-spin"></i> Carregando dados...</button>
       <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM conecta automaticamente ao Firestore quando o objeto firebaseConfig está preenchido no código.</div>
     </div>
   </section>
@@ -860,14 +860,12 @@
 // 3) Quando este bloco estiver preenchido, todos os computadores/navegadores
 //    usarão automaticamente o mesmo Firebase/Firestore pelo GitHub.
 const firebaseConfig = {
-  apiKey: "AIzaSyBdPq4mhlF448mfPdjNHYejQsNeo-Cm8NM",
-  authDomain: "prospectflow-crm-5775a.firebaseapp.com",
-  databaseURL: "https://prospectflow-crm-5775a-default-rtdb.firebaseio.com",
-  projectId: "prospectflow-crm-5775a",
-  storageBucket: "prospectflow-crm-5775a.firebasestorage.app",
-  messagingSenderId: "278911416959",
-  appId: "1:278911416959:web:4413b269567eb6646b1d4a",
-  measurementId: "G-TSB9CV1WF2"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
 const FIRESTORE_COLLECTION = "prospectflow_crm";
@@ -876,6 +874,7 @@ const STORAGE_KEY = "prospectflow_db";
 
 let state = null;
 let currentUser = null;
+let dataReady = false;
 let firebaseReady = false;
 let firestore = null;
 let unsubscribeFirestore = null;
@@ -999,6 +998,93 @@ function clearError() {
   $("authError").innerHTML = "";
 }
 
+
+function setLoginReady(ready) {
+  dataReady = ready;
+  const btn = $("loginButton");
+  if (!btn) return;
+  btn.disabled = !ready;
+  btn.innerHTML = ready
+    ? `<i class="fa-solid fa-right-to-bracket"></i> Entrar`
+    : `<i class="fa-solid fa-spinner fa-spin"></i> Carregando dados...`;
+}
+
+function setSyncStatus(ok, message) {
+  const label = message || (ok ? "Firestore conectado" : "modo local");
+  const badge = $("syncBadge");
+  if (badge) {
+    badge.classList.toggle("ok", Boolean(ok));
+    badge.classList.toggle("warn", !ok);
+    badge.innerHTML = `<i class="fa-solid ${ok ? "fa-cloud-arrow-up" : "fa-database"}"></i> ${escapeHTML(label)}`;
+  }
+  const sidebar = $("sidebarSync");
+  if (sidebar) sidebar.textContent = label;
+}
+
+function normalizeUserRecord(u = {}) {
+  const nome = String(u.nome || u.name || u.displayName || u.login || u.usuario || u.username || u.email || "Usuário").trim();
+  const login = String(u.login || u.usuario || u.username || u.user || u.email || norm(nome)).trim();
+  return {
+    ...u,
+    id: String(u.id || u.uid || uid("u")),
+    nome,
+    login,
+    senha: String(u.senha ?? u.password ?? u.pass ?? u.pwd ?? "1234").trim(),
+    perfil: String(u.perfil || u.role || u.cargo || "Vendedor").trim(),
+    equipe: String(u.equipe || u.team || "Comercial").trim(),
+    ativo: u.ativo !== false && u.active !== false && u.status !== "Inativo"
+  };
+}
+
+function markBootstrapIfNeeded(data) {
+  data.users = Array.isArray(data.users) ? data.users.map(normalizeUserRecord) : [];
+  const hasUsableLogin = data.users.some(u => u.ativo !== false && norm(u.login) && String(u.senha || "").trim());
+  if (!hasUsableLogin) {
+    const seed = seedData();
+    data.users = seed.users.map(normalizeUserRecord);
+    data.__bootstrapApplied = true;
+  }
+
+  const hasAdmin = data.users.some(u => norm(u.login) === "admin" || norm(u.perfil) === "administrador");
+  if (!hasAdmin) {
+    data.users.unshift(normalizeUserRecord({
+      id: "u_admin",
+      nome: "Administrador",
+      login: "admin",
+      senha: "1234",
+      perfil: "Administrador",
+      equipe: "Comercial",
+      ativo: true
+    }));
+    data.__bootstrapApplied = true;
+  }
+  return data;
+}
+
+function persist() {
+  if (!state) return;
+  state.updatedAt = new Date().toISOString();
+  const payload = buildFirestorePayload(state);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+  if (!firebaseReady || !firestore) {
+    setSyncStatus(false, hasFirebaseConfig(loadFirebaseConfig()) ? "Firebase desconectado" : "modo local");
+    return;
+  }
+
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      await firestore.collection(FIRESTORE_COLLECTION).doc(FIRESTORE_DOC).set(payload, { merge: true });
+      setSyncStatus(true, `Firestore salvo: ${loadFirebaseConfig().projectId}`);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus(false, "Erro ao salvar no Firestore");
+      showToast("Não foi possível salvar no Firestore. Confira regras e conexão.", "fa-triangle-exclamation");
+    }
+  }, 350);
+}
+
 function seedData() {
   const users = [
     { id: "u_admin", nome: "Administrador", login: "admin", senha: "1234", perfil: "Administrador", equipe: "Comercial", ativo: true },
@@ -1048,6 +1134,13 @@ function seedData() {
 
 function migrateOldShape(raw) {
   if (!raw || typeof raw !== "object") return seedData();
+
+  // Aceita documentos antigos/normais e também documentos que vieram aninhados
+  // em campos como data, database ou crm.
+  if (raw.data && typeof raw.data === "object") raw = raw.data;
+  if (raw.database && typeof raw.database === "object") raw = raw.database;
+  if (raw.crm && typeof raw.crm === "object") raw = raw.crm;
+
   if (raw.users || raw.products || raw.sales || raw.goals) return normalizeState(raw);
 
   const seed = seedData();
@@ -1162,7 +1255,7 @@ function normalizeState(raw) {
   data.updatedAt = new Date().toISOString();
 
   data.products = data.products.map(p => ({ ...p, implantacao: Number(p.implantacao ?? p.adesao ?? 0), mensalidade: Number(p.mensalidade ?? 0), ativo: p.ativo !== false }));
-  data.users = data.users.map(u => ({ ...u, ativo: u.ativo !== false, perfil: u.perfil || "Vendedor", senha: u.senha || "1234" }));
+  markBootstrapIfNeeded(data);
   data.leads = data.leads.map(l => {
     const stage = l.pipeline || "Captação";
     return { ...l, status: l.status || "Aberto", pipeline: stage, probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)), implantacao: Number(l.implantacao ?? l.adesao ?? 0), mensalidade: Number(l.mensalidade ?? 0), previsaoFechamento: l.previsaoFechamento || todayISO() };
@@ -1192,8 +1285,10 @@ function loadFirebaseConfig() {
 
 function buildFirestorePayload(data) {
   // Garante que o documento gravado no Firestore tenha apenas dados serializáveis.
+  const clean = { ...(data || {}) };
+  delete clean.__bootstrapApplied;
   return JSON.parse(JSON.stringify({
-    ...data,
+    ...clean,
     updatedAt: new Date().toISOString()
   }));
 }
@@ -1231,7 +1326,14 @@ async function connectFirestore(config = loadFirebaseConfig()) {
     if (snapshot.exists) {
       const remoteData = snapshot.data();
       state = migrateOldShape(remoteData);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+      // Se o documento remoto existir, mas estiver sem usuários válidos,
+      // grava a estrutura corrigida para liberar o login.
+      if (state.__bootstrapApplied) {
+        await docRef.set(buildFirestorePayload(state), { merge: true });
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
       setSyncStatus(true, `Firestore conectado: ${config.projectId}`);
     } else {
       // Primeira execução: cria o documento central do CRM no Firestore.
@@ -1245,7 +1347,7 @@ async function connectFirestore(config = loadFirebaseConfig()) {
       snap => {
         if (snap.exists) {
           state = migrateOldShape(snap.data());
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
           populateMonthFilters();
           if (currentUser) renderAll();
           setSyncStatus(true, `Firestore sincronizado: ${config.projectId}`);
@@ -1273,13 +1375,19 @@ async function connectFirestore(config = loadFirebaseConfig()) {
 async function initData() {
   // Carrega um estado inicial apenas para permitir abertura do app.
   // Se o firebaseConfig estiver preenchido, o Firestore substitui este estado logo abaixo.
-  const local = localStorage.getItem(STORAGE_KEY);
-  state = local ? migrateOldShape(JSON.parse(local)) : seedData();
+  try {
+    const local = localStorage.getItem(STORAGE_KEY);
+    state = local ? migrateOldShape(JSON.parse(local)) : seedData();
+  } catch (error) {
+    console.warn("Estado local inválido. Recriando base inicial.", error);
+    state = seedData();
+    localStorage.removeItem(STORAGE_KEY);
+  }
 
   const connected = await connectFirestore(loadFirebaseConfig());
 
   if (!connected) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
   }
 
   populateMonthFilters();
@@ -1415,12 +1523,19 @@ function markReportCustom() {
 
 function doLogin() {
   clearError();
+  if (!dataReady) {
+    showError("Aguarde a carga dos dados do Firebase/local terminar antes de entrar.");
+    return;
+  }
+
   const login = norm($("loginInput").value);
   const senha = String($("passwordInput").value || "").trim();
-  const user = state.users.find(u => norm(u.login) === login && String(u.senha || "").trim() === senha && u.ativo !== false);
+  const users = Array.isArray(state?.users) ? state.users.map(normalizeUserRecord) : [];
+  const user = users.find(u => norm(u.login) === login && String(u.senha || "").trim() === senha && u.ativo !== false);
 
   if (!user) {
-    showError("Usuário ou senha inválidos, ou usuário inativo. Confira seu login ou solicite ajuste ao Administrador.");
+    const totalUsuarios = users.length;
+    showError(`Usuário ou senha inválidos, ou usuário inativo. Usuários carregados: ${totalUsuarios}. Se o Firestore estiver vazio, entre com o administrador inicial e cadastre os usuários.`);
     return;
   }
 
@@ -2695,12 +2810,16 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeModal();
 });
 
-initData().catch(error => {
-  console.error(error);
-  state = seedData();
-  setSyncStatus(false, "Local");
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-});
+setLoginReady(false);
+initData()
+  .then(() => setLoginReady(true))
+  .catch(error => {
+    console.error(error);
+    state = seedData();
+    setSyncStatus(false, "Local");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
+    setLoginReady(true);
+  });
 </script>
 </body>
 </html>
