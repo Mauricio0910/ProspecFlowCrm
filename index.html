@@ -1375,8 +1375,24 @@ async function connectFirestore(config = loadFirebaseConfig()) {
 }
 
 async function initData() {
-  // Carrega um estado inicial apenas para permitir abertura do app.
-  // Se o firebaseConfig estiver preenchido, o Firestore substitui este estado logo abaixo.
+  // Quando firebaseConfig está preenchido, o CRM tenta carregar o Firestore primeiro.
+  // O modo local fica apenas como contingência visual/de emergência, sem substituir o banco.
+  const config = loadFirebaseConfig();
+
+  if (hasFirebaseConfig(config)) {
+    state = seedData();
+    setSyncStatus(false, `Conectando Firestore: ${config.projectId}`);
+    const connected = await connectFirestore(config);
+    if (connected) {
+      populateMonthFilters();
+      return;
+    }
+
+    // Se houve falha real de conexão, permite login local apenas para manutenção,
+    // mas deixa claro na tela que o Firebase não conectou.
+    setSyncStatus(false, "Erro Firebase - usando contingência local");
+  }
+
   try {
     const local = localStorage.getItem(STORAGE_KEY);
     state = local ? migrateOldShape(JSON.parse(local)) : seedData();
@@ -1386,12 +1402,7 @@ async function initData() {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  const connected = await connectFirestore(loadFirebaseConfig());
-
-  if (!connected) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
-  }
-
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
   populateMonthFilters();
 }
 
