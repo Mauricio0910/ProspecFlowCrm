@@ -516,6 +516,7 @@
         <button class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fa-solid fa-diagram-project"></i><span class="nav-label">Pipeline</span></button>
         <button class="nav-item" data-page="vendas" data-requires="admin" onclick="goToPage('vendas')"><i class="fa-solid fa-handshake"></i><span class="nav-label">Gestão de Vendas</span></button>
         <button class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fa-solid fa-chart-simple"></i><span class="nav-label">Forecast</span></button>
+        <button class="nav-item" data-page="comissionamento" data-requires="commission" onclick="goToPage('comissionamento')"><i class="fa-solid fa-coins"></i><span class="nav-label">Comissionamento</span></button>
         <button class="nav-item" data-page="projecoes" onclick="goToPage('projecoes')"><i class="fa-solid fa-chart-line"></i><span class="nav-label">Projeções</span></button>
         <button class="nav-item" data-page="metas" onclick="goToPage('metas')"><i class="fa-solid fa-bullseye"></i><span class="nav-label">Metas e Produtividade</span></button>
 
@@ -662,6 +663,76 @@
               </select>
             </div>
             <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Empresa</th><th>Produto</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Prob.</th><th>Impl. Prevista / MRR</th><th>Prev. Fechamento</th></tr></thead><tbody id="forecastTable"></tbody></table></div>
+          </div>
+        </section>
+
+
+        <section id="page-comissionamento" class="page">
+          <div class="grid stats-grid">
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-coins"></i></div><div id="commissionTotal" class="stat-value">R$ 0</div><div class="stat-label">Comissão total no filtro</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div id="commissionImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Comissão sobre implantação</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-repeat"></i></div><div id="commissionMensalidade" class="stat-value">R$ 0</div><div class="stat-label">Comissão sobre mensalidade</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-handshake"></i></div><div id="commissionSalesCount" class="stat-value">0</div><div class="stat-label">Vendas consideradas</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Comissionamento</div>
+                <div class="card-subtitle">Administrador visualiza todos. Consultor/vendedor visualiza somente as próprias vendas.</div>
+              </div>
+              <button class="btn btn-outline" onclick="exportTable('commission')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
+            </div>
+
+            <div class="toolbar">
+              <select id="commissionPeriodFilter" class="select" style="max-width:170px" onchange="togglePeriodControls('commission'); renderCommission()">
+                <option value="month" selected>Mês atual</option>
+                <option value="year">Ano atual</option>
+                <option value="all">Todo histórico</option>
+              </select>
+              <input id="commissionMonthFilter" class="field" type="month" style="max-width:160px" onchange="renderCommission()" />
+              <input id="commissionYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderCommission()" />
+              <select id="commissionSellerFilter" class="select" style="max-width:240px" onchange="renderCommission()"></select>
+              <select id="commissionProductFilter" class="select" style="max-width:220px" onchange="renderCommission()"></select>
+              <select id="commissionStatusFilter" class="select" style="max-width:170px" onchange="renderCommission()">
+                <option value="Fechada" selected>Somente fechadas</option>
+                <option value="">Todos os status</option>
+                <option value="Cancelada">Canceladas</option>
+              </select>
+            </div>
+
+            <div class="note" style="margin-bottom:14px">
+              Percentuais usados no cálculo:
+              <strong id="commissionRateLabel">Implantação 5% · Mensalidade 10%</strong>.
+              Altere abaixo se precisar ajustar a política de comissão.
+            </div>
+
+            <div class="form-grid" style="margin-bottom:12px">
+              <div class="form-group">
+                <label>% Comissão implantação</label>
+                <input id="commissionImplRate" class="field" type="number" step="0.01" min="0" onchange="renderCommission()" />
+              </div>
+              <div class="form-group">
+                <label>% Comissão mensalidade</label>
+                <input id="commissionMrrRate" class="field" type="number" step="0.01" min="0" onchange="renderCommission()" />
+              </div>
+              <div class="form-group" style="align-self:end">
+                <button id="saveCommissionConfigBtn" class="btn btn-primary" onclick="saveCommissionConfig()"><i class="fa-solid fa-floppy-disk"></i> Salvar percentuais</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th><th>Cliente</th><th>Produto</th><th>Vendedor</th>
+                    <th>Implantação</th><th>% Impl.</th><th>Comissão Impl.</th>
+                    <th>Mensalidade</th><th>% Mens.</th><th>Comissão Mens.</th><th>Total Comissão</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="commissionTable"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
@@ -873,7 +944,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-08-28-1435-firebase-estavel";
+const APP_BUILD_VERSION = "2026-08-28-1530-comissionamento";
 
 let state = null;
 let currentUser = null;
@@ -927,8 +998,12 @@ function canViewTeamProductivity() {
 function canManageGoals() {
   return ["administrador", "gerente"].includes(currentRole());
 }
+function canAccessCommission() {
+  return isAdmin() || isSalesConsultant(currentUser);
+}
 function canAccessPage(page) {
   if (["vendas", "usuarios"].includes(page)) return isAdmin();
+  if (page === "comissionamento") return canAccessCommission();
   return true;
 }
 function visibleLeads(list = state.leads) {
@@ -1130,6 +1205,7 @@ function seedData() {
     landingPages: [],
     emailConfig: { publicKey: "", serviceId: "", templateId: "", fromName: "Equipe Comercial" },
     emailHistory: [],
+    commissionConfig: { implantacaoPercent: 5, mensalidadePercent: 10 },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -1255,6 +1331,12 @@ function normalizeState(raw) {
   data.landingPages = Array.isArray(data.landingPages) ? data.landingPages : [];
   data.emailHistory = Array.isArray(data.emailHistory) ? data.emailHistory : [];
   data.emailConfig = { ...seed.emailConfig, ...(data.emailConfig || {}) };
+  data.commissionConfig = {
+    ...seed.commissionConfig,
+    ...(data.commissionConfig || {}),
+    implantacaoPercent: Number((data.commissionConfig || {}).implantacaoPercent ?? seed.commissionConfig.implantacaoPercent),
+    mensalidadePercent: Number((data.commissionConfig || {}).mensalidadePercent ?? seed.commissionConfig.mensalidadePercent)
+  };
   data.updatedAt = new Date().toISOString();
 
   data.products = data.products.map(p => ({ ...p, implantacao: Number(p.implantacao ?? p.adesao ?? 0), mensalidade: Number(p.mensalidade ?? 0), ativo: p.ativo !== false }));
@@ -1479,6 +1561,15 @@ function populateMonthFilters() {
       if (!el.value && safeValues.length) el.value = safeValues[0];
     });
 
+    ["leadMonthFilter", "forecastMonthFilter", "projectionMonthFilter", "commissionMonthFilter", "reportMonthFilter"].forEach(id => {
+      const el = $(id);
+      if (el && !el.value) el.value = currentMonth;
+    });
+    ["leadYearFilter", "forecastYearFilter", "projectionYearFilter", "commissionYearFilter", "reportYearFilter", "goalYearFilter"].forEach(id => {
+      const el = $(id);
+      if (el && !el.value) el.value = String(new Date().getFullYear());
+    });
+
     const projMonth = $("projectionMonth");
     if (projMonth && !projMonth.value) projMonth.value = currentMonth;
 
@@ -1494,12 +1585,15 @@ function fillCommonFilters() {
   fillSellerFilter("reportSellerFilter");
   fillSellerFilter("projectionSellerFilter");
   fillSellerFilter("forecastSellerFilter");
+  fillCommissionSellerFilter("commissionSellerFilter");
   fillProductFilter("reportProductFilter");
   fillProductFilter("projectionProductFilter");
   fillProductFilter("forecastProductFilter");
+  fillProductFilter("commissionProductFilter");
   ensureReportDefaultDates();
   togglePeriodControls("lead");
   togglePeriodControls("forecast");
+  togglePeriodControls("commission");
   togglePeriodControls("projection");
   togglePeriodControls("goal");
 }
@@ -1515,6 +1609,31 @@ function fillSellerFilter(id) {
   } else {
     select.disabled = false;
   }
+  select.dataset.loadedFor = `${currentUser?.id || ""}:${state.users.length}`;
+}
+
+function fillCommissionSellerFilter(id) {
+  const select = $(id);
+  if (!select || select.dataset.loadedFor === `${currentUser?.id || ""}:${state.users.length}`) return;
+
+  if (isAdmin()) {
+    const usersWithSales = state.users
+      .filter(u => u.ativo !== false && state.sales.some(s => s.vendedorId === u.id));
+    const map = new Map();
+    [...salesConsultants(), ...usersWithSales].forEach(u => map.set(u.id, u));
+    const allowed = [...map.values()].sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
+    select.innerHTML = `<option value="">Todos os vendedores</option>` +
+      allowed.map(u => `<option value="${u.id}">${escapeHTML(u.nome)} (${escapeHTML(u.perfil)})</option>`).join("");
+    select.disabled = false;
+  } else if (isSalesConsultant(currentUser)) {
+    select.innerHTML = `<option value="${currentUser.id}" selected>${escapeHTML(currentUser.nome)} (${escapeHTML(currentUser.perfil)})</option>`;
+    select.value = currentUser.id;
+    select.disabled = true;
+  } else {
+    select.innerHTML = `<option value="">Sem permissão</option>`;
+    select.disabled = true;
+  }
+
   select.dataset.loadedFor = `${currentUser?.id || ""}:${state.users.length}`;
 }
 function fillProductFilter(id) {
@@ -1613,6 +1732,10 @@ function applyPermissions() {
     el.style.display = isAdmin() ? "" : "none";
   });
 
+  document.querySelectorAll("[data-requires='commission']").forEach(el => {
+    el.style.display = canAccessCommission() ? "" : "none";
+  });
+
   // Botões de meta ficam disponíveis para Administrador e Gerente.
   document.querySelectorAll("[data-action='manage-goals']").forEach(el => {
     el.style.display = canManageGoals() ? "" : "none";
@@ -1638,6 +1761,7 @@ function goToPage(page) {
     pipeline: "Pipeline",
     vendas: "Gestão de Vendas",
     forecast: "Forecast",
+    comissionamento: "Comissionamento",
     projecoes: "Projeções",
     metas: "Metas e Produtividade",
     email: "E-mails",
@@ -1652,6 +1776,7 @@ function goToPage(page) {
     pipeline: "Etapas do funil comercial",
     vendas: "Vendas fechadas e receita recorrente",
     forecast: "Previsibilidade comercial",
+    comissionamento: "Comissões por implantação e mensalidade",
     projecoes: "Estimativas semanais, mensais e anuais",
     metas: "Atingimento individual, global e por produto",
     email: "Disparo automático e histórico",
@@ -1911,6 +2036,7 @@ function projectionData() {
 function renderAll() {
   if (!currentUser) return;
   populateMonthFilters();
+  fillCommonFilters();
   fillEmailProductFilter();
   loadEmailConfigIntoForm();
   renderDashboard();
@@ -1919,6 +2045,7 @@ function renderAll() {
   renderSales();
   applyPermissions();
   renderForecast();
+  renderCommission();
   renderProjections();
   renderGoals();
   renderEmailHistory();
@@ -2135,6 +2262,120 @@ function productivityRows(periodInfo = monthKey()) {
       <td>${money(faltaTotal)}</td>
     </tr>`;
   });
+}
+
+
+function commissionConfig() {
+  const seed = { implantacaoPercent: 5, mensalidadePercent: 10 };
+  state.commissionConfig = {
+    ...seed,
+    ...(state.commissionConfig || {}),
+    implantacaoPercent: Number((state.commissionConfig || {}).implantacaoPercent ?? seed.implantacaoPercent),
+    mensalidadePercent: Number((state.commissionConfig || {}).mensalidadePercent ?? seed.mensalidadePercent)
+  };
+  return state.commissionConfig;
+}
+function commissionRatesFromForm() {
+  const cfg = commissionConfig();
+  const impl = $("commissionImplRate")?.value;
+  const mrr = $("commissionMrrRate")?.value;
+  return {
+    implantacaoPercent: impl === "" || impl == null ? Number(cfg.implantacaoPercent || 0) : number(impl),
+    mensalidadePercent: mrr === "" || mrr == null ? Number(cfg.mensalidadePercent || 0) : number(mrr)
+  };
+}
+function commissionSales() {
+  const range = filterRange("commission", "month");
+  let sellerId = $("commissionSellerFilter")?.value || "";
+  if (!isAdmin() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
+  const productId = $("commissionProductFilter")?.value || "";
+  const status = $("commissionStatusFilter")?.value ?? "Fechada";
+  return filteredVisibleSales({ start: range.start, end: range.end, sellerId, productId, status })
+    .filter(s => canAccessCommercialRecord(s.vendedorId))
+    .sort((a,b) => String(b.dataVenda || "").localeCompare(String(a.dataVenda || "")));
+}
+function commissionRowsData() {
+  const rates = commissionRatesFromForm();
+  return commissionSales().map(s => {
+    const implantacao = Number(s.implantacao || 0);
+    const mensalidade = Number(s.mensalidade || 0);
+    const comImpl = implantacao * (rates.implantacaoPercent / 100);
+    const comMens = mensalidade * (rates.mensalidadePercent / 100);
+    return {
+      sale: s,
+      implantacao,
+      mensalidade,
+      implantacaoPercent: rates.implantacaoPercent,
+      mensalidadePercent: rates.mensalidadePercent,
+      comImpl,
+      comMens,
+      total: comImpl + comMens
+    };
+  });
+}
+function renderCommission() {
+  if (!$("commissionTable")) return;
+
+  if (!canAccessCommission()) {
+    $("commissionTable").innerHTML = `<tr><td class="empty" colspan="12">Comissionamento disponível apenas para Administrador e Consultores/Vendedores.</td></tr>`;
+    ["commissionTotal", "commissionImplantacao", "commissionMensalidade"].forEach(id => { if ($(id)) $(id).textContent = money(0); });
+    if ($("commissionSalesCount")) $("commissionSalesCount").textContent = "0";
+    return;
+  }
+
+  const cfg = commissionConfig();
+  const implInput = $("commissionImplRate");
+  const mrrInput = $("commissionMrrRate");
+  if (implInput && implInput.value === "") implInput.value = Number(cfg.implantacaoPercent || 0);
+  if (mrrInput && mrrInput.value === "") mrrInput.value = Number(cfg.mensalidadePercent || 0);
+  if (implInput) implInput.disabled = !isAdmin();
+  if (mrrInput) mrrInput.disabled = !isAdmin();
+  if ($("saveCommissionConfigBtn")) $("saveCommissionConfigBtn").style.display = isAdmin() ? "" : "none";
+
+  const rates = commissionRatesFromForm();
+  if ($("commissionRateLabel")) {
+    $("commissionRateLabel").textContent = `Implantação ${rates.implantacaoPercent}% · Mensalidade ${rates.mensalidadePercent}%`;
+  }
+
+  const rows = commissionRowsData();
+  const totalImpl = rows.reduce((s,r) => s + r.comImpl, 0);
+  const totalMens = rows.reduce((s,r) => s + r.comMens, 0);
+  $("commissionImplantacao").textContent = money(totalImpl);
+  $("commissionMensalidade").textContent = money(totalMens);
+  $("commissionTotal").textContent = money(totalImpl + totalMens);
+  $("commissionSalesCount").textContent = String(rows.length);
+
+  $("commissionTable").innerHTML = rows.map(r => {
+    const s = r.sale;
+    return `<tr>
+      <td>${formatDate(s.dataVenda)}</td>
+      <td><strong>${escapeHTML(s.cliente)}</strong><br><small>${escapeHTML(s.observacao || "")}</small></td>
+      <td>${escapeHTML(productName(s.produtoId))}</td>
+      <td>${escapeHTML(userName(s.vendedorId))}</td>
+      <td>${money(r.implantacao)}</td>
+      <td>${r.implantacaoPercent}%</td>
+      <td><strong>${money(r.comImpl)}</strong></td>
+      <td>${money(r.mensalidade)}</td>
+      <td>${r.mensalidadePercent}%</td>
+      <td><strong>${money(r.comMens)}</strong></td>
+      <td><strong>${money(r.total)}</strong></td>
+      <td>${statusTag(s.status)}</td>
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="12">Nenhuma venda encontrada para comissionamento no filtro selecionado.</td></tr>`;
+}
+function saveCommissionConfig() {
+  if (!isAdmin()) {
+    showToast("Somente Administrador pode alterar percentuais de comissão.", "fa-lock");
+    renderCommission();
+    return;
+  }
+  state.commissionConfig = {
+    implantacaoPercent: Math.max(0, number($("commissionImplRate")?.value)),
+    mensalidadePercent: Math.max(0, number($("commissionMrrRate")?.value))
+  };
+  persist();
+  renderCommission();
+  showToast("Percentuais de comissão salvos.");
 }
 
 function renderProjections() {
@@ -2798,6 +3039,25 @@ function exportTable(type) {
     const range = filterRange("forecast", "month");
     rows = filteredVisibleLeads({ sellerId, productId, stage, start: range.start, end: range.end }).map(l => ({ Vendedor: userName(l.vendedorId), Empresa: l.empresa, Produto: productName(l.produtoId), Implantacao: l.implantacao, Mensalidade: l.mensalidade, Etapa: l.pipeline, Probabilidade: l.probabilidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l), PrevisaoFechamento: l.previsaoFechamento }));
     name = "forecast";
+  } else if (type === "commission") {
+    rows = commissionRowsData().map(r => {
+      const s = r.sale;
+      return {
+        Data: s.dataVenda,
+        Cliente: s.cliente,
+        Produto: productName(s.produtoId),
+        Vendedor: userName(s.vendedorId),
+        Implantacao: r.implantacao,
+        PercentualImplantacao: r.implantacaoPercent,
+        ComissaoImplantacao: r.comImpl,
+        Mensalidade: r.mensalidade,
+        PercentualMensalidade: r.mensalidadePercent,
+        ComissaoMensalidade: r.comMens,
+        ComissaoTotal: r.total,
+        Status: s.status
+      };
+    });
+    name = "comissionamento";
   } else if (type === "goals") {
     const rangeInfo = goalRange();
     rows = state.goals
