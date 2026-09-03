@@ -514,6 +514,7 @@
         <button class="nav-item active" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fa-solid fa-gauge-high"></i><span class="nav-label">Dashboard</span></button>
         <button class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fa-solid fa-users-line"></i><span class="nav-label">Leads</span></button>
         <button class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fa-solid fa-diagram-project"></i><span class="nav-label">Pipeline</span></button>
+        <button class="nav-item" data-page="agendamento" onclick="goToPage('agendamento')"><i class="fa-solid fa-calendar-check"></i><span class="nav-label">Agendamento</span></button>
         <button class="nav-item" data-page="vendas" data-requires="admin" onclick="goToPage('vendas')"><i class="fa-solid fa-handshake"></i><span class="nav-label">Gestão de Vendas</span></button>
         <button class="nav-item" data-page="forecast" onclick="goToPage('forecast')"><i class="fa-solid fa-chart-simple"></i><span class="nav-label">Forecast</span></button>
         <button class="nav-item" data-page="comissionamento" data-requires="commission" onclick="goToPage('comissionamento')"><i class="fa-solid fa-coins"></i><span class="nav-label">Comissionamento</span></button>
@@ -648,6 +649,50 @@
           </div>
         </section>
 
+        <section id="page-agendamento" class="page">
+          <div class="grid stats-grid">
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-calendar-day"></i></div><div id="scheduleTotal" class="stat-value">0</div><div class="stat-label">Agendamentos no período</div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-check-double"></i></div><div id="scheduleDone" class="stat-value">0</div><div class="stat-label">Realizados</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div id="schedulePending" class="stat-value">0</div><div class="stat-label">Pendentes</div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-video"></i></div><div id="scheduleToday" class="stat-value">0</div><div class="stat-label">Hoje</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Agendamento</div><div class="card-subtitle">Reuniões, demonstrações e retornos comerciais vinculados ao lead/vendedor</div></div>
+              <button class="btn btn-primary" onclick="openAppointmentModal()"><i class="fa-solid fa-plus"></i> Novo Agendamento</button>
+            </div>
+            <div class="toolbar">
+              <select id="appointmentPeriodFilter" class="select" style="max-width:170px" onchange="togglePeriodControls('appointment'); renderAppointments()">
+                <option value="day">Dia</option>
+                <option value="week">Semana</option>
+                <option value="month" selected>Mês</option>
+                <option value="year">Ano</option>
+                <option value="all">Todo histórico</option>
+              </select>
+              <input id="appointmentDayFilter" class="field" type="date" style="max-width:160px;display:none" onchange="renderAppointments()" />
+              <input id="appointmentWeekRef" class="field" type="date" style="max-width:160px;display:none" onchange="renderAppointments()" />
+              <input id="appointmentMonthFilter" class="field" type="month" style="max-width:160px" onchange="renderAppointments()" />
+              <input id="appointmentYearFilter" class="field" type="number" min="2020" max="2100" style="max-width:130px;display:none" onchange="renderAppointments()" />
+              <select id="appointmentSellerFilter" class="select" style="max-width:220px" onchange="renderAppointments()"></select>
+              <select id="appointmentStatusFilter" class="select" style="max-width:180px" onchange="renderAppointments()">
+                <option value="">Todos os status</option>
+                <option value="Agendado">Agendado</option>
+                <option value="Realizado">Realizado</option>
+                <option value="Reagendado">Reagendado</option>
+                <option value="Cancelado">Cancelado</option>
+                <option value="Não compareceu">Não compareceu</option>
+              </select>
+              <button class="btn btn-outline" onclick="exportTable('appointments')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Data/Hora</th><th>Lead/Cliente</th><th>Contato</th><th>Vendedor</th><th>Tipo</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead>
+                <tbody id="appointmentsTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <section id="page-vendas" class="page">
           <div class="card">
             <div class="card-header">
@@ -674,7 +719,7 @@
               </select>
               <button class="btn btn-outline" onclick="exportTable('sales')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Data</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Data</th><th>Recebimentos comissão</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
           </div>
         </section>
 
@@ -717,16 +762,16 @@
         <section id="page-comissionamento" class="page">
           <div class="grid stats-grid">
             <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-coins"></i></div><div id="commissionTotal" class="stat-value">R$ 0</div><div class="stat-label">Comissão vendedores</div></div>
-            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div id="commissionImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Base implantação</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-screwdriver-wrench"></i></div><div id="commissionImplantacao" class="stat-value">R$ 0</div><div class="stat-label">Implantação recebida</div></div>
             <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div><div id="commissionMensalidade" class="stat-value">R$ 0</div><div class="stat-label">Comissão do gestor</div></div>
-            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-handshake"></i></div><div id="commissionSalesCount" class="stat-value">0</div><div class="stat-label">Vendas consideradas</div></div>
+            <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-handshake"></i></div><div id="commissionSalesCount" class="stat-value">0</div><div class="stat-label">Recebimentos considerados</div></div>
           </div>
 
           <div class="card">
             <div class="card-header">
               <div>
                 <div class="card-title">Comissionamento</div>
-                <div class="card-subtitle">Administrador/Gerente visualiza todos. Consultor/vendedor visualiza somente o próprio comissionamento.</div>
+                <div class="card-subtitle">Comissão apurada por recebimento: entrada, integral e cartão entram no mês; parcelas entram somente quando marcadas como pagas.</div>
               </div>
               <button class="btn btn-outline" onclick="exportTable('commission')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
@@ -753,8 +798,8 @@
             </div>
 
             <div class="note" style="margin-bottom:14px">
-              Fórmula aplicada: <strong id="commissionRateLabel">Comissão sobre implantação conforme metas de mensalidade e implantação</strong>.
-              A mensalidade não gera comissão direta; ela define o indicador. A comissão do vendedor é paga sobre implantação: 20% sem bater indicadores, 25% ao bater um indicador e 30% ao bater mensalidade e implantação. Gestor: 25% sobre a implantação da equipe.
+              Fórmula aplicada: <strong id="commissionRateLabel">Comissão sobre implantação recebida, conforme metas de mensalidade e implantação</strong>.
+              A mensalidade não gera comissão direta; ela define o indicador. A comissão do vendedor é paga sobre a implantação efetivamente recebida no período: 20% sem bater indicadores, 25% ao bater um indicador e 30% ao bater mensalidade e implantação. Gestor: 25% sobre a implantação recebida da equipe.
             </div>
 
             <div class="table-wrap" style="margin-bottom:14px">
@@ -774,8 +819,8 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Data</th><th>Cliente</th><th>Produto</th><th>Vendedor</th>
-                    <th>Indicadores</th><th>Implantação</th><th>Mensalidade</th><th>Meta Impl.</th>
+                    <th>Data receb.</th><th>Cliente</th><th>Produto</th><th>Vendedor</th>
+                    <th>Forma/Parcela</th><th>Indicadores</th><th>Base recebida</th><th>Mensalidade</th><th>Meta Impl.</th>
                     <th>Meta Mens.</th><th>% Vendedor</th><th>Comissão Vendedor</th><th>Comissão Gestor</th><th>Status</th>
                   </tr>
                 </thead>
@@ -1009,7 +1054,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-08-28-1600-comissionamento-escalonado";
+const APP_BUILD_VERSION = "2026-09-03-0937-recebimentos-agendamento";
 
 let state = null;
 let currentUser = null;
@@ -1089,6 +1134,15 @@ function visibleSales(list = state.sales) {
   if (isSalesConsultant(currentUser)) return list.filter(s => s.vendedorId === currentUser.id);
   return [];
 }
+
+function visibleAppointments(list = state.appointments) {
+  if (!currentUser) return [];
+  const base = Array.isArray(list) ? list : [];
+  if (canViewAllCommercialData()) return [...base];
+  if (isSalesConsultant(currentUser)) return base.filter(a => a.vendedorId === currentUser.id);
+  return [];
+}
+
 function enforceAdminOnly() {
   if (isAdmin()) return true;
   showToast("Acesso restrito ao Administrador.", "fa-lock");
@@ -1236,6 +1290,167 @@ function persist() {
   }, 350);
 }
 
+
+function paymentMethodLabel(method) {
+  const key = String(method || "integral").toLowerCase();
+  return {
+    integral: "Pagamento integral",
+    entrada: "Entrada + parcelas",
+    cartao: "Cartão",
+    parcelado: "Parcelado",
+    pix: "Pix/Dinheiro"
+  }[key] || method || "Pagamento integral";
+}
+
+function paymentMethodOptions(selected = "integral") {
+  const opts = [
+    ["integral", "Pagamento integral"],
+    ["pix", "Pix/Dinheiro"],
+    ["cartao", "Cartão"],
+    ["entrada", "Entrada + parcelas"],
+    ["parcelado", "Parcelado"]
+  ];
+  return opts.map(([value, label]) => `<option value="${value}"${String(selected || "integral") === value ? " selected" : ""}>${label}</option>`).join("");
+}
+
+function addMonthsISO(dateValue, monthsToAdd = 0) {
+  const d = parseLocalDate(dateValue || todayISO());
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + Number(monthsToAdd || 0));
+  // Ajuste para meses com menos dias.
+  if (d.getDate() < day) d.setDate(0);
+  return isoFromDate(d);
+}
+
+function salePaymentSignature(sale = {}) {
+  return JSON.stringify({
+    implantacao: Number(sale.implantacao || 0),
+    dataVenda: sale.dataVenda || todayISO(),
+    formaPagamento: sale.formaPagamento || "integral",
+    parcelas: Number(sale.parcelas || 1),
+    entrada: Number(sale.entrada || 0),
+    dataPrimeiroRecebimento: sale.dataPrimeiroRecebimento || sale.dataVenda || todayISO()
+  });
+}
+
+function generateReceivablesForSale(sale = {}) {
+  const total = Number(sale.implantacao || 0);
+  if (total <= 0) return [];
+  const method = String(sale.formaPagamento || "integral").toLowerCase();
+  const firstDate = sale.dataPrimeiroRecebimento || sale.dataVenda || todayISO();
+  const receipts = [];
+
+  function pushReceipt({ data, valor, pago, tipo, parcela }) {
+    const amount = Number(valor || 0);
+    if (amount <= 0) return;
+    receipts.push({
+      id: uid("rc"),
+      data,
+      valor: Number(amount.toFixed(2)),
+      pago: Boolean(pago),
+      tipo,
+      parcela: parcela || "",
+      observacao: ""
+    });
+  }
+
+  if (method === "parcelado" || method === "entrada") {
+    const entry = Math.max(0, Math.min(total, Number(sale.entrada || 0)));
+    const installments = Math.max(1, Number(sale.parcelas || 1));
+    const remaining = Math.max(total - entry, 0);
+
+    if (entry > 0) {
+      // Entrada recebida entra no mês da venda/recebimento.
+      pushReceipt({ data: firstDate, valor: entry, pago: true, tipo: "Entrada", parcela: "Entrada" });
+    }
+
+    const installmentValue = installments ? remaining / installments : 0;
+    for (let i = 0; i < installments; i++) {
+      // Parcelas só entram na comissão quando marcadas como pagas.
+      pushReceipt({ data: addMonthsISO(firstDate, i + (entry > 0 ? 1 : 0)), valor: installmentValue, pago: false, tipo: "Parcela", parcela: `${i + 1}/${installments}` });
+    }
+  } else {
+    // Integral, Pix/Dinheiro e Cartão contam no mês da venda/recebimento.
+    pushReceipt({ data: firstDate, valor: total, pago: true, tipo: paymentMethodLabel(method), parcela: "Única" });
+  }
+
+  return receipts;
+}
+
+function normalizeSaleRecord(s = {}) {
+  const sale = {
+    ...s,
+    id: String(s.id || uid("s")),
+    leadId: s.leadId || "",
+    cliente: s.cliente || s.empresa || "Cliente",
+    produtoId: s.produtoId || "",
+    vendedorId: s.vendedorId || "",
+    implantacao: Number(s.implantacao ?? s.adesao ?? 0),
+    mensalidade: Number(s.mensalidade ?? 0),
+    dataVenda: s.dataVenda || s.data || todayISO(),
+    status: s.status || "Fechada",
+    observacao: s.observacao || "",
+    formaPagamento: s.formaPagamento || s.pagamento || s.formaPgto || "integral",
+    parcelas: Math.max(1, Number(s.parcelas || 1)),
+    entrada: Number(s.entrada || 0),
+    dataPrimeiroRecebimento: s.dataPrimeiroRecebimento || s.dataRecebimento || s.dataVenda || s.data || todayISO()
+  };
+  sale.paymentSignature = s.paymentSignature || salePaymentSignature(sale);
+  sale.recebimentos = Array.isArray(s.recebimentos)
+    ? s.recebimentos.map((r, idx) => ({
+        id: String(r.id || uid("rc")),
+        data: r.data || r.dataRecebimento || sale.dataVenda,
+        valor: Number(r.valor ?? r.amount ?? 0),
+        pago: r.pago === true || r.status === "Pago" || r.recebido === true,
+        tipo: r.tipo || r.descricao || (idx === 0 ? paymentMethodLabel(sale.formaPagamento) : "Parcela"),
+        parcela: r.parcela || "",
+        observacao: r.observacao || ""
+      })).filter(r => r.valor > 0)
+    : [];
+  if (!sale.recebimentos.length) {
+    sale.recebimentos = generateReceivablesForSale(sale);
+    sale.paymentSignature = salePaymentSignature(sale);
+  }
+  return sale;
+}
+
+function getSaleReceipts(sale = {}) {
+  const normalized = Array.isArray(sale.recebimentos) && sale.recebimentos.length
+    ? sale.recebimentos
+    : generateReceivablesForSale(normalizeSaleRecord(sale));
+  return normalized.map(r => ({
+    ...r,
+    valor: Number(r.valor || 0),
+    data: r.data || sale.dataVenda || todayISO(),
+    pago: Boolean(r.pago)
+  })).filter(r => r.valor > 0);
+}
+
+function receiptSummary(sale = {}) {
+  const receipts = getSaleReceipts(sale);
+  const total = receipts.reduce((sum, r) => sum + Number(r.valor || 0), 0);
+  const paid = receipts.filter(r => r.pago).reduce((sum, r) => sum + Number(r.valor || 0), 0);
+  const pending = Math.max(total - paid, 0);
+  return { total, paid, pending, receipts };
+}
+
+function normalizeAppointmentRecord(a = {}) {
+  const lead = a.leadId ? findById(state?.leads || [], a.leadId) : null;
+  return {
+    ...a,
+    id: String(a.id || uid("ag")),
+    leadId: a.leadId || "",
+    empresa: a.empresa || lead?.empresa || "",
+    contato: a.contato || lead?.contato || "",
+    vendedorId: a.vendedorId || lead?.vendedorId || currentUser?.id || "",
+    data: a.data || todayISO(),
+    hora: a.hora || "09:00",
+    tipo: a.tipo || "Demonstração",
+    status: a.status || "Agendado",
+    observacao: a.observacao || ""
+  };
+}
+
 function seedData() {
   const users = [
     { id: "u_admin", nome: "Administrador", login: "admin", senha: "1234", perfil: "Administrador", equipe: "Comercial", ativo: true },
@@ -1276,6 +1491,9 @@ function seedData() {
     sales,
     goals,
     landingPages: [],
+    appointments: [
+      { id: "ag_1", leadId: "l_1", empresa: "Tocantins Aero Drones", contato: "Carlos", vendedorId: "u_gusthavo", data: todayISO(), hora: "09:00", tipo: "Demonstração", status: "Agendado", observacao: "Agendamento exemplo" }
+    ],
     emailConfig: { publicKey: "", serviceId: "", templateId: "", fromName: "Equipe Comercial" },
     emailHistory: [],
     commissionConfig: { implantacaoPercent: 5, mensalidadePercent: 10 },
@@ -1388,6 +1606,7 @@ function migrateOldShape(raw) {
     sales,
     goals: goals.length ? goals : seed.goals,
     landingPages: [],
+    appointments: raw.appointments || raw.agendamentos || [],
     emailConfig: raw.emailConfig || seed.emailConfig,
     emailHistory: raw.emailHistory || raw.emailHist || []
   });
@@ -1402,6 +1621,7 @@ function normalizeState(raw) {
   data.sales = Array.isArray(data.sales) ? data.sales : [];
   data.goals = Array.isArray(data.goals) && data.goals.length ? data.goals : seed.goals;
   data.landingPages = Array.isArray(data.landingPages) ? data.landingPages : [];
+  data.appointments = Array.isArray(data.appointments) ? data.appointments : [];
   data.emailHistory = Array.isArray(data.emailHistory) ? data.emailHistory : [];
   data.emailConfig = { ...seed.emailConfig, ...(data.emailConfig || {}) };
   data.commissionConfig = {
@@ -1418,7 +1638,23 @@ function normalizeState(raw) {
     const stage = l.pipeline || "Captação";
     return { ...l, status: l.status || "Aberto", pipeline: stage, probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)), implantacao: Number(l.implantacao ?? l.adesao ?? 0), mensalidade: Number(l.mensalidade ?? 0), previsaoFechamento: l.previsaoFechamento || todayISO() };
   });
-  data.sales = data.sales.map(s => ({ ...s, implantacao: Number(s.implantacao ?? s.adesao ?? 0), mensalidade: Number(s.mensalidade ?? 0), dataVenda: s.dataVenda || todayISO(), status: s.status || "Fechada" }));
+  data.sales = data.sales.map(normalizeSaleRecord);
+  data.appointments = data.appointments.map(a => {
+    const lead = a.leadId ? data.leads.find(l => l.id === a.leadId) : null;
+    return {
+      ...a,
+      id: String(a.id || uid("ag")),
+      leadId: a.leadId || "",
+      empresa: a.empresa || lead?.empresa || "",
+      contato: a.contato || lead?.contato || "",
+      vendedorId: a.vendedorId || lead?.vendedorId || "",
+      data: a.data || todayISO(),
+      hora: a.hora || "09:00",
+      tipo: a.tipo || "Demonstração",
+      status: a.status || "Agendado",
+      observacao: a.observacao || ""
+    };
+  });
   data.goals = data.goals
     .map(g => ({ ...g, tipo: g.tipo || (g.vendedorId ? "Individual" : "Global"), produtoId: g.produtoId || "todos", periodo: g.periodo || monthKey(), implantacao: Number(g.implantacao ?? g.adesao ?? 0), mensalidade: Number(g.mensalidade ?? 0) }))
     // Remove metas individuais vinculadas a SDR, Marketing, gerente, administrador ou usuário inativo.
@@ -1619,6 +1855,11 @@ function productName(id) {
 function userName(id) {
   return findById(state.users, id)?.nome || "—";
 }
+
+function leadName(id) {
+  return findById(state.leads, id)?.empresa || "—";
+}
+
 function productOptions(selected = "", includeAll = false) {
   return `${includeAll ? `<option value="todos"${selected === "todos" ? " selected" : ""}>Todos os produtos</option>` : ""}` +
     activeProducts().map(p => `<option value="${p.id}"${selected === p.id ? " selected" : ""}>${escapeHTML(p.nome)}</option>`).join("");
@@ -1627,6 +1868,13 @@ function sellerOptions(selected = "", includeBlank = false) {
   return `${includeBlank ? `<option value="">Todos / Global</option>` : ""}` +
     sellers().map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`).join("");
 }
+
+function leadOptions(selected = "", includeBlank = true) {
+  const allowedLeads = visibleLeads().filter(l => l.status !== "Perdido");
+  return `${includeBlank ? `<option value="">Sem vínculo</option>` : ""}` +
+    allowedLeads.map(l => `<option value="${l.id}"${selected === l.id ? " selected" : ""}>${escapeHTML(l.empresa)} · ${escapeHTML(userName(l.vendedorId))}</option>`).join("");
+}
+
 function goalSellerOptions(selected = "", includeBlank = false) {
   return `${includeBlank ? `<option value="">Todos / Global</option>` : ""}` +
     salesConsultants().map(u => `<option value="${u.id}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)} (${escapeHTML(u.perfil)})</option>`).join("");
@@ -1654,7 +1902,11 @@ function populateMonthFilters() {
     addMonth(currentMonth);
 
     (Array.isArray(state?.goals) ? state.goals : []).forEach(g => addMonth(g?.periodo));
-    (Array.isArray(visibleSales?.()) ? visibleSales() : []).forEach(s => addMonth(s?.dataVenda));
+    (Array.isArray(visibleSales?.()) ? visibleSales() : []).forEach(s => {
+      addMonth(s?.dataVenda);
+      (Array.isArray(s?.recebimentos) ? s.recebimentos : []).forEach(r => addMonth(r?.data));
+    });
+    (Array.isArray(visibleAppointments?.()) ? visibleAppointments() : []).forEach(a => addMonth(a?.data));
     (Array.isArray(visibleLeads?.()) ? visibleLeads() : []).forEach(l => {
       addMonth(l?.previsaoFechamento);
       addMonth(leadCreatedDate(l));
@@ -1673,22 +1925,22 @@ function populateMonthFilters() {
       if (!el.value && safeValues.length) el.value = safeValues[0];
     });
 
-    ["dashboardMonthFilter","leadMonthFilter","saleMonthFilter","forecastMonthFilter","projectionMonthFilter","commissionMonthFilter","reportMonthFilter","goalMonthFilter"].forEach(id => {
+    ["dashboardMonthFilter","leadMonthFilter","saleMonthFilter","forecastMonthFilter","projectionMonthFilter","commissionMonthFilter","reportMonthFilter","goalMonthFilter","appointmentMonthFilter"].forEach(id => {
       const el = $(id);
       if (el && !el.value) el.value = currentMonth;
     });
 
-    ["dashboardYearFilter","leadYearFilter","saleYearFilter","forecastYearFilter","projectionYearFilter","commissionYearFilter","reportYearFilter","goalYearFilter"].forEach(id => {
+    ["dashboardYearFilter","leadYearFilter","saleYearFilter","forecastYearFilter","projectionYearFilter","commissionYearFilter","reportYearFilter","goalYearFilter","appointmentYearFilter"].forEach(id => {
       const el = $(id);
       if (el && !el.value) el.value = currentYear;
     });
 
-    ["dashboardDayFilter","leadDayFilter","saleDayFilter","forecastDayFilter","projectionDayFilter","commissionDayFilter","reportDayFilter","goalDayFilter"].forEach(id => {
+    ["dashboardDayFilter","leadDayFilter","saleDayFilter","forecastDayFilter","projectionDayFilter","commissionDayFilter","reportDayFilter","goalDayFilter","appointmentDayFilter"].forEach(id => {
       const el = $(id);
       if (el && !el.value) el.value = today;
     });
 
-    ["dashboardWeekRef","leadWeekRef","saleWeekRef","forecastWeekRef","projectionWeekRef","commissionWeekRef","reportWeekRef","goalWeekRef"].forEach(id => {
+    ["dashboardWeekRef","leadWeekRef","saleWeekRef","forecastWeekRef","projectionWeekRef","commissionWeekRef","reportWeekRef","goalWeekRef","appointmentWeekRef"].forEach(id => {
       const el = $(id);
       if (el && !el.value) el.value = today;
     });
@@ -1708,6 +1960,7 @@ function fillCommonFilters() {
   fillSellerFilter("dashboardSellerFilter");
   fillSellerFilter("leadSellerFilter");
   fillSellerFilter("saleSellerFilter");
+  fillSellerFilter("appointmentSellerFilter");
   fillSellerFilter("reportSellerFilter");
   fillSellerFilter("projectionSellerFilter");
   fillSellerFilter("forecastSellerFilter");
@@ -1724,7 +1977,7 @@ function fillCommonFilters() {
   fillProductFilter("commissionProductFilter");
 
   ensureReportDefaultDates();
-  ["dashboard","lead","sale","forecast","commission","projection","goal"].forEach(togglePeriodControls);
+  ["dashboard","lead","sale","forecast","commission","projection","goal","appointment"].forEach(togglePeriodControls);
 }
 function fillSellerFilter(id) {
   const select = $(id);
@@ -1906,6 +2159,7 @@ function goToPage(page) {
     dashboard: "Dashboard",
     leads: "Leads",
     pipeline: "Pipeline",
+    agendamento: "Agendamento",
     vendas: "Gestão de Vendas",
     forecast: "Forecast",
     comissionamento: "Comissionamento",
@@ -1921,7 +2175,8 @@ function goToPage(page) {
     dashboard: "Visão comercial consolidada",
     leads: "Cadastro e gestão de oportunidades",
     pipeline: "Etapas do funil comercial",
-    vendas: "Vendas fechadas e receita recorrente",
+    agendamento: "Agenda comercial e retornos",
+    vendas: "Vendas fechadas, recebimentos e receita recorrente",
     forecast: "Previsibilidade comercial",
     comissionamento: "Comissões por implantação e mensalidade",
     projecoes: "Estimativas semanais, mensais e anuais",
@@ -2292,6 +2547,7 @@ function renderAll() {
   renderDashboard();
   renderLeads();
   renderPipeline();
+  renderAppointments();
   renderSales();
   applyPermissions();
   renderForecast();
@@ -2406,6 +2662,7 @@ function renderLeads() {
       <td>${money(forecastImplantacaoValue(l))}<br><small>MRR: ${money(forecastMensalidadeValue(l))} · ${l.probabilidade || 0}%</small></td>
       <td>
         <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="openAppointmentModal('', '${l.id}')" title="Agendar"><i class="fa-solid fa-calendar-plus"></i></button>
         ${l.status !== "Fechado" ? `<button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')" title="Fechar venda"><i class="fa-solid fa-check"></i></button>` : ""}
         <button class="btn btn-danger btn-sm" onclick="deleteLead('${l.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
       </td>
@@ -2429,6 +2686,7 @@ function renderPipeline() {
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
             <button class="btn btn-outline btn-sm" onclick="moveLead('${l.id}', -1)"><i class="fa-solid fa-arrow-left"></i></button>
             <button class="btn btn-outline btn-sm" onclick="openLeadModal('${l.id}')"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-outline btn-sm" onclick="openAppointmentModal('', '${l.id}')" title="Agendar"><i class="fa-solid fa-calendar-plus"></i></button>
             <button class="btn btn-primary btn-sm" onclick="moveLead('${l.id}', 1)"><i class="fa-solid fa-arrow-right"></i></button>
             <button class="btn btn-success btn-sm" onclick="closeLeadAsSale('${l.id}')"><i class="fa-solid fa-check"></i></button>
           </div>
@@ -2437,9 +2695,53 @@ function renderPipeline() {
   }).join("");
 }
 
+
+function filteredVisibleAppointments({ start = null, end = null, sellerId = "", status = "" } = {}) {
+  return visibleAppointments().filter(a => {
+    const sellerOk = !sellerId || a.vendedorId === sellerId;
+    const statusOk = !status || a.status === status;
+    const dateOk = (!start || !end) || inDateRange(a.data || todayISO(), start, end);
+    return sellerOk && statusOk && dateOk;
+  });
+}
+
+function renderAppointments() {
+  if (!$("appointmentsTable")) return;
+  const range = filterRange("appointment", "month");
+  let sellerId = $("appointmentSellerFilter")?.value || "";
+  if (!canViewAllCommercialData() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
+  const status = $("appointmentStatusFilter")?.value || "";
+
+  const rows = filteredVisibleAppointments({ start: range.start, end: range.end, sellerId, status })
+    .sort((a,b) => `${a.data || ""} ${a.hora || ""}`.localeCompare(`${b.data || ""} ${b.hora || ""}`));
+
+  const done = rows.filter(a => a.status === "Realizado").length;
+  const pending = rows.filter(a => ["Agendado", "Reagendado"].includes(a.status)).length;
+  const todayCount = visibleAppointments().filter(a => a.data === todayISO()).length;
+  $("scheduleTotal").textContent = String(rows.length);
+  $("scheduleDone").textContent = String(done);
+  $("schedulePending").textContent = String(pending);
+  $("scheduleToday").textContent = String(todayCount);
+
+  $("appointmentsTable").innerHTML = rows.map(a => `
+    <tr>
+      <td><strong>${formatDate(a.data)}</strong><br><small>${escapeHTML(a.hora || "")}</small></td>
+      <td><strong>${escapeHTML(a.empresa || leadName(a.leadId))}</strong><br><small>${escapeHTML(a.leadId ? "Vinculado ao lead" : "Sem vínculo")}</small></td>
+      <td>${escapeHTML(a.contato || "—")}</td>
+      <td>${escapeHTML(userName(a.vendedorId))}</td>
+      <td>${escapeHTML(a.tipo || "Demonstração")}</td>
+      <td>${statusTag(a.status || "Agendado")}</td>
+      <td>${escapeHTML(a.observacao || "")}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="openAppointmentModal('${a.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAppointment('${a.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`).join("") || `<tr><td class="empty" colspan="8">Nenhum agendamento encontrado no período/filtro selecionado.</td></tr>`;
+}
+
 function renderSales() {
   if (!isAdmin()) {
-    if ($("salesTable")) $("salesTable").innerHTML = `<tr><td class="empty" colspan="8">A Gestão de Vendas é exclusiva do Administrador.</td></tr>`;
+    if ($("salesTable")) $("salesTable").innerHTML = `<tr><td class="empty" colspan="9">A Gestão de Vendas é exclusiva do Administrador.</td></tr>`;
     return;
   }
 
@@ -2450,7 +2752,9 @@ function renderSales() {
   const rows = filteredVisibleSales({ start: range.start, end: range.end, sellerId, productId, status })
     .sort((a,b) => String(b.dataVenda).localeCompare(String(a.dataVenda)));
 
-  $("salesTable").innerHTML = rows.map(s => `
+  $("salesTable").innerHTML = rows.map(s => {
+    const summary = receiptSummary(s);
+    return `
     <tr>
       <td><strong>${escapeHTML(s.cliente)}</strong><br><small>${escapeHTML(s.observacao || "")}</small></td>
       <td>${escapeHTML(productName(s.produtoId))}</td>
@@ -2458,12 +2762,15 @@ function renderSales() {
       <td>${money(s.implantacao)}</td>
       <td>${money(s.mensalidade)}</td>
       <td>${formatDate(s.dataVenda)}</td>
+      <td><strong>${money(summary.paid)}</strong> pagos<br><small>${money(summary.pending)} pendente · ${escapeHTML(paymentMethodLabel(s.formaPagamento))}</small></td>
       <td>${statusTag(s.status)}</td>
       <td>
-        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')" title="Editar venda"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-outline btn-sm" onclick="openReceiptsModal('${s.id}')" title="Recebimentos"><i class="fa-solid fa-money-check-dollar"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
       </td>
-    </tr>`).join("") || `<tr><td class="empty" colspan="8">Nenhuma venda no período/filtro selecionado.</td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td class="empty" colspan="9">Nenhuma venda no período/filtro selecionado.</td></tr>`;
 }
 
 
@@ -2586,32 +2893,62 @@ function productivityRows(periodInfo = monthKey(), filters = {}) {
 }
 
 
-function commissionSaleMonthKey(sale) {
-  const date = String(sale?.dataVenda || todayISO());
+function commissionSaleMonthKey(saleOrReceipt) {
+  const date = String(saleOrReceipt?.data || saleOrReceipt?.dataRecebimento || saleOrReceipt?.dataVenda || todayISO());
   return /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : monthKey();
+}
+
+function isCommissionableSale(sale) {
+  const status = String(sale?.status || "").toLowerCase();
+  return (status === "fechada" || status === "fechado")
+    && isSalesConsultant(findById(state.users, sale?.vendedorId));
+}
+
+function paidCommissionEntries({ start = null, end = null, sellerId = "", productId = "", status = "" } = {}) {
+  const rows = [];
+  (state.sales || []).filter(s => {
+    const statusOk = !status || s.status === status;
+    const sellerOk = !sellerId || s.vendedorId === sellerId;
+    const productOk = !productId || s.produtoId === productId;
+    return statusOk && sellerOk && productOk && isCommissionableSale(s);
+  }).forEach(sale => {
+    getSaleReceipts(sale).filter(r => r.pago).forEach(receipt => {
+      const dateOk = (!start || !end) || inDateRange(receipt.data || sale.dataVenda || todayISO(), start, end);
+      if (!dateOk) return;
+      rows.push({ sale, receipt });
+    });
+  });
+
+  return rows.filter(row => {
+    if (canViewManagerCommission()) return true;
+    if (isSalesConsultant(currentUser)) return row.sale.vendedorId === currentUser.id;
+    return false;
+  });
 }
 
 function commissionEligibleSalesForMonth(sellerId, month) {
   const range = monthRange(month);
   return (state.sales || []).filter(s => {
-    const status = String(s.status || "").toLowerCase();
-    const closed = status === "fechada" || status === "fechado";
-    return closed
+    return isCommissionableSale(s)
       && s.vendedorId === sellerId
-      && inDateRange(s.dataVenda || todayISO(), range.start, range.end)
-      && isSalesConsultant(findById(state.users, s.vendedorId));
+      && inDateRange(s.dataVenda || todayISO(), range.start, range.end);
   });
+}
+
+function commissionReceivedImplantacaoForSellerMonth(sellerId, month) {
+  const range = monthRange(month);
+  return paidCommissionEntries({ start: range.start, end: range.end, sellerId, status: "Fechada" })
+    .reduce((sum, row) => sum + Number(row.receipt.valor || 0), 0);
 }
 
 function commissionPolicyForSellerMonth(sellerId, month) {
   const range = monthRange(month);
-  const done = sumSales(commissionEligibleSalesForMonth(sellerId, month));
   const goal = totalGoalForSellerRange(sellerId, range.start, range.end);
-
+  const monthlySales = commissionEligibleSalesForMonth(sellerId, month);
   const metaImplantacao = Number(goal.implantacao) || 0;
   const metaMensalidade = Number(goal.mensalidade) || 0;
-  const realizadoImplantacao = Number(done.implantacao) || 0;
-  const realizadoMensalidade = Number(done.mensalidade) || 0;
+  const realizadoImplantacao = commissionReceivedImplantacaoForSellerMonth(sellerId, month);
+  const realizadoMensalidade = monthlySales.reduce((sum, s) => sum + (Number(s.mensalidade) || 0), 0);
 
   const bateuImplantacao = metaImplantacao > 0 && realizadoImplantacao >= metaImplantacao;
   const bateuMensalidade = metaMensalidade > 0 && realizadoMensalidade >= metaMensalidade;
@@ -2629,7 +2966,6 @@ function commissionPolicyForSellerMonth(sellerId, month) {
 
   return {
     month,
-    done,
     goal,
     metaImplantacao,
     metaMensalidade,
@@ -2646,28 +2982,30 @@ function commissionPolicyForSellerMonth(sellerId, month) {
   };
 }
 
-function commissionSales() {
+function commissionEntries() {
   const range = filterRange("commission", "month");
   let sellerId = $("commissionSellerFilter")?.value || "";
   if (!canViewManagerCommission() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
   const productId = $("commissionProductFilter")?.value || "";
   const status = $("commissionStatusFilter")?.value ?? "Fechada";
-  return filteredVisibleSales({ start: range.start, end: range.end, sellerId, productId, status })
-    .filter(s => canAccessCommercialRecord(s.vendedorId))
-    .filter(s => isSalesConsultant(findById(state.users, s.vendedorId)))
-    .sort((a,b) => String(b.dataVenda || "").localeCompare(String(a.dataVenda || "")));
+  return paidCommissionEntries({ start: range.start, end: range.end, sellerId, productId, status })
+    .filter(row => canAccessCommercialRecord(row.sale.vendedorId))
+    .sort((a,b) => String(b.receipt.data || b.sale.dataVenda || "").localeCompare(String(a.receipt.data || a.sale.dataVenda || "")));
 }
 
 function commissionRowsData() {
-  return commissionSales().map(s => {
-    const implantacao = Number(s.implantacao || 0);
-    const mensalidade = Number(s.mensalidade || 0);
-    const policy = commissionPolicyForSellerMonth(s.vendedorId, commissionSaleMonthKey(s));
+  return commissionEntries().map(({ sale, receipt }) => {
+    const implantacao = Number(receipt.valor || 0);
+    const mensalidade = Number(sale.mensalidade || 0);
+    const month = commissionSaleMonthKey(receipt);
+    const policy = commissionPolicyForSellerMonth(sale.vendedorId, month);
     const comVendedor = implantacao * (policy.vendedorPercent / 100);
     const comGestor = implantacao * (policy.managerPercent / 100);
 
     return {
-      sale: s,
+      sale,
+      receipt,
+      dataRecebimento: receipt.data || sale.dataVenda,
       implantacao,
       mensalidade,
       policy,
@@ -2691,47 +3029,32 @@ function commissionRowsData() {
 function commissionTotalsForDashboard(range = periodRange("month"), filters = {}) {
   const sellerId = filters.sellerId || "";
   const productId = filters.productId || "";
+  const entries = paidCommissionEntries({ start: range.start, end: range.end, sellerId, productId, status: "Fechada" });
 
-  const sales = (state.sales || [])
-    .filter(s => {
-      const status = String(s.status || "").toLowerCase();
-      return (status === "fechada" || status === "fechado")
-        && (!range.start || inDateRange(s.dataVenda || todayISO(), range.start, range.end))
-        && (!sellerId || s.vendedorId === sellerId)
-        && (!productId || s.produtoId === productId)
-        && isSalesConsultant(findById(state.users, s.vendedorId));
-    })
-    .filter(s => {
-      if (canViewManagerCommission()) return true;
-      if (isSalesConsultant(currentUser)) return s.vendedorId === currentUser.id;
-      return false;
-    });
-
-  const sellerTotal = sales.reduce((sum, s) => {
-    const policy = commissionPolicyForSellerMonth(s.vendedorId, commissionSaleMonthKey(s));
-    return sum + ((Number(s.implantacao) || 0) * (policy.vendedorPercent / 100));
+  const sellerTotal = entries.reduce((sum, row) => {
+    const policy = commissionPolicyForSellerMonth(row.sale.vendedorId, commissionSaleMonthKey(row.receipt));
+    return sum + ((Number(row.receipt.valor) || 0) * (policy.vendedorPercent / 100));
   }, 0);
 
   const managerTotal = canViewManagerCommission()
-    ? sales.reduce((sum, s) => sum + ((Number(s.implantacao) || 0) * 0.25), 0)
+    ? entries.reduce((sum, row) => sum + ((Number(row.receipt.valor) || 0) * 0.25), 0)
     : 0;
 
-  return { sales, sellerTotal, managerTotal };
+  return { entries, sales: entries.map(e => e.sale), sellerTotal, managerTotal };
 }
-
 
 function renderCommission() {
   if (!$("commissionTable")) return;
 
   if (!canAccessCommission()) {
-    $("commissionTable").innerHTML = `<tr><td class="empty" colspan="13">Comissionamento disponível apenas para Administrador, Gerente e Consultores/Vendedores.</td></tr>`;
+    $("commissionTable").innerHTML = `<tr><td class="empty" colspan="14">Comissionamento disponível apenas para Administrador, Gerente e Consultores/Vendedores.</td></tr>`;
     ["commissionTotal", "commissionImplantacao", "commissionMensalidade"].forEach(id => { if ($(id)) $(id).textContent = money(0); });
     if ($("commissionSalesCount")) $("commissionSalesCount").textContent = "0";
     return;
   }
 
   if ($("commissionRateLabel")) {
-    $("commissionRateLabel").textContent = "Vendedor: 20% sem indicadores, 25% com um indicador, 30% com implantação e mensalidade. Gestor: 25% sobre implantação da equipe.";
+    $("commissionRateLabel").textContent = "Vendedor: 20% sem indicadores, 25% com um indicador e 30% com implantação + mensalidade. Gestor: 25% sobre implantação recebida da equipe.";
   }
 
   const rows = commissionRowsData();
@@ -2746,17 +3069,19 @@ function renderCommission() {
 
   $("commissionTable").innerHTML = rows.map(r => {
     const s = r.sale;
+    const receipt = r.receipt || {};
     const indicadores = `
       <strong>${escapeHTML(r.faixa)}</strong><br>
       <small>Impl.: ${r.pctImplantacao}% · Mens.: ${r.pctMensalidade}%</small>
     `;
     return `<tr>
-      <td>${formatDate(s.dataVenda)}</td>
-      <td><strong>${escapeHTML(s.cliente)}</strong><br><small>${escapeHTML(s.observacao || "")}</small></td>
+      <td>${formatDate(r.dataRecebimento)}</td>
+      <td><strong>${escapeHTML(s.cliente)}</strong><br><small>Venda: ${formatDate(s.dataVenda)} · ${escapeHTML(s.observacao || "")}</small></td>
       <td>${escapeHTML(productName(s.produtoId))}</td>
       <td>${escapeHTML(userName(s.vendedorId))}</td>
+      <td>${escapeHTML(receipt.tipo || paymentMethodLabel(s.formaPagamento))}<br><small>${escapeHTML(receipt.parcela || "")}</small></td>
       <td>${indicadores}</td>
-      <td>${money(r.implantacao)}</td>
+      <td><strong>${money(r.implantacao)}</strong><br><small>implantação recebida</small></td>
       <td>${money(r.mensalidade)}</td>
       <td>${money(r.metaImplantacao)}</td>
       <td>${money(r.metaMensalidade)}</td>
@@ -2765,7 +3090,7 @@ function renderCommission() {
       <td>${canViewManagerCommission() ? `<strong>${money(r.comGestor)}</strong><br><small>25% gestor</small>` : "—"}</td>
       <td>${statusTag(s.status)}</td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="13">Nenhuma venda encontrada para comissionamento no filtro selecionado.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="14">Nenhum recebimento pago encontrado para comissionamento no filtro selecionado.</td></tr>`;
 }
 
 function saveCommissionConfig() {
@@ -3043,6 +3368,92 @@ function deleteLead(id) {
   showToast("Lead excluído.");
 }
 
+
+function setAppointmentLeadData() {
+  const lead = findById(state.leads, $("aLead")?.value);
+  if (!lead) return;
+  $("aEmpresa").value = lead.empresa || "";
+  $("aContato").value = lead.contato || "";
+  $("aVendedor").value = lead.vendedorId || currentUser?.id || "";
+}
+
+function openAppointmentModal(id = "", leadId = "") {
+  const baseLead = leadId ? findById(state.leads, leadId) : null;
+  const appointment = id ? findById(state.appointments, id) : {
+    id: "",
+    leadId: baseLead?.id || "",
+    empresa: baseLead?.empresa || "",
+    contato: baseLead?.contato || "",
+    vendedorId: baseLead?.vendedorId || (isSalesConsultant(currentUser) ? currentUser.id : sellers()[0]?.id || ""),
+    data: todayISO(),
+    hora: "09:00",
+    tipo: "Demonstração",
+    status: "Agendado",
+    observacao: ""
+  };
+  if (id && !canAccessCommercialRecord(appointment.vendedorId)) return showToast("Você só pode acessar seus próprios agendamentos.", "fa-lock");
+
+  const sellerDisabled = canViewAllCommercialData() ? "" : "disabled";
+  openModal(id ? "Editar Agendamento" : "Novo Agendamento", `
+    <div class="form-grid">
+      <div class="form-group"><label>Lead vinculado</label><select id="aLead" class="select" onchange="setAppointmentLeadData()">${leadOptions(appointment.leadId, true)}</select></div>
+      <div class="form-group"><label>Vendedor</label><select id="aVendedor" class="select" ${sellerDisabled}>${sellerOptions(appointment.vendedorId)}</select></div>
+      <div class="form-group"><label>Lead/Cliente</label><input id="aEmpresa" class="field" value="${escapeHTML(appointment.empresa || "")}"></div>
+      <div class="form-group"><label>Contato</label><input id="aContato" class="field" value="${escapeHTML(appointment.contato || "")}"></div>
+      <div class="form-group"><label>Data</label><input id="aData" class="field" type="date" value="${appointment.data || todayISO()}"></div>
+      <div class="form-group"><label>Hora</label><input id="aHora" class="field" type="time" value="${appointment.hora || "09:00"}"></div>
+      <div class="form-group"><label>Tipo</label><select id="aTipo" class="select"><option${appointment.tipo === "Demonstração" ? " selected" : ""}>Demonstração</option><option${appointment.tipo === "Retorno" ? " selected" : ""}>Retorno</option><option${appointment.tipo === "Reunião" ? " selected" : ""}>Reunião</option><option${appointment.tipo === "Follow-up" ? " selected" : ""}>Follow-up</option><option${appointment.tipo === "Implantação" ? " selected" : ""}>Implantação</option></select></div>
+      <div class="form-group"><label>Status</label><select id="aStatus" class="select"><option${appointment.status === "Agendado" ? " selected" : ""}>Agendado</option><option${appointment.status === "Realizado" ? " selected" : ""}>Realizado</option><option${appointment.status === "Reagendado" ? " selected" : ""}>Reagendado</option><option${appointment.status === "Cancelado" ? " selected" : ""}>Cancelado</option><option${appointment.status === "Não compareceu" ? " selected" : ""}>Não compareceu</option></select></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Observação</label><input id="aObs" class="field" value="${escapeHTML(appointment.observacao || "")}"></div>
+    </div>
+  `, `
+    <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveAppointment('${id}')"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+  `);
+}
+
+function saveAppointment(id = "") {
+  const vendedorId = canViewAllCommercialData() ? $("aVendedor").value : currentUser?.id;
+  if (!vendedorId) return showToast("Selecione o vendedor.", "fa-triangle-exclamation");
+  if (!canAccessCommercialRecord(vendedorId)) return showToast("Você só pode salvar seus próprios agendamentos.", "fa-lock");
+  const data = normalizeAppointmentRecord({
+    id: id || uid("ag"),
+    leadId: $("aLead").value,
+    empresa: $("aEmpresa").value.trim(),
+    contato: $("aContato").value.trim(),
+    vendedorId,
+    data: $("aData").value || todayISO(),
+    hora: $("aHora").value || "09:00",
+    tipo: $("aTipo").value,
+    status: $("aStatus").value,
+    observacao: $("aObs").value.trim()
+  });
+  if (!data.empresa) return showToast("Informe o lead/cliente do agendamento.", "fa-triangle-exclamation");
+
+  if (id) {
+    const idx = state.appointments.findIndex(a => a.id === id);
+    state.appointments[idx] = { ...state.appointments[idx], ...data, updatedAt: new Date().toISOString() };
+  } else {
+    state.appointments.push({ ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  }
+
+  persist();
+  closeModal();
+  renderAll();
+  showToast("Agendamento salvo.");
+}
+
+function deleteAppointment(id) {
+  const appointment = findById(state.appointments, id);
+  if (!appointment) return;
+  if (!canAccessCommercialRecord(appointment.vendedorId)) return showToast("Você só pode excluir seus próprios agendamentos.", "fa-lock");
+  if (!confirm("Excluir este agendamento?")) return;
+  state.appointments = state.appointments.filter(a => a.id !== id);
+  persist();
+  renderAll();
+  showToast("Agendamento excluído.");
+}
+
 function closeLeadAsSale(id) {
   const lead = findById(state.leads, id);
   if (!lead) return;
@@ -3050,7 +3461,7 @@ function closeLeadAsSale(id) {
   const existing = state.sales.find(s => s.leadId === id);
   if (existing) return showToast("Já existe venda criada para este lead.", "fa-triangle-exclamation");
 
-  state.sales.push({
+  const newSale = normalizeSaleRecord({
     id: uid("s"),
     leadId: lead.id,
     cliente: lead.empresa,
@@ -3060,8 +3471,13 @@ function closeLeadAsSale(id) {
     mensalidade: Number(lead.mensalidade) || 0,
     dataVenda: todayISO(),
     status: "Fechada",
+    formaPagamento: "integral",
+    parcelas: 1,
+    entrada: 0,
+    dataPrimeiroRecebimento: todayISO(),
     observacao: "Criada a partir do lead"
   });
+  state.sales.push(newSale);
 
   lead.status = "Fechado";
   lead.pipeline = "Fechamento";
@@ -3075,7 +3491,7 @@ function closeLeadAsSale(id) {
 
 function openSaleModal(id = "") {
   if (!enforceAdminOnly()) return;
-  const sale = id ? findById(state.sales, id) : { id: "", cliente: "", produtoId: activeProducts()[0]?.id || "", vendedorId: sellers()[0]?.id || "", implantacao: activeProducts()[0]?.implantacao || 0, mensalidade: activeProducts()[0]?.mensalidade || 0, dataVenda: todayISO(), status: "Fechada", observacao: "" };
+  const sale = id ? normalizeSaleRecord(findById(state.sales, id) || {}) : { id: "", cliente: "", produtoId: activeProducts()[0]?.id || "", vendedorId: sellers()[0]?.id || "", implantacao: activeProducts()[0]?.implantacao || 0, mensalidade: activeProducts()[0]?.mensalidade || 0, dataVenda: todayISO(), status: "Fechada", formaPagamento: "integral", parcelas: 1, entrada: 0, dataPrimeiroRecebimento: todayISO(), observacao: "" };
   openModal(id ? "Editar Venda" : "Nova Venda", `
     <div class="form-grid">
       <div class="form-group"><label>Cliente</label><input id="sCliente" class="field" value="${escapeHTML(sale.cliente)}"></div>
@@ -3084,6 +3500,10 @@ function openSaleModal(id = "") {
       <div class="form-group"><label>Vendedor</label><select id="sVendedor" class="select">${sellerOptions(sale.vendedorId)}</select></div>
       <div class="form-group"><label>Valor implantação</label><input id="sImplantacao" class="field" type="number" step="0.01" value="${sale.implantacao || 0}"></div>
       <div class="form-group"><label>Valor mensalidade</label><input id="sMensalidade" class="field" type="number" step="0.01" value="${sale.mensalidade || 0}"></div>
+      <div class="form-group"><label>Forma de recebimento da implantação</label><select id="sPagamento" class="select" onchange="togglePaymentFields()">${paymentMethodOptions(sale.formaPagamento || "integral")}</select></div>
+      <div class="form-group"><label>Data do primeiro recebimento</label><input id="sDataRecebimento" class="field" type="date" value="${sale.dataPrimeiroRecebimento || sale.dataVenda || todayISO()}"></div>
+      <div class="form-group"><label>Entrada recebida</label><input id="sEntrada" class="field" type="number" step="0.01" value="${sale.entrada || 0}"></div>
+      <div class="form-group"><label>Nº de parcelas</label><input id="sParcelas" class="field" type="number" min="1" step="1" value="${sale.parcelas || 1}"></div>
       <div class="form-group"><label>Status</label><select id="sStatus" class="select"><option${sale.status === "Fechada" ? " selected" : ""}>Fechada</option><option${sale.status === "Cancelada" ? " selected" : ""}>Cancelada</option></select></div>
       <div class="form-group"><label>Observação</label><input id="sObs" class="field" value="${escapeHTML(sale.observacao || "")}"></div>
     </div>
@@ -3091,6 +3511,7 @@ function openSaleModal(id = "") {
     <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveSale('${id}')"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
   `);
+  togglePaymentFields();
 }
 function fillSaleProductValues() {
   const p = findById(state.products, $("sProduto").value);
@@ -3098,10 +3519,24 @@ function fillSaleProductValues() {
   $("sImplantacao").value = p.implantacao || 0;
   $("sMensalidade").value = p.mensalidade || 0;
 }
+
+function togglePaymentFields() {
+  const method = $("sPagamento")?.value || "integral";
+  const isParcel = method === "parcelado" || method === "entrada";
+  if ($("sParcelas")) $("sParcelas").disabled = !isParcel;
+  if ($("sEntrada")) $("sEntrada").disabled = !isParcel;
+  if (!isParcel) {
+    if ($("sParcelas")) $("sParcelas").value = 1;
+    if ($("sEntrada")) $("sEntrada").value = 0;
+  }
+}
+
 function saveSale(id = "") {
   if (!enforceAdminOnly()) return;
   const cliente = $("sCliente").value.trim();
   if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
+
+  const existing = id ? findById(state.sales, id) : null;
   const data = {
     id: id || uid("s"),
     cliente,
@@ -3111,8 +3546,20 @@ function saveSale(id = "") {
     mensalidade: number($("sMensalidade").value),
     dataVenda: $("sData").value || todayISO(),
     status: $("sStatus").value,
+    formaPagamento: $("sPagamento")?.value || "integral",
+    parcelas: Math.max(1, Number($("sParcelas")?.value || 1)),
+    entrada: number($("sEntrada")?.value || 0),
+    dataPrimeiroRecebimento: $("sDataRecebimento")?.value || $("sData").value || todayISO(),
     observacao: $("sObs").value.trim()
   };
+  data.paymentSignature = salePaymentSignature(data);
+
+  if (existing && existing.paymentSignature === data.paymentSignature && Array.isArray(existing.recebimentos)) {
+    data.recebimentos = existing.recebimentos;
+  } else {
+    data.recebimentos = generateReceivablesForSale(data);
+  }
+
   if (id) {
     const idx = state.sales.findIndex(s => s.id === id);
     state.sales[idx] = { ...state.sales[idx], ...data };
@@ -3122,8 +3569,90 @@ function saveSale(id = "") {
   persist();
   closeModal();
   renderAll();
-  showToast("Venda salva.");
+  showToast("Venda salva. Recebimentos atualizados para o comissionamento.");
 }
+
+let receiptModalIndex = 0;
+
+function receiptRowHTML(receipt = {}, idx = 0) {
+  return `<tr data-receipt-row="${idx}">
+    <td><input id="rData_${idx}" class="field" type="date" value="${escapeHTML(receipt.data || todayISO())}"></td>
+    <td><input id="rValor_${idx}" class="field" type="number" step="0.01" value="${Number(receipt.valor || 0)}"></td>
+    <td>
+      <select id="rPago_${idx}" class="select">
+        <option value="true"${receipt.pago ? " selected" : ""}>Pago</option>
+        <option value="false"${!receipt.pago ? " selected" : ""}>Pendente</option>
+      </select>
+    </td>
+    <td><input id="rTipo_${idx}" class="field" value="${escapeHTML(receipt.tipo || "Parcela")}"></td>
+    <td><input id="rParcela_${idx}" class="field" value="${escapeHTML(receipt.parcela || "")}"></td>
+    <td><input id="rObs_${idx}" class="field" value="${escapeHTML(receipt.observacao || "")}"></td>
+    <td><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()" title="Remover"><i class="fa-solid fa-trash"></i></button></td>
+  </tr>`;
+}
+
+function addReceiptRowToModal(receipt = {}) {
+  const tbody = $("receiptRows");
+  if (!tbody) return;
+  const idx = receiptModalIndex++;
+  tbody.insertAdjacentHTML("beforeend", receiptRowHTML(receipt, idx));
+}
+
+function openReceiptsModal(saleId) {
+  if (!enforceAdminOnly()) return;
+  const sale = findById(state.sales, saleId);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+
+  receiptModalIndex = 0;
+  const receipts = getSaleReceipts(sale);
+  openModal("Recebimentos da implantação", `
+    <div class="note" style="margin-bottom:14px">
+      Cliente: <strong>${escapeHTML(sale.cliente)}</strong>. Marque como <strong>Pago</strong> somente o que já foi recebido.
+      A comissão do mês considera a data e o valor recebido de cada linha paga.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Data receb.</th><th>Valor</th><th>Status</th><th>Tipo</th><th>Parcela</th><th>Obs.</th><th></th></tr></thead>
+        <tbody id="receiptRows"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-outline" style="margin-top:12px" onclick="addReceiptRowToModal({ data: todayISO(), valor: 0, pago: false, tipo: 'Manual', parcela: '' })"><i class="fa-solid fa-plus"></i> Adicionar recebimento</button>
+  `, `
+    <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveReceipts('${saleId}')"><i class="fa-solid fa-floppy-disk"></i> Salvar recebimentos</button>
+  `);
+  receipts.forEach(r => addReceiptRowToModal(r));
+}
+
+function saveReceipts(saleId) {
+  if (!enforceAdminOnly()) return;
+  const sale = findById(state.sales, saleId);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+
+  const rows = [...document.querySelectorAll("#receiptRows tr[data-receipt-row]")];
+  const receipts = rows.map(row => {
+    const idx = row.dataset.receiptRow;
+    return {
+      id: uid("rc"),
+      data: $(`rData_${idx}`)?.value || todayISO(),
+      valor: number($(`rValor_${idx}`)?.value || 0),
+      pago: $(`rPago_${idx}`)?.value === "true",
+      tipo: $(`rTipo_${idx}`)?.value.trim() || "Recebimento",
+      parcela: $(`rParcela_${idx}`)?.value.trim(),
+      observacao: $(`rObs_${idx}`)?.value.trim()
+    };
+  }).filter(r => r.valor > 0);
+
+  sale.recebimentos = receipts;
+  sale.paymentSignature = salePaymentSignature(sale);
+  sale.updatedAt = new Date().toISOString();
+
+  persist();
+  closeModal();
+  renderAll();
+  showToast("Recebimentos salvos. O comissionamento foi recalculado por data de pagamento.");
+}
+
 function deleteSale(id) {
   if (!enforceAdminOnly()) return;
   if (!confirm("Excluir esta venda?")) return;
@@ -3441,7 +3970,10 @@ function exportTable(type) {
     const productId = $("saleProductFilter")?.value || "";
     const status = $("saleStatusFilter")?.value || "";
     rows = filteredVisibleSales({ start: range.start, end: range.end, sellerId, productId, status })
-      .map(s => ({ Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, Status: s.status }));
+      .map(s => {
+        const rs = receiptSummary(s);
+        return { Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, FormaPagamento: paymentMethodLabel(s.formaPagamento), RecebidoImplantacao: rs.paid, PendenteImplantacao: rs.pending, Status: s.status };
+      });
     name = "vendas";
   } else if (type === "forecast") {
     const sellerId = $("forecastSellerFilter")?.value || "";
@@ -3453,19 +3985,24 @@ function exportTable(type) {
   } else if (type === "commission") {
     rows = commissionRowsData().map(r => {
       const s = r.sale;
+      const receipt = r.receipt || {};
       return {
-        Data: s.dataVenda,
+        DataRecebimento: r.dataRecebimento,
+        DataVenda: s.dataVenda,
         Cliente: s.cliente,
         Produto: productName(s.produtoId),
         Vendedor: userName(s.vendedorId),
+        FormaPagamento: paymentMethodLabel(s.formaPagamento),
+        TipoRecebimento: receipt.tipo || "",
+        Parcela: receipt.parcela || "",
         Indicadores: r.faixa,
         AtingimentoImplantacao: `${r.pctImplantacao}%`,
         AtingimentoMensalidade: `${r.pctMensalidade}%`,
         MetaImplantacao: r.metaImplantacao,
         MetaMensalidade: r.metaMensalidade,
-        RealizadoImplantacaoMes: r.realizadoImplantacao,
+        RealizadoImplantacaoRecebidaMes: r.realizadoImplantacao,
         RealizadoMensalidadeMes: r.realizadoMensalidade,
-        ImplantacaoVenda: r.implantacao,
+        BaseImplantacaoRecebida: r.implantacao,
         MensalidadeVenda: r.mensalidade,
         PercentualVendedor: `${r.vendedorPercent}%`,
         ComissaoVendedor: r.comImpl,
@@ -3475,6 +4012,22 @@ function exportTable(type) {
       };
     });
     name = "comissionamento";
+  } else if (type === "appointments") {
+    const range = filterRange("appointment", "month");
+    const sellerId = $("appointmentSellerFilter")?.value || "";
+    const status = $("appointmentStatusFilter")?.value || "";
+    rows = filteredVisibleAppointments({ start: range.start, end: range.end, sellerId, status })
+      .map(a => ({
+        Data: a.data,
+        Hora: a.hora,
+        LeadCliente: a.empresa || leadName(a.leadId),
+        Contato: a.contato,
+        Vendedor: userName(a.vendedorId),
+        Tipo: a.tipo,
+        Status: a.status,
+        Observacao: a.observacao
+      }));
+    name = "agendamentos";
   } else if (type === "goals") {
     const rangeInfo = goalRange();
     const sellerId = $("goalSellerFilter")?.value || "";
@@ -3522,8 +4075,13 @@ function exportAllReports() {
 
   const wb = XLSX.utils.book_new();
   const sheets = {
-    Vendas: reportSales.map(s => ({ Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, Status: s.status })),
+    Vendas: reportSales.map(s => {
+      const rs = receiptSummary(s);
+      return { Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, FormaPagamento: paymentMethodLabel(s.formaPagamento), RecebidoImplantacao: rs.paid, PendenteImplantacao: rs.pending, Status: s.status };
+    }),
     Leads: reportLeads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Etapa: l.pipeline, Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l) })),
+    Agendamentos: filteredVisibleAppointments({ start, end, sellerId }).map(a => ({ Data: a.data, Hora: a.hora, LeadCliente: a.empresa || leadName(a.leadId), Contato: a.contato, Vendedor: userName(a.vendedorId), Tipo: a.tipo, Status: a.status, Observacao: a.observacao })),
+    Comissionamento: commissionRowsData().map(r => ({ DataRecebimento: r.dataRecebimento, Cliente: r.sale.cliente, Produto: productName(r.sale.produtoId), Vendedor: userName(r.sale.vendedorId), BaseRecebida: r.implantacao, PercentualVendedor: `${r.vendedorPercent}%`, ComissaoVendedor: r.comImpl, ComissaoGestor: canViewManagerCommission() ? r.comGestor : "" })),
     Metas: state.goals.filter(g => isValidGoal(g) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)).map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Implantacao: g.implantacao, Mensalidade: g.mensalidade }))
   };
   if (isAdmin()) {
