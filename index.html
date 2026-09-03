@@ -1059,7 +1059,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-09-03-1406-historico-recebimentos-agendamento";
+const APP_BUILD_VERSION = "2026-09-03-1535-parcelados-historico-corrigido";
 
 let state = null;
 let currentUser = null;
@@ -1331,12 +1331,23 @@ function normalizeReceiptRecord(receipt = {}, sale = {}, idx = 0) {
 function extractLegacyReceipts(sourceSale = {}, normalizedSale = {}) {
   const candidates = [
     sourceSale.recebimentos,
+    sourceSale.recebimentosImplantacao,
     sourceSale.recebimentosComissao,
+    sourceSale.recebimentosParcelados,
     sourceSale.parcelasRecebimento,
+    sourceSale.parcelasComissao,
+    sourceSale.parcelamento,
     sourceSale.parcelas,
     sourceSale.pagamentos,
     sourceSale.payments,
-    sourceSale.installments
+    sourceSale.installments,
+    sourceSale.duplicatas,
+    sourceSale.boletos,
+    sourceSale.titulos,
+    sourceSale.cobrancas,
+    sourceSale.cobranças,
+    sourceSale.lancamentosReceber,
+    sourceSale.contasReceber
   ].find(Array.isArray);
 
   if (Array.isArray(candidates)) {
@@ -1359,6 +1370,119 @@ function extractLegacyReceipts(sourceSale = {}, normalizedSale = {}) {
   return [];
 }
 
+
+function firstFilled(...values) {
+  return values.find(v => v !== undefined && v !== null && String(v).trim() !== "");
+}
+
+function installmentsFromSaleRecord(sourceSale = {}) {
+  const value = firstFilled(
+    sourceSale.parcelasQtd,
+    sourceSale.qtdParcelas,
+    sourceSale.numeroParcelas,
+    sourceSale.numParcelas,
+    sourceSale.qtdeParcelas,
+    sourceSale.quantidadeParcelas,
+    sourceSale.parcelas,
+    sourceSale.installmentsCount,
+    sourceSale.installmentCount,
+    sourceSale.paymentInstallments,
+    sourceSale.numero_de_parcelas
+  );
+  const n = Number(value || 0);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 1;
+}
+
+function entryFromSaleRecord(sourceSale = {}) {
+  return Number(firstFilled(
+    sourceSale.entrada,
+    sourceSale.valorEntrada,
+    sourceSale.entradaRecebida,
+    sourceSale.sinal,
+    sourceSale.valorSinal,
+    sourceSale.downPayment,
+    sourceSale.valor_entrada
+  ) || 0);
+}
+
+function normalizePaymentMethod(rawMethod, installments = 1, entry = 0, sourceSale = {}) {
+  const raw = norm(rawMethod);
+  const parcelClue = Number(installments || 1) > 1 || Number(entry || 0) > 0
+    || sourceSale.parcelado === true
+    || sourceSale.ehParcelado === true
+    || sourceSale.isParcelado === true
+    || sourceSale.temParcelas === true;
+
+  if (raw) {
+    if (raw.includes("cartao") || raw.includes("cartão") || raw.includes("credito") || raw.includes("crédito") || raw.includes("debito") || raw.includes("débito")) return "cartao";
+    if (raw.includes("pix") || raw.includes("dinheiro")) return "pix";
+    if (raw.includes("entrada") || raw.includes("sinal")) return "entrada";
+    if (raw.includes("parcela") || raw.includes("boleto") || raw.includes("duplicata") || raw.includes("recorrente") || raw.includes("prazo")) return Number(entry || 0) > 0 ? "entrada" : "parcelado";
+
+    // Correção de histórico: versões anteriores gravaram vendas parceladas como
+    // "integral" quando existia quantidade de parcelas/entrada. Nesse caso, a pista
+    // de parcelamento prevalece para não transformar pedido parcelado em à vista.
+    if ((raw.includes("integral") || raw.includes("vista") || raw.includes("unica") || raw.includes("única") || raw.includes("avista")) && parcelClue) {
+      return Number(entry || 0) > 0 ? "entrada" : "parcelado";
+    }
+
+    if (raw.includes("integral") || raw.includes("vista") || raw.includes("unica") || raw.includes("única") || raw.includes("avista")) return "integral";
+  }
+
+  if (Number(entry || 0) > 0) return "entrada";
+  if (Number(installments || 1) > 1 || parcelClue) return "parcelado";
+  return "integral";
+}
+
+function saleHasParcelClues(sourceSale = {}) {
+  return installmentsFromSaleRecord(sourceSale) > 1
+    || entryFromSaleRecord(sourceSale) > 0
+    || sourceSale.parcelado === true
+    || sourceSale.ehParcelado === true
+    || sourceSale.isParcelado === true
+    || sourceSale.temParcelas === true
+    || Array.isArray(sourceSale.parcelamento)
+    || Array.isArray(sourceSale.parcelasRecebimento)
+    || Array.isArray(sourceSale.parcelasComissao)
+    || Array.isArray(sourceSale.recebimentosParcelados)
+    || Array.isArray(sourceSale.duplicatas)
+    || Array.isArray(sourceSale.boletos)
+    || Array.isArray(sourceSale.titulos)
+    || /parcela|boleto|duplicata|prazo|entrada|sinal/.test(norm(firstFilled(
+      sourceSale.formaPagamento,
+      sourceSale.pagamento,
+      sourceSale.formaPgto,
+      sourceSale.metodoPagamento,
+      sourceSale.tipoPagamento,
+      sourceSale.condicaoPagamento,
+      sourceSale.condicaoPgto,
+      sourceSale.meioPagamento,
+      sourceSale.metodoRecebimento,
+      sourceSale.paymentMethod,
+      sourceSale.recebimentoTipo
+    ) || ""));
+}
+
+function receiptsLookLikeGeneratedIntegral(receipts = [], sale = {}) {
+  if (!Array.isArray(receipts) || receipts.length !== 1) return false;
+  const r = receipts[0] || {};
+  const saleTotal = Number(sale.implantacao || 0);
+  const receiptValue = Number(r.valor || 0);
+  const label = norm(`${r.tipo || ""} ${r.parcela || ""} ${r.observacao || ""}`);
+  const sameTotal = Math.abs(receiptValue - saleTotal) < 0.02;
+  return sameTotal
+    && Boolean(r.pago)
+    && (label.includes("integral") || label.includes("unica") || label.includes("única") || label.includes("migrado") || label.includes("pagamento"));
+}
+
+function shouldRegenerateReceiptsForParcelHistory(sourceSale = {}, normalizedSale = {}, receipts = []) {
+  const method = norm(normalizedSale.formaPagamento);
+  if (!["parcelado", "entrada"].includes(method)) return false;
+  if (!saleHasParcelClues(sourceSale) && Number(normalizedSale.parcelas || 1) <= 1) return false;
+  return !Array.isArray(receipts)
+    || !receipts.length
+    || receiptsLookLikeGeneratedIntegral(receipts, normalizedSale);
+}
 
 function paymentMethodLabel(method) {
   const key = String(method || "integral").toLowerCase();
@@ -1447,7 +1571,35 @@ function generateReceivablesForSale(sale = {}) {
 }
 
 function normalizeSaleRecord(s = {}) {
-  const rawParcelas = s.parcelasQtd ?? s.qtdParcelas ?? s.numeroParcelas ?? s.parcelas;
+  const rawParcelas = firstFilled(
+    s.parcelasQtd,
+    s.qtdParcelas,
+    s.numeroParcelas,
+    s.numParcelas,
+    s.qtdeParcelas,
+    s.quantidadeParcelas,
+    s.parcelas,
+    s.installmentsCount,
+    s.installmentCount,
+    s.paymentInstallments,
+    s.numero_de_parcelas
+  );
+  const parcelas = Math.max(1, installmentsFromSaleRecord(s));
+  const entrada = entryFromSaleRecord(s);
+  const rawPaymentMethod = firstFilled(
+    s.formaPagamento,
+    s.pagamento,
+    s.formaPgto,
+    s.metodoPagamento,
+    s.tipoPagamento,
+    s.condicaoPagamento,
+    s.condicaoPgto,
+    s.meioPagamento,
+    s.metodoRecebimento,
+    s.paymentMethod,
+    s.recebimentoTipo
+  );
+  const formaPagamento = normalizePaymentMethod(rawPaymentMethod, rawParcelas || parcelas, entrada, s);
   const sale = {
     ...s,
     id: String(s.id || uid("s")),
@@ -1455,27 +1607,46 @@ function normalizeSaleRecord(s = {}) {
     cliente: s.cliente || s.empresa || s.razaoSocial || "Cliente",
     produtoId: s.produtoId || "",
     vendedorId: s.vendedorId || "",
-    implantacao: Number(s.implantacao ?? s.adesao ?? s.valorImplantacao ?? 0),
-    mensalidade: Number(s.mensalidade ?? s.mrr ?? s.valorMensalidade ?? 0),
+    implantacao: Number(s.implantacao ?? s.adesao ?? s.valorImplantacao ?? s.valor_implantacao ?? 0),
+    mensalidade: Number(s.mensalidade ?? s.mrr ?? s.valorMensalidade ?? s.valor_mensalidade ?? 0),
     dataVenda: String(s.dataVenda || s.data || s.createdAt || todayISO()).slice(0, 10),
     status: normalizeSaleStatus(s.status || "Fechada"),
     observacao: s.observacao || s.obs || "",
-    formaPagamento: s.formaPagamento || s.pagamento || s.formaPgto || s.metodoPagamento || "integral",
-    parcelas: Math.max(1, Number(rawParcelas || 1)),
-    entrada: Number(s.entrada ?? s.valorEntrada ?? 0),
-    dataPrimeiroRecebimento: String(s.dataPrimeiroRecebimento || s.dataRecebimento || s.dataPagamento || s.dataVenda || s.data || todayISO()).slice(0, 10)
+    formaPagamento,
+    parcelas,
+    entrada,
+    dataPrimeiroRecebimento: String(
+      s.dataPrimeiroRecebimento
+      || s.dataRecebimento
+      || s.dataPagamento
+      || s.dataEntrada
+      || s.primeiroVencimento
+      || s.vencimentoPrimeiraParcela
+      || s.dataPrimeiraParcela
+      || s.dataVenda
+      || s.data
+      || todayISO()
+    ).slice(0, 10)
   };
 
   sale.paymentSignature = s.paymentSignature || salePaymentSignature(sale);
-  sale.recebimentos = extractLegacyReceipts(s, sale);
+  let receipts = extractLegacyReceipts(s, sale);
 
-  if (!sale.recebimentos.length) {
-    sale.recebimentos = generateReceivablesForSale(sale);
+  if (shouldRegenerateReceiptsForParcelHistory(s, sale, receipts)) {
+    receipts = generateReceivablesForSale(sale);
+    sale.__parcelHistoryCorrected = true;
+  }
+
+  if (!receipts.length) {
+    receipts = generateReceivablesForSale(sale);
     sale.paymentSignature = salePaymentSignature(sale);
   }
 
-  // Compatibilidade com históricos antigos: se a venda era fechada e não tinha forma
-  // de pagamento parcelada explícita, a implantação é considerada recebida na data da venda.
+  sale.recebimentos = receipts;
+
+  // Compatibilidade com históricos antigos: vendas realmente à vista, pix, dinheiro
+  // ou cartão são consideradas recebidas na data da venda/recebimento. Vendas com
+  // pistas de parcelamento permanecem em aberto até baixa das parcelas.
   const method = norm(sale.formaPagamento);
   if (sale.status === "Fechada" && !["parcelado", "entrada"].includes(method)) {
     sale.recebimentos = sale.recebimentos.map((r, idx) => idx === 0 ? { ...r, pago: true, data: r.data || sale.dataPrimeiroRecebimento } : r);
@@ -1649,11 +1820,11 @@ function migrateOldShape(raw) {
     mensalidade: Number(v.mensalidade ?? v.mrr ?? v.valorMensalidade ?? 0),
     dataVenda: v.dataVenda || v.data || v.createdAt || todayISO(),
     status: normalizeSaleStatus(v.status || "Fechada"),
-    formaPagamento: v.formaPagamento || v.pagamento || v.formaPgto || v.metodoPagamento || "integral",
-    parcelas: v.parcelasQtd ?? v.qtdParcelas ?? v.numeroParcelas ?? v.parcelas ?? 1,
-    entrada: Number(v.entrada ?? v.valorEntrada ?? 0),
-    dataPrimeiroRecebimento: v.dataPrimeiroRecebimento || v.dataRecebimento || v.dataPagamento || v.dataVenda || v.data || todayISO(),
-    recebimentos: v.recebimentos || v.recebimentosComissao || v.parcelasRecebimento || v.pagamentos || v.payments || v.installments || [],
+    formaPagamento: v.formaPagamento || v.pagamento || v.formaPgto || v.metodoPagamento || v.tipoPagamento || v.condicaoPagamento || v.condicaoPgto || v.meioPagamento || v.paymentMethod || "",
+    parcelas: v.parcelasQtd ?? v.qtdParcelas ?? v.numeroParcelas ?? v.numParcelas ?? v.qtdeParcelas ?? v.quantidadeParcelas ?? v.parcelas ?? v.installmentsCount ?? v.installmentCount ?? 1,
+    entrada: Number(v.entrada ?? v.valorEntrada ?? v.entradaRecebida ?? v.sinal ?? v.valorSinal ?? 0),
+    dataPrimeiroRecebimento: v.dataPrimeiroRecebimento || v.dataRecebimento || v.dataPagamento || v.dataEntrada || v.primeiroVencimento || v.vencimentoPrimeiraParcela || v.dataVenda || v.data || todayISO(),
+    recebimentos: v.recebimentos || v.recebimentosImplantacao || v.recebimentosComissao || v.recebimentosParcelados || v.parcelasRecebimento || v.parcelasComissao || v.parcelamento || v.pagamentos || v.payments || v.installments || v.duplicatas || v.boletos || v.titulos || [],
     valorRecebido: v.valorRecebido,
     valorPago: v.valorPago,
     observacao: v.observacao || v.obs || ""
@@ -1727,14 +1898,28 @@ function normalizeState(raw) {
     return { ...l, status: l.status || "Aberto", pipeline: stage, probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)), implantacao: Number(l.implantacao ?? l.adesao ?? 0), mensalidade: Number(l.mensalidade ?? 0), previsaoFechamento: l.previsaoFechamento || todayISO() };
   });
   const rawSalesForReceiptMigration = Array.isArray(data.sales) ? data.sales : [];
-  const needsReceiptMigration = rawSalesForReceiptMigration.some(s =>
-    !Array.isArray(s?.recebimentos)
-    && !Array.isArray(s?.recebimentosComissao)
-    && !Array.isArray(s?.parcelasRecebimento)
-    && !Array.isArray(s?.pagamentos)
-    && !Array.isArray(s?.payments)
-    && Number(s?.implantacao ?? s?.adesao ?? s?.valorImplantacao ?? 0) > 0
-  );
+  const needsReceiptMigration = rawSalesForReceiptMigration.some(s => {
+    const normalizedPreview = normalizeSaleRecord(s);
+    return (
+      (
+        !Array.isArray(s?.recebimentos)
+        && !Array.isArray(s?.recebimentosComissao)
+        && !Array.isArray(s?.recebimentosImplantacao)
+        && !Array.isArray(s?.recebimentosParcelados)
+        && !Array.isArray(s?.parcelasRecebimento)
+        && !Array.isArray(s?.parcelasComissao)
+        && !Array.isArray(s?.parcelamento)
+        && !Array.isArray(s?.pagamentos)
+        && !Array.isArray(s?.payments)
+        && !Array.isArray(s?.installments)
+        && !Array.isArray(s?.duplicatas)
+        && !Array.isArray(s?.boletos)
+        && !Array.isArray(s?.titulos)
+        && Number(s?.implantacao ?? s?.adesao ?? s?.valorImplantacao ?? 0) > 0
+      )
+      || normalizedPreview.__parcelHistoryCorrected === true
+    );
+  });
   data.sales = rawSalesForReceiptMigration.map(normalizeSaleRecord);
   if (needsReceiptMigration) data.__receiptsAutoMigrated = true;
   data.appointments = data.appointments.map(a => {
@@ -3200,9 +3385,24 @@ function rebuildReceiptHistory() {
   }
   let changed = 0;
   (state.sales || []).forEach((sale, idx) => {
-    const beforeCount = Array.isArray(sale.recebimentos) ? sale.recebimentos.length : 0;
+    const beforeSnapshot = JSON.stringify({
+      status: sale.status,
+      formaPagamento: sale.formaPagamento,
+      parcelas: sale.parcelas,
+      entrada: sale.entrada,
+      dataPrimeiroRecebimento: sale.dataPrimeiroRecebimento,
+      recebimentos: sale.recebimentos
+    });
     const normalized = normalizeSaleRecord(sale);
-    if (!beforeCount || normalizeSaleStatus(sale.status || "") !== normalized.status) {
+    const afterSnapshot = JSON.stringify({
+      status: normalized.status,
+      formaPagamento: normalized.formaPagamento,
+      parcelas: normalized.parcelas,
+      entrada: normalized.entrada,
+      dataPrimeiroRecebimento: normalized.dataPrimeiroRecebimento,
+      recebimentos: normalized.recebimentos
+    });
+    if (beforeSnapshot !== afterSnapshot || normalized.__parcelHistoryCorrected === true) {
       state.sales[idx] = normalized;
       changed++;
     }
