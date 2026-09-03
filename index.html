@@ -497,7 +497,7 @@
       <input id="loginInput" class="auth-input" type="text" autocomplete="username" placeholder="Usuário" />
       <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Senha" />
       <button id="loginButton" class="btn-auth" onclick="doLogin()" disabled><i class="fa-solid fa-spinner fa-spin"></i> Carregando dados...</button>
-      <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM conecta automaticamente ao Firestore quando o objeto firebaseConfig está preenchido no código.</div>
+      <div class="note" style="margin-top:14px;text-align:left;font-size:12px">O CRM conecta automaticamente ao Firestore e já traz histórico, recebimentos parcelados e agendamento.</div>
     </div>
   </section>
 
@@ -532,6 +532,7 @@
 
         <div class="sidebar-footer">
           <strong>Firebase:</strong> <span id="sidebarSync">modo local</span><br>
+          <strong>Versão:</strong> <span id="sidebarVersion">histórico + recebimentos + agendamento</span><br>
           As alterações são salvas automaticamente.
         </div>
       </aside>
@@ -544,6 +545,7 @@
           </div>
           <div class="topbar-actions">
             <span id="syncBadge" class="sync-badge warn"><i class="fa-solid fa-cloud"></i> Conectando Firestore...</span>
+            <span id="buildBadge" class="sync-badge ok"><i class="fa-solid fa-code-branch"></i> Histórico + Recebimentos</span>
             <button class="btn btn-outline" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i> Menu</button>
             <div class="user-pill">
               <div id="userAvatar" class="avatar">A</div>
@@ -773,7 +775,10 @@
                 <div class="card-title">Comissionamento</div>
                 <div class="card-subtitle">Comissão apurada por recebimento: entrada, integral e cartão entram no mês; parcelas entram somente quando marcadas como pagas.</div>
               </div>
-              <button class="btn btn-outline" onclick="exportTable('commission')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-outline" onclick="rebuildReceiptHistory()"><i class="fa-solid fa-rotate"></i> Atualizar histórico</button>
+                <button class="btn btn-outline" onclick="exportTable('commission')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
+              </div>
             </div>
 
             <div class="toolbar">
@@ -1054,7 +1059,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-09-03-0937-recebimentos-agendamento";
+const APP_BUILD_VERSION = "2026-09-03-1406-historico-recebimentos-agendamento";
 
 let state = null;
 let currentUser = null;
@@ -1291,6 +1296,70 @@ function persist() {
 }
 
 
+
+function normalizeSaleStatus(status = "") {
+  const raw = norm(status).replace(/\s+/g, " ");
+  if (!raw || ["fechada", "fechado", "concluida", "concluído", "concluido", "ganha", "won", "pago", "recebida"].includes(raw)) return "Fechada";
+  if (["cancelada", "cancelado", "perdida", "perdido", "lost"].includes(raw)) return "Cancelada";
+  return String(status || "Fechada").trim();
+}
+
+function receiptPaidFlag(receipt = {}) {
+  const st = norm(receipt.status || receipt.situacao || receipt.statusPagamento || receipt.paymentStatus);
+  return receipt.pago === true
+    || receipt.recebido === true
+    || receipt.paid === true
+    || receipt.liquidado === true
+    || Boolean(receipt.dataPagamento || receipt.paidAt || receipt.dataRecebimento)
+    || ["pago", "recebido", "quitado", "liquidado", "baixado", "paid"].includes(st);
+}
+
+function normalizeReceiptRecord(receipt = {}, sale = {}, idx = 0) {
+  const rawValue = receipt.valor ?? receipt.valorRecebido ?? receipt.valorPago ?? receipt.valorParcela ?? receipt.amount ?? receipt.total ?? 0;
+  const date = receipt.data || receipt.dataRecebimento || receipt.dataPagamento || receipt.paidAt || receipt.vencimento || sale.dataVenda || todayISO();
+  return {
+    id: String(receipt.id || receipt.uid || uid("rc")),
+    data: String(date).slice(0, 10),
+    valor: Number(rawValue || 0),
+    pago: receiptPaidFlag(receipt),
+    tipo: receipt.tipo || receipt.descricao || receipt.formaPagamento || (idx === 0 ? paymentMethodLabel(sale.formaPagamento) : "Parcela"),
+    parcela: receipt.parcela || receipt.numero || receipt.nParcela || "",
+    observacao: receipt.observacao || receipt.obs || ""
+  };
+}
+
+function extractLegacyReceipts(sourceSale = {}, normalizedSale = {}) {
+  const candidates = [
+    sourceSale.recebimentos,
+    sourceSale.recebimentosComissao,
+    sourceSale.parcelasRecebimento,
+    sourceSale.parcelas,
+    sourceSale.pagamentos,
+    sourceSale.payments,
+    sourceSale.installments
+  ].find(Array.isArray);
+
+  if (Array.isArray(candidates)) {
+    return candidates
+      .map((r, idx) => normalizeReceiptRecord(r, normalizedSale, idx))
+      .filter(r => r.valor > 0);
+  }
+
+  const paidValue = Number(sourceSale.valorRecebido ?? sourceSale.valorPago ?? sourceSale.entradaRecebida ?? 0);
+  if (paidValue > 0) {
+    return [normalizeReceiptRecord({
+      data: sourceSale.dataRecebimento || sourceSale.dataPagamento || sourceSale.dataVenda || sourceSale.data,
+      valor: paidValue,
+      pago: true,
+      tipo: "Recebimento migrado",
+      parcela: "Histórico"
+    }, normalizedSale, 0)];
+  }
+
+  return [];
+}
+
+
 function paymentMethodLabel(method) {
   const key = String(method || "integral").toLowerCase();
   return {
@@ -1378,39 +1447,40 @@ function generateReceivablesForSale(sale = {}) {
 }
 
 function normalizeSaleRecord(s = {}) {
+  const rawParcelas = s.parcelasQtd ?? s.qtdParcelas ?? s.numeroParcelas ?? s.parcelas;
   const sale = {
     ...s,
     id: String(s.id || uid("s")),
     leadId: s.leadId || "",
-    cliente: s.cliente || s.empresa || "Cliente",
+    cliente: s.cliente || s.empresa || s.razaoSocial || "Cliente",
     produtoId: s.produtoId || "",
     vendedorId: s.vendedorId || "",
-    implantacao: Number(s.implantacao ?? s.adesao ?? 0),
-    mensalidade: Number(s.mensalidade ?? 0),
-    dataVenda: s.dataVenda || s.data || todayISO(),
-    status: s.status || "Fechada",
-    observacao: s.observacao || "",
-    formaPagamento: s.formaPagamento || s.pagamento || s.formaPgto || "integral",
-    parcelas: Math.max(1, Number(s.parcelas || 1)),
-    entrada: Number(s.entrada || 0),
-    dataPrimeiroRecebimento: s.dataPrimeiroRecebimento || s.dataRecebimento || s.dataVenda || s.data || todayISO()
+    implantacao: Number(s.implantacao ?? s.adesao ?? s.valorImplantacao ?? 0),
+    mensalidade: Number(s.mensalidade ?? s.mrr ?? s.valorMensalidade ?? 0),
+    dataVenda: String(s.dataVenda || s.data || s.createdAt || todayISO()).slice(0, 10),
+    status: normalizeSaleStatus(s.status || "Fechada"),
+    observacao: s.observacao || s.obs || "",
+    formaPagamento: s.formaPagamento || s.pagamento || s.formaPgto || s.metodoPagamento || "integral",
+    parcelas: Math.max(1, Number(rawParcelas || 1)),
+    entrada: Number(s.entrada ?? s.valorEntrada ?? 0),
+    dataPrimeiroRecebimento: String(s.dataPrimeiroRecebimento || s.dataRecebimento || s.dataPagamento || s.dataVenda || s.data || todayISO()).slice(0, 10)
   };
+
   sale.paymentSignature = s.paymentSignature || salePaymentSignature(sale);
-  sale.recebimentos = Array.isArray(s.recebimentos)
-    ? s.recebimentos.map((r, idx) => ({
-        id: String(r.id || uid("rc")),
-        data: r.data || r.dataRecebimento || sale.dataVenda,
-        valor: Number(r.valor ?? r.amount ?? 0),
-        pago: r.pago === true || r.status === "Pago" || r.recebido === true,
-        tipo: r.tipo || r.descricao || (idx === 0 ? paymentMethodLabel(sale.formaPagamento) : "Parcela"),
-        parcela: r.parcela || "",
-        observacao: r.observacao || ""
-      })).filter(r => r.valor > 0)
-    : [];
+  sale.recebimentos = extractLegacyReceipts(s, sale);
+
   if (!sale.recebimentos.length) {
     sale.recebimentos = generateReceivablesForSale(sale);
     sale.paymentSignature = salePaymentSignature(sale);
   }
+
+  // Compatibilidade com históricos antigos: se a venda era fechada e não tinha forma
+  // de pagamento parcelada explícita, a implantação é considerada recebida na data da venda.
+  const method = norm(sale.formaPagamento);
+  if (sale.status === "Fechada" && !["parcelado", "entrada"].includes(method)) {
+    sale.recebimentos = sale.recebimentos.map((r, idx) => idx === 0 ? { ...r, pago: true, data: r.data || sale.dataPrimeiroRecebimento } : r);
+  }
+
   return sale;
 }
 
@@ -1569,17 +1639,24 @@ function migrateOldShape(raw) {
     };
   });
 
-  const sales = (raw.vendas || raw.sales || []).map(v => ({
+  const sales = (raw.vendas || raw.sales || raw.negocios || []).map(v => ({
     id: String(v.id || uid("s")),
     leadId: v.leadId || "",
-    cliente: v.cliente || v.empresa || "Cliente",
+    cliente: v.cliente || v.empresa || v.razaoSocial || "Cliente",
     produtoId: v.produtoId || productIdByName(v.produto),
     vendedorId: v.vendedorId || userIdByName(v.vendedor),
-    implantacao: Number(v.implantacao ?? v.adesao ?? 0),
-    mensalidade: Number(v.mensalidade ?? 0),
-    dataVenda: v.dataVenda || v.data || todayISO(),
-    status: v.status || "Fechada",
-    observacao: v.observacao || ""
+    implantacao: Number(v.implantacao ?? v.adesao ?? v.valorImplantacao ?? 0),
+    mensalidade: Number(v.mensalidade ?? v.mrr ?? v.valorMensalidade ?? 0),
+    dataVenda: v.dataVenda || v.data || v.createdAt || todayISO(),
+    status: normalizeSaleStatus(v.status || "Fechada"),
+    formaPagamento: v.formaPagamento || v.pagamento || v.formaPgto || v.metodoPagamento || "integral",
+    parcelas: v.parcelasQtd ?? v.qtdParcelas ?? v.numeroParcelas ?? v.parcelas ?? 1,
+    entrada: Number(v.entrada ?? v.valorEntrada ?? 0),
+    dataPrimeiroRecebimento: v.dataPrimeiroRecebimento || v.dataRecebimento || v.dataPagamento || v.dataVenda || v.data || todayISO(),
+    recebimentos: v.recebimentos || v.recebimentosComissao || v.parcelasRecebimento || v.pagamentos || v.payments || v.installments || [],
+    valorRecebido: v.valorRecebido,
+    valorPago: v.valorPago,
+    observacao: v.observacao || v.obs || ""
   }));
 
   const goals = [];
@@ -1614,7 +1691,18 @@ function migrateOldShape(raw) {
 
 function normalizeState(raw) {
   const seed = seedData();
-  const data = { ...seed, ...raw };
+  raw = raw || {};
+  const data = {
+    ...seed,
+    ...raw,
+    users: raw.users || raw.usuarios || seed.users,
+    products: raw.products || raw.produtos || seed.products,
+    leads: raw.leads || raw.oportunidades || raw.prospects || [],
+    sales: raw.sales || raw.vendas || raw.negocios || [],
+    goals: raw.goals || raw.metas || raw.metasVendedor || seed.goals,
+    appointments: raw.appointments || raw.agendamentos || raw.schedules || [],
+    emailHistory: raw.emailHistory || raw.emailHist || raw.emails || []
+  };
   data.users = Array.isArray(data.users) && data.users.length ? data.users : seed.users;
   data.products = Array.isArray(data.products) && data.products.length ? data.products : seed.products;
   data.leads = Array.isArray(data.leads) ? data.leads : [];
@@ -1638,7 +1726,17 @@ function normalizeState(raw) {
     const stage = l.pipeline || "Captação";
     return { ...l, status: l.status || "Aberto", pipeline: stage, probabilidade: Number(l.probabilidade ?? (PIPELINE.find(p => p.nome === stage)?.prob ?? 10)), implantacao: Number(l.implantacao ?? l.adesao ?? 0), mensalidade: Number(l.mensalidade ?? 0), previsaoFechamento: l.previsaoFechamento || todayISO() };
   });
-  data.sales = data.sales.map(normalizeSaleRecord);
+  const rawSalesForReceiptMigration = Array.isArray(data.sales) ? data.sales : [];
+  const needsReceiptMigration = rawSalesForReceiptMigration.some(s =>
+    !Array.isArray(s?.recebimentos)
+    && !Array.isArray(s?.recebimentosComissao)
+    && !Array.isArray(s?.parcelasRecebimento)
+    && !Array.isArray(s?.pagamentos)
+    && !Array.isArray(s?.payments)
+    && Number(s?.implantacao ?? s?.adesao ?? s?.valorImplantacao ?? 0) > 0
+  );
+  data.sales = rawSalesForReceiptMigration.map(normalizeSaleRecord);
+  if (needsReceiptMigration) data.__receiptsAutoMigrated = true;
   data.appointments = data.appointments.map(a => {
     const lead = a.leadId ? data.leads.find(l => l.id === a.leadId) : null;
     return {
@@ -1715,6 +1813,7 @@ function buildFirestorePayload(data) {
   const clean = { ...(data || {}) };
   delete clean.__bootstrapApplied;
   delete clean.__goalsAutoDistributed;
+  delete clean.__receiptsAutoMigrated;
   return JSON.parse(JSON.stringify({
     ...clean,
     updatedAt: new Date().toISOString()
@@ -1757,7 +1856,7 @@ async function connectFirestore(config = loadFirebaseConfig()) {
 
       // Se o documento remoto existir, mas estiver sem usuários válidos,
       // grava a estrutura corrigida para liberar o login.
-      if (state.__bootstrapApplied || state.__goalsAutoDistributed) {
+      if (state.__bootstrapApplied || state.__goalsAutoDistributed || state.__receiptsAutoMigrated) {
         await docRef.set(buildFirestorePayload(state), { merge: true });
       }
 
@@ -1776,7 +1875,7 @@ async function connectFirestore(config = loadFirebaseConfig()) {
         try {
           if (snap.exists) {
             state = migrateOldShape(snap.data());
-            if (state.__goalsAutoDistributed) {
+            if (state.__goalsAutoDistributed || state.__receiptsAutoMigrated) {
               docRef.set(buildFirestorePayload(state), { merge: true }).catch(console.error);
             }
             localStorage.setItem(STORAGE_KEY, JSON.stringify(buildFirestorePayload(state)));
@@ -2193,10 +2292,10 @@ function goToPage(page) {
 
 // =============== CÁLCULOS ===============
 function salesInMonth(period = monthKey()) {
-  return state.sales.filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period && s.status !== "Cancelada");
+  return state.sales.filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period && normalizeSaleStatus(s.status || "Fechada") !== "Cancelada");
 }
 function salesInRange(start, end) {
-  return state.sales.filter(s => s.status !== "Cancelada" && inDateRange(s.dataVenda || todayISO(), start, end));
+  return state.sales.filter(s => normalizeSaleStatus(s.status || "Fechada") !== "Cancelada" && inDateRange(s.dataVenda || todayISO(), start, end));
 }
 function goalInRange(goal, start, end) {
   if (!goal?.periodo) return false;
@@ -2479,7 +2578,7 @@ function filteredVisibleSales({ start = null, end = null, sellerId = "", product
     const dateOk = (!start || !end) || inDateRange(s.dataVenda || todayISO(), start, end);
     const sellerOk = !sellerId || s.vendedorId === sellerId;
     const productOk = !productId || s.produtoId === productId;
-    const statusOk = !status || s.status === status;
+    const statusOk = !status || normalizeSaleStatus(s.status || "Fechada") === normalizeSaleStatus(status);
     return dateOk && sellerOk && productOk && statusOk;
   });
 }
@@ -2899,18 +2998,19 @@ function commissionSaleMonthKey(saleOrReceipt) {
 }
 
 function isCommissionableSale(sale) {
-  const status = String(sale?.status || "").toLowerCase();
-  return (status === "fechada" || status === "fechado")
+  const status = normalizeSaleStatus(sale?.status || "");
+  return status === "Fechada"
     && isSalesConsultant(findById(state.users, sale?.vendedorId));
 }
 
 function paidCommissionEntries({ start = null, end = null, sellerId = "", productId = "", status = "" } = {}) {
   const rows = [];
   (state.sales || []).filter(s => {
-    const statusOk = !status || s.status === status;
+    const normalizedStatus = normalizeSaleStatus(s.status || "Fechada");
+    const statusOk = !status || normalizedStatus === normalizeSaleStatus(status);
     const sellerOk = !sellerId || s.vendedorId === sellerId;
     const productOk = !productId || s.produtoId === productId;
-    return statusOk && sellerOk && productOk && isCommissionableSale(s);
+    return statusOk && sellerOk && productOk && isCommissionableSale({ ...s, status: normalizedStatus });
   }).forEach(sale => {
     getSaleReceipts(sale).filter(r => r.pago).forEach(receipt => {
       const dateOk = (!start || !end) || inDateRange(receipt.data || sale.dataVenda || todayISO(), start, end);
@@ -3091,6 +3191,28 @@ function renderCommission() {
       <td>${statusTag(s.status)}</td>
     </tr>`;
   }).join("") || `<tr><td class="empty" colspan="14">Nenhum recebimento pago encontrado para comissionamento no filtro selecionado.</td></tr>`;
+}
+
+function rebuildReceiptHistory() {
+  if (!canViewManagerCommission()) {
+    showToast("Atualização de histórico disponível apenas para Administrador/Gerente.", "fa-lock");
+    return;
+  }
+  let changed = 0;
+  (state.sales || []).forEach((sale, idx) => {
+    const beforeCount = Array.isArray(sale.recebimentos) ? sale.recebimentos.length : 0;
+    const normalized = normalizeSaleRecord(sale);
+    if (!beforeCount || normalizeSaleStatus(sale.status || "") !== normalized.status) {
+      state.sales[idx] = normalized;
+      changed++;
+    }
+  });
+  persist();
+  populateMonthFilters();
+  renderAll();
+  showToast(changed
+    ? `Histórico atualizado: ${changed} venda(s) receberam controle de recebimentos.`
+    : "Histórico já estava atualizado.");
 }
 
 function saveCommissionConfig() {
@@ -4099,6 +4221,13 @@ function exportXlsx(rows, filename, sheetName) {
   showToast("Arquivo exportado.");
 }
 
+
+function applyBuildLabels() {
+  const versionText = APP_BUILD_VERSION;
+  if ($("sidebarVersion")) $("sidebarVersion").textContent = versionText;
+  if ($("buildBadge")) $("buildBadge").innerHTML = `<i class="fa-solid fa-code-branch"></i> ${escapeHTML(versionText)}`;
+}
+
 // =============== EVENTOS ===============
 document.addEventListener("keydown", event => {
   if (event.key === "Enter" && $("authScreen").style.display !== "none") doLogin();
@@ -4106,6 +4235,7 @@ document.addEventListener("keydown", event => {
 });
 
 setLoginReady(false);
+applyBuildLabels();
 initData()
   .then(() => setLoginReady(true))
   .catch(error => {
