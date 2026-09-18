@@ -848,6 +848,23 @@
                 <tbody id="commissionTable"></tbody>
               </table>
             </div>
+
+            <div class="card" style="margin-top:16px">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Recebimentos a receber no período</div>
+                  <div id="commissionReceivableSummary" class="card-subtitle">Parcelas pendentes por vencimento, incluindo vendas de meses anteriores.</div>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Vencimento</th><th>Cliente</th><th>Produto</th><th>Vendedor</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ações</th></tr>
+                  </thead>
+                  <tbody id="commissionReceivableTable"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1030,6 +1047,44 @@
               <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-handshake"></i></div><div id="reportForecastSalesTotal" class="stat-value">R$ 0</div><div class="stat-label">Implantação fechada</div></div>
             </div>
 
+            <div class="grid stats-grid">
+              <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-file-signature"></i></div><div id="reportForecastProposalTotal" class="stat-value">0</div><div class="stat-label">Propostas/negociações</div></div>
+              <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-trophy"></i></div><div id="reportForecastWinsTotal" class="stat-value">0</div><div class="stat-label">Vendas ganhas</div></div>
+              <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-percent"></i></div><div id="reportForecastConversionTotal" class="stat-value">0%</div><div class="stat-label">Conversão geral</div></div>
+              <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-clock"></i></div><div id="reportForecastCycleTotal" class="stat-value">0 dias</div><div class="stat-label">Ciclo médio</div></div>
+            </div>
+
+            <div class="grid two-col">
+              <div class="card">
+                <div class="card-header"><div><div class="card-title">Conversão do funil</div><div class="card-subtitle">Visão inspirada no BI Comercial: captação até ganhos</div></div></div>
+                <div class="table-wrap"><table><thead><tr><th>Etapa</th><th>Qtd.</th><th>Conversão</th></tr></thead><tbody id="reportForecastFunnelTable"></tbody></table></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><div><div class="card-title">Novo MRR por vendedor</div><div class="card-subtitle">Participação no MRR conquistado</div></div></div>
+                <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Novo MRR</th><th>Participação</th></tr></thead><tbody id="reportForecastMrrSellerTable"></tbody></table></div>
+              </div>
+            </div>
+
+            <div class="grid two-col">
+              <div class="card">
+                <div class="card-header"><div><div class="card-title">Meta de novo MRR</div><div class="card-subtitle">Realizado, meta e gap no período filtrado</div></div></div>
+                <div id="reportForecastMrrGoal" class="note">Sem meta configurada.</div>
+              </div>
+              <div class="card">
+                <div class="card-header"><div><div class="card-title">Alertas de execução</div><div class="card-subtitle">Follow-ups vencidos, leads sem contato e negócios parados</div></div></div>
+                <div class="grid stats-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom:0">
+                  <div class="stat-card"><div id="reportForecastAlertFollowups" class="stat-value">0</div><div class="stat-label">Follow-ups vencidos</div></div>
+                  <div class="stat-card"><div id="reportForecastAlertNoContact" class="stat-value">0</div><div class="stat-label">Leads sem contato</div></div>
+                  <div class="stat-card"><div id="reportForecastAlertStuck" class="stat-value">0</div><div class="stat-label">Negócios parados</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><div><div class="card-title">Desempenho individual</div><div class="card-subtitle">Leads, propostas, ganhos, conversão, implantação, novo MRR, ciclo e situação</div></div></div>
+              <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Leads</th><th>Propostas</th><th>Ganhos</th><th>Conversão</th><th>Implantação</th><th>Novo MRR</th><th>Ciclo</th><th>Situação</th></tr></thead><tbody id="reportForecastPerformanceTable"></tbody></table></div>
+            </div>
+
             <div class="card">
               <div class="card-header">
                 <div>
@@ -1122,7 +1177,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-09-11-0950-relatorios-forecast-semanal";
+const APP_BUILD_VERSION = "2026-09-18-1212-recebimentos-sync-forecast-bi";
 
 let state = null;
 let currentUser = null;
@@ -1597,7 +1652,7 @@ function generateReceivablesForSale(sale = {}) {
   const firstDate = sale.dataPrimeiroRecebimento || sale.dataVenda || todayISO();
   const receipts = [];
 
-  function pushReceipt({ data, valor, pago, tipo, parcela }) {
+  function pushReceipt({ data, valor, pago, tipo, parcela, observacao = "" }) {
     const amount = Number(valor || 0);
     if (amount <= 0) return;
     receipts.push({
@@ -1607,11 +1662,22 @@ function generateReceivablesForSale(sale = {}) {
       pago: Boolean(pago),
       tipo,
       parcela: parcela || "",
-      observacao: ""
+      observacao
     });
   }
 
-  if (method === "parcelado" || method === "entrada") {
+  if (method === "cartao") {
+    // Regra comercial: cartão de crédito, mesmo parcelado, é considerado recebido integralmente no mês.
+    const installments = Math.max(1, Number(sale.parcelas || 1));
+    pushReceipt({
+      data: firstDate,
+      valor: total,
+      pago: true,
+      tipo: installments > 1 ? `Cartão de crédito (${installments}x)` : "Cartão de crédito",
+      parcela: installments > 1 ? `Integral cartão ${installments}x` : "Única",
+      observacao: "Cartão computado integralmente no mês do recebimento"
+    });
+  } else if (method === "parcelado" || method === "entrada") {
     const entry = Math.max(0, Math.min(total, Number(sale.entrada || 0)));
     const installments = Math.max(1, Number(sale.parcelas || 1));
     const remaining = Math.max(total - entry, 0);
@@ -1623,11 +1689,11 @@ function generateReceivablesForSale(sale = {}) {
 
     const installmentValue = installments ? remaining / installments : 0;
     for (let i = 0; i < installments; i++) {
-      // Parcelas só entram na comissão quando marcadas como pagas.
+      // Parcelas de boleto/duplicata/parcelado só entram na comissão quando marcadas como pagas.
       pushReceipt({ data: addMonthsISO(firstDate, i + (entry > 0 ? 1 : 0)), valor: installmentValue, pago: false, tipo: "Parcela", parcela: `${i + 1}/${installments}` });
     }
   } else {
-    // Integral, Pix/Dinheiro e Cartão contam no mês da venda/recebimento.
+    // Integral, Pix e Dinheiro contam no mês da venda/recebimento.
     pushReceipt({ data: firstDate, valor: total, pago: true, tipo: paymentMethodLabel(method), parcela: "Única" });
   }
 
@@ -2715,6 +2781,12 @@ function daysBetweenInclusive(start, end) {
   const b = parseLocalDate(isoFromDate(end));
   return Math.max(0, Math.floor((b - a) / 86400000) + 1);
 }
+
+function daysBetweenExclusive(start, end) {
+  const a = parseLocalDate(String(start || todayISO()).slice(0, 10));
+  const b = parseLocalDate(String(end || todayISO()).slice(0, 10));
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
 function clampDate(date, min, max) {
   const d = parseLocalDate(date);
   if (d < min) return min;
@@ -3253,6 +3325,10 @@ function isCommissionableSale(sale) {
 }
 
 function paidCommissionEntries({ start = null, end = null, sellerId = "", productId = "", status = "" } = {}) {
+  return receivableEntries({ start, end, sellerId, productId, status, onlyPaid: true });
+}
+
+function receivableEntries({ start = null, end = null, sellerId = "", productId = "", status = "", onlyPaid = false, onlyPending = false } = {}) {
   const rows = [];
   (state.sales || []).filter(s => {
     const normalizedStatus = normalizeSaleStatus(s.status || "Fechada");
@@ -3261,7 +3337,9 @@ function paidCommissionEntries({ start = null, end = null, sellerId = "", produc
     const productOk = !productId || s.produtoId === productId;
     return statusOk && sellerOk && productOk && isCommissionableSale({ ...s, status: normalizedStatus });
   }).forEach(sale => {
-    getSaleReceipts(sale).filter(r => r.pago).forEach(receipt => {
+    getSaleReceipts(sale).forEach(receipt => {
+      if (onlyPaid && !receipt.pago) return;
+      if (onlyPending && receipt.pago) return;
       const dateOk = (!start || !end) || inDateRange(receipt.data || sale.dataVenda || todayISO(), start, end);
       if (!dateOk) return;
       rows.push({ sale, receipt });
@@ -3392,24 +3470,112 @@ function commissionTotalsForDashboard(range = periodRange("month"), filters = {}
   return { entries, sales: entries.map(e => e.sale), sellerTotal, managerTotal };
 }
 
+
+function pendingReceivableRowsData() {
+  const range = filterRange("commission", "month");
+  let sellerId = $("commissionSellerFilter")?.value || "";
+  if (!canViewManagerCommission() && isSalesConsultant(currentUser)) sellerId = currentUser.id;
+  const productId = $("commissionProductFilter")?.value || "";
+  const status = $("commissionStatusFilter")?.value ?? "Fechada";
+  return receivableEntries({ start: range.start, end: range.end, sellerId, productId, status, onlyPending: true })
+    .filter(row => canAccessCommercialRecord(row.sale.vendedorId))
+    .sort((a,b) => String(a.receipt.data || a.sale.dataVenda || "").localeCompare(String(b.receipt.data || b.sale.dataVenda || "")));
+}
+
+function reconcileReceiptsForUpdatedSale(existing = {}, updated = {}) {
+  const oldReceipts = Array.isArray(existing.recebimentos) ? existing.recebimentos : [];
+  const hasPaidReceipt = oldReceipts.some(r => r && r.pago);
+  const oldSignature = existing.paymentSignature || salePaymentSignature(existing);
+  const newSignature = salePaymentSignature(updated);
+
+  if (oldSignature === newSignature && oldReceipts.length) return oldReceipts;
+  if (!hasPaidReceipt) return generateReceivablesForSale(updated);
+
+  const paid = oldReceipts
+    .map(r => ({ ...r, valor: Number(r.valor || 0) }))
+    .filter(r => r.pago && r.valor > 0);
+  const paidTotal = paid.reduce((sum, r) => sum + Number(r.valor || 0), 0);
+  const remaining = Number(updated.implantacao || 0) - paidTotal;
+
+  if (remaining > 0.009) {
+    return [
+      ...paid,
+      {
+        id: uid("rc"),
+        data: updated.dataPrimeiroRecebimento || updated.dataVenda || todayISO(),
+        valor: Number(remaining.toFixed(2)),
+        pago: false,
+        tipo: "Ajuste pendente",
+        parcela: "Saldo",
+        observacao: "Gerado após atualização do lead/venda preservando recebimentos já pagos"
+      }
+    ];
+  }
+  return paid;
+}
+
+function syncSaleFromLead(lead = {}) {
+  if (!lead?.id) return;
+  const idx = (state.sales || []).findIndex(s => s.leadId === lead.id);
+  if (idx < 0) return;
+
+  const existing = normalizeSaleRecord(state.sales[idx]);
+  const updated = {
+    ...existing,
+    cliente: lead.empresa || existing.cliente,
+    produtoId: lead.produtoId || existing.produtoId,
+    vendedorId: lead.vendedorId || existing.vendedorId,
+    implantacao: Number(lead.implantacao ?? existing.implantacao ?? 0),
+    mensalidade: Number(lead.mensalidade ?? existing.mensalidade ?? 0),
+    status: lead.status === "Perdido" ? "Cancelada" : existing.status,
+    updatedAt: new Date().toISOString()
+  };
+
+  updated.recebimentos = reconcileReceiptsForUpdatedSale(existing, updated);
+  updated.paymentSignature = salePaymentSignature(updated);
+  state.sales[idx] = updated;
+}
+
+function syncLeadFromSale(sale = {}) {
+  if (!sale?.leadId) return;
+  const idx = (state.leads || []).findIndex(l => l.id === sale.leadId);
+  if (idx < 0) return;
+  const existing = state.leads[idx];
+  state.leads[idx] = {
+    ...existing,
+    empresa: sale.cliente || existing.empresa,
+    produtoId: sale.produtoId || existing.produtoId,
+    vendedorId: sale.vendedorId || existing.vendedorId,
+    implantacao: Number(sale.implantacao ?? existing.implantacao ?? 0),
+    mensalidade: Number(sale.mensalidade ?? existing.mensalidade ?? 0),
+    status: normalizeSaleStatus(sale.status) === "Fechada" ? "Fechado" : existing.status,
+    pipeline: normalizeSaleStatus(sale.status) === "Fechada" ? "Fechamento" : existing.pipeline,
+    probabilidade: normalizeSaleStatus(sale.status) === "Fechada" ? 100 : existing.probabilidade,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function renderCommission() {
   if (!$("commissionTable")) return;
 
   if (!canAccessCommission()) {
     $("commissionTable").innerHTML = `<tr><td class="empty" colspan="14">Comissionamento disponível apenas para Administrador, Gerente e Consultores/Vendedores.</td></tr>`;
+    if ($("commissionReceivableTable")) $("commissionReceivableTable").innerHTML = `<tr><td class="empty" colspan="8">Sem permissão para visualizar recebimentos.</td></tr>`;
     ["commissionTotal", "commissionImplantacao", "commissionMensalidade"].forEach(id => { if ($(id)) $(id).textContent = money(0); });
     if ($("commissionSalesCount")) $("commissionSalesCount").textContent = "0";
     return;
   }
 
   if ($("commissionRateLabel")) {
-    $("commissionRateLabel").textContent = "Vendedor: 20% sem indicadores, 25% com um indicador e 30% com implantação + mensalidade. Gestor: 25% sobre implantação recebida da equipe.";
+    $("commissionRateLabel").textContent = "Vendedor: 20% sem indicadores, 25% com um indicador e 30% com implantação + mensalidade. Gestor: 25% sobre implantação recebida da equipe. Cartão de crédito conta integralmente no mês; boleto/parcelado só entra quando a parcela for marcada como paga.";
   }
 
   const rows = commissionRowsData();
+  const pendingRows = pendingReceivableRowsData();
   const totalSellerCommission = rows.reduce((s,r) => s + r.comImpl, 0);
   const totalImplantacao = rows.reduce((s,r) => s + r.implantacao, 0);
   const totalGestor = canViewManagerCommission() ? rows.reduce((s,r) => s + r.comGestor, 0) : 0;
+  const totalPending = pendingRows.reduce((s,r) => s + Number(r.receipt.valor || 0), 0);
 
   $("commissionImplantacao").textContent = money(totalImplantacao);
   $("commissionMensalidade").textContent = canViewManagerCommission() ? money(totalGestor) : "—";
@@ -3440,6 +3606,24 @@ function renderCommission() {
       <td>${statusTag(s.status)}</td>
     </tr>`;
   }).join("") || `<tr><td class="empty" colspan="14">Nenhum recebimento pago encontrado para comissionamento no filtro selecionado.</td></tr>`;
+
+  if ($("commissionReceivableSummary")) {
+    $("commissionReceivableSummary").innerHTML = `A receber no período filtrado: <strong>${money(totalPending)}</strong>. Parcelas de vendas antigas aparecem aqui pela data de vencimento/recebimento, mesmo que a venda tenha sido feita em mês anterior.`;
+  }
+  if ($("commissionReceivableTable")) {
+    $("commissionReceivableTable").innerHTML = pendingRows.map(({ sale, receipt }) => `
+      <tr>
+        <td>${formatDate(receipt.data || sale.dataVenda)}</td>
+        <td><strong>${escapeHTML(sale.cliente)}</strong><br><small>Venda: ${formatDate(sale.dataVenda)}</small></td>
+        <td>${escapeHTML(productName(sale.produtoId))}</td>
+        <td>${escapeHTML(userName(sale.vendedorId))}</td>
+        <td>${escapeHTML(receipt.tipo || paymentMethodLabel(sale.formaPagamento))}<br><small>${escapeHTML(receipt.parcela || "")}</small></td>
+        <td><strong>${money(receipt.valor)}</strong></td>
+        <td>${statusTag("Pendente")}</td>
+        <td>${canViewManagerCommission() ? `<button class="btn btn-outline btn-sm" onclick="openReceiptsModal('${sale.id}')" title="Baixar recebimento"><i class="fa-solid fa-money-check-dollar"></i></button>` : "—"}</td>
+      </tr>
+    `).join("") || `<tr><td class="empty" colspan="8">Nenhuma parcela pendente com vencimento no período filtrado.</td></tr>`;
+  }
 }
 
 function rebuildReceiptHistory() {
@@ -3755,17 +3939,191 @@ function reportForecastData() {
     return acc;
   }, { leads: 0, forecastImplantacao: 0, forecastMensalidade: 0, implantacaoFechada: 0, mensalidadeFechada: 0 });
 
-  return { weekRows, sellerRows, productRows, totals };
+  const bi = forecastBIData(baseLeads, baseSales, ctx);
+  return { weekRows, sellerRows, productRows, totals, bi };
+}
+
+function forecastStageAtLeast(lead = {}, stageName = "Captação") {
+  const current = PIPELINE.findIndex(p => p.nome === (lead.pipeline || "Captação"));
+  const target = PIPELINE.findIndex(p => p.nome === stageName);
+  return current >= target && current >= 0 && target >= 0;
+}
+
+function salesLeadMatch(lead = {}, sale = {}) {
+  if (sale.leadId && lead.id && sale.leadId === lead.id) return true;
+  return norm(sale.cliente || "") === norm(lead.empresa || "")
+    && (!sale.vendedorId || !lead.vendedorId || sale.vendedorId === lead.vendedorId)
+    && (!sale.produtoId || !lead.produtoId || sale.produtoId === lead.produtoId);
+}
+
+function forecastCycleDays(sales = [], leads = []) {
+  const cycles = sales.map(sale => {
+    const lead = leads.find(l => salesLeadMatch(l, sale));
+    const start = lead ? leadCreatedDate(lead) : sale.dataVenda;
+    return daysBetweenExclusive(start, sale.dataVenda || todayISO());
+  }).filter(v => Number.isFinite(v) && v >= 0);
+  return cycles.length ? Math.round(cycles.reduce((sum, v) => sum + v, 0) / cycles.length) : 0;
+}
+
+function forecastBIData(leads = [], sales = [], ctx = {}) {
+  const generatedLeads = leads.filter(l => !ctx.start || inDateRange(leadCreatedDate(l), ctx.start, ctx.end));
+  const openLeads = leads.filter(l => normalizeSaleStatus(l.status || "Aberto") !== "Fechada" && !leadStageEquals(l, "Perdido"));
+  const proposals = leads.filter(l => forecastStageAtLeast(l, "Negociação") || normalizeSaleStatus(l.status || "") === "Fechada");
+  const wins = sales.filter(s => normalizeSaleStatus(s.status || "Fechada") === "Fechada");
+  const novoMrr = wins.reduce((sum, s) => sum + Number(s.mensalidade || 0), 0);
+  const implantacao = wins.reduce((sum, s) => sum + Number(s.implantacao || 0), 0);
+  const conversion = generatedLeads.length ? Math.round((wins.length / generatedLeads.length) * 1000) / 10 : 0;
+  const cycle = forecastCycleDays(wins, leads);
+
+  const unmatchedWins = wins.filter(s => !leads.some(l => salesLeadMatch(l, s))).length;
+  const funnelDefinitions = [
+    ["Captação", generatedLeads.length],
+    ["Contato realizado", leads.filter(l => forecastStageAtLeast(l, "Agendamento") || forecastStageAtLeast(l, "Apresentação") || forecastStageAtLeast(l, "Negociação") || forecastStageAtLeast(l, "Fechamento")).length + unmatchedWins],
+    ["Qualificados", leads.filter(l => forecastStageAtLeast(l, "Agendamento")).length + unmatchedWins],
+    ["Demonstrações", leads.filter(l => forecastStageAtLeast(l, "Apresentação")).length + unmatchedWins],
+    ["Propostas", proposals.length],
+    ["Negociação", leads.filter(l => forecastStageAtLeast(l, "Negociação")).length],
+    ["Ganhos", wins.length]
+  ];
+  const firstCount = funnelDefinitions[0]?.[1] || 0;
+  const funnel = funnelDefinitions.map(([stage, count], idx) => {
+    const previous = idx === 0 ? count : (funnelDefinitions[idx - 1]?.[1] || 0);
+    const pct = idx === 0
+      ? (firstCount ? 100 : 0)
+      : previous ? Math.round((count / previous) * 1000) / 10 : 0;
+    return { etapa: stage, quantidade: count, conversao: pct };
+  });
+
+  const sellersForRows = Array.from(new Set([
+    ...leads.map(l => l.vendedorId).filter(Boolean),
+    ...wins.map(s => s.vendedorId).filter(Boolean)
+  ])).filter(id => !ctx.sellerId || id === ctx.sellerId);
+
+  const mrrBySeller = sellersForRows.map(id => {
+    const sellerSales = wins.filter(s => s.vendedorId === id);
+    const mrr = sellerSales.reduce((sum, s) => sum + Number(s.mensalidade || 0), 0);
+    return { vendedorId: id, vendedor: userName(id), mrr, participacao: novoMrr ? Math.round((mrr / novoMrr) * 100) : 0 };
+  }).filter(r => r.mrr > 0).sort((a,b) => b.mrr - a.mrr);
+
+  const goalSource = ctx.sellerId
+    ? state.goals.filter(g => g.tipo === "Individual" && g.vendedorId === ctx.sellerId)
+    : state.goals.filter(g => g.tipo === "Global");
+  const goal = sumProratedGoals(
+    goalSource.filter(g => isValidGoal(g) && (!ctx.productId || g.produtoId === "todos" || g.produtoId === ctx.productId) && goalInRange(g, ctx.start, ctx.end)),
+    ctx.start,
+    ctx.end
+  );
+  const metaMrr = Number(goal.mensalidade || 0);
+  const mrrPct = metaMrr ? Math.round((novoMrr / metaMrr) * 100) : 0;
+  const mrrGap = Math.max(metaMrr - novoMrr, 0);
+
+  const now = parseLocalDate(todayISO());
+  const followupsVencidos = (state.appointments || []).filter(a => {
+    const sellerOk = !ctx.sellerId || a.vendedorId === ctx.sellerId;
+    const status = norm(a.status || "");
+    return sellerOk && parseLocalDate(a.data || todayISO()) < now && !["realizado", "concluido", "concluído", "cancelado", "cancelada"].includes(status);
+  }).length;
+  const leadsSemContato = generatedLeads.filter(l => (l.pipeline || "Captação") === "Captação").length;
+  const negociosParados = openLeads.filter(l => daysBetweenExclusive(String(l.updatedAt || l.createdAt || leadCreatedDate(l)).slice(0, 10), todayISO()) >= 15).length;
+
+  const performance = sellersForRows.map(id => {
+    const sellerLeads = generatedLeads.filter(l => l.vendedorId === id);
+    const sellerSales = wins.filter(s => s.vendedorId === id);
+    const sellerProposals = proposals.filter(l => l.vendedorId === id);
+    const sellerImpl = sellerSales.reduce((sum, s) => sum + Number(s.implantacao || 0), 0);
+    const sellerMrr = sellerSales.reduce((sum, s) => sum + Number(s.mensalidade || 0), 0);
+    const sellerConversion = sellerLeads.length ? Math.round((sellerSales.length / sellerLeads.length) * 1000) / 10 : 0;
+    const sellerCycle = forecastCycleDays(sellerSales, leads.filter(l => l.vendedorId === id));
+    const situation = sellerConversion >= 18 || sellerMrr >= (novoMrr / Math.max(1, sellersForRows.length))
+      ? "Alta performance"
+      : sellerSales.length > 0 ? "Em atenção" : "Sem fechamento";
+    return {
+      vendedorId: id,
+      vendedor: userName(id),
+      leads: sellerLeads.length,
+      propostas: sellerProposals.length,
+      ganhos: sellerSales.length,
+      conversao: sellerConversion,
+      implantacao: sellerImpl,
+      novoMrr: sellerMrr,
+      ciclo: sellerCycle,
+      situacao: situation
+    };
+  }).sort((a,b) => b.novoMrr - a.novoMrr || b.ganhos - a.ganhos);
+
+  return {
+    leadsRecebidos: generatedLeads.length,
+    propostas: proposals.length,
+    ganhos: wins.length,
+    conversao: conversion,
+    novoMrr,
+    implantacao,
+    cicloMedio: cycle,
+    funnel,
+    mrrBySeller,
+    metaMrr,
+    mrrPct,
+    mrrGap,
+    alerts: { followupsVencidos, leadsSemContato, negociosParados },
+    performance
+  };
 }
 
 function renderReportForecast() {
   if (!$("reportForecastWeekTable")) return;
   const data = reportForecastData();
+  const bi = data.bi || {};
 
   if ($("reportForecastLeadsTotal")) $("reportForecastLeadsTotal").textContent = String(data.totals.leads);
   if ($("reportForecastPipelineTotal")) $("reportForecastPipelineTotal").textContent = money(data.totals.forecastImplantacao);
   if ($("reportForecastMrrTotal")) $("reportForecastMrrTotal").textContent = money(data.totals.forecastMensalidade);
   if ($("reportForecastSalesTotal")) $("reportForecastSalesTotal").textContent = money(data.totals.implantacaoFechada);
+
+  if ($("reportForecastProposalTotal")) $("reportForecastProposalTotal").textContent = String(bi.propostas || 0);
+  if ($("reportForecastWinsTotal")) $("reportForecastWinsTotal").textContent = String(bi.ganhos || 0);
+  if ($("reportForecastConversionTotal")) $("reportForecastConversionTotal").textContent = `${Number(bi.conversao || 0).toLocaleString("pt-BR")}%`;
+  if ($("reportForecastCycleTotal")) $("reportForecastCycleTotal").textContent = `${bi.cicloMedio || 0} dias`;
+
+  if ($("reportForecastFunnelTable")) {
+    $("reportForecastFunnelTable").innerHTML = (bi.funnel || []).map(r => `
+      <tr>
+        <td><strong>${escapeHTML(r.etapa)}</strong></td>
+        <td>${r.quantidade}</td>
+        <td>${Number(r.conversao || 0).toLocaleString("pt-BR")}%</td>
+      </tr>`).join("") || `<tr><td class="empty" colspan="3">Sem funil para o filtro atual.</td></tr>`;
+  }
+  if ($("reportForecastMrrSellerTable")) {
+    $("reportForecastMrrSellerTable").innerHTML = (bi.mrrBySeller || []).map(r => `
+      <tr>
+        <td><strong>${escapeHTML(r.vendedor)}</strong></td>
+        <td>${money(r.mrr)}</td>
+        <td>${r.participacao}%</td>
+      </tr>`).join("") || `<tr><td class="empty" colspan="3">Sem MRR conquistado no filtro atual.</td></tr>`;
+  }
+  if ($("reportForecastMrrGoal")) {
+    $("reportForecastMrrGoal").innerHTML = `
+      <div style="font-size:24px;font-weight:800">${money(bi.novoMrr || 0)}</div>
+      <div>Meta: <strong>${money(bi.metaMrr || 0)}</strong></div>
+      <div>${bi.mrrPct || 0}% da meta${(bi.mrrGap || 0) > 0 ? ` · gap de <strong>${money(bi.mrrGap)}</strong>` : " · meta atingida"}</div>
+    `;
+  }
+  if ($("reportForecastAlertFollowups")) $("reportForecastAlertFollowups").textContent = String(bi.alerts?.followupsVencidos || 0);
+  if ($("reportForecastAlertNoContact")) $("reportForecastAlertNoContact").textContent = String(bi.alerts?.leadsSemContato || 0);
+  if ($("reportForecastAlertStuck")) $("reportForecastAlertStuck").textContent = String(bi.alerts?.negociosParados || 0);
+  if ($("reportForecastPerformanceTable")) {
+    $("reportForecastPerformanceTable").innerHTML = (bi.performance || []).map(r => `
+      <tr>
+        <td><strong>${escapeHTML(r.vendedor)}</strong></td>
+        <td>${r.leads}</td>
+        <td>${r.propostas}</td>
+        <td>${r.ganhos}</td>
+        <td>${Number(r.conversao || 0).toLocaleString("pt-BR")}%</td>
+        <td>${money(r.implantacao)}</td>
+        <td>${money(r.novoMrr)}</td>
+        <td>${r.ciclo || 0} dias</td>
+        <td>${escapeHTML(r.situacao)}</td>
+      </tr>`).join("") || `<tr><td class="empty" colspan="9">Sem desempenho individual no filtro atual.</td></tr>`;
+  }
 
   $("reportForecastWeekTable").innerHTML = data.weekRows.map(r => `
     <tr>
@@ -3811,6 +4169,7 @@ function renderReportForecast() {
 
 function forecastReportRowsForExport() {
   const data = reportForecastData();
+  const bi = data.bi || {};
   return {
     semanal: data.weekRows.map(r => ({
       Semana: r.semana,
@@ -3855,19 +4214,40 @@ function forecastReportRowsForExport() {
       VendasFechadas: r.vendas,
       ImplantacaoFechada: r.implantacaoFechada,
       MensalidadeFechada: r.mensalidadeFechada
+    })),
+    funil: (bi.funnel || []).map(r => ({
+      Etapa: r.etapa,
+      Quantidade: r.quantidade,
+      Conversao: `${r.conversao}%`
+    })),
+    mrr_vendedor: (bi.mrrBySeller || []).map(r => ({
+      Vendedor: r.vendedor,
+      NovoMRR: r.mrr,
+      Participacao: `${r.participacao}%`
+    })),
+    desempenho: (bi.performance || []).map(r => ({
+      Vendedor: r.vendedor,
+      Leads: r.leads,
+      Propostas: r.propostas,
+      Ganhos: r.ganhos,
+      Conversao: `${r.conversao}%`,
+      Implantacao: r.implantacao,
+      NovoMRR: r.novoMrr,
+      CicloDias: r.ciclo,
+      Situacao: r.situacao
     }))
   };
 }
 
 function exportForecastReport() {
-  if (!window.XLSX) return showToast("Biblioteca XLSX não carregou.", "fa-triangle-exclamation");
+  if (!window.XLSX) return showToast("Biblioteca XLSX não carregada.", "fa-triangle-exclamation");
   const rows = forecastReportRowsForExport();
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.semanal), "Forecast Semanal");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.vendedores), "Por Vendedor");
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.produtos), "Por Produto");
+  Object.entries(rows).forEach(([sheet, data]) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 31));
+  });
   XLSX.writeFile(wb, `forecast_semanal_${todayISO()}.xlsx`);
-  showToast("Forecast semanal exportado.");
 }
 
 function renderReports() {
@@ -4035,6 +4415,9 @@ function saveLead(id = "") {
     state.leads.push(data);
   }
 
+  // Mantém Leads e Gestão de Vendas sincronizados quando já existir venda vinculada ao lead.
+  syncSaleFromLead(findById(state.leads, data.id) || data);
+
   persist();
   closeModal();
   renderAll();
@@ -4200,7 +4583,7 @@ function openSaleModal(id = "") {
       <div class="form-group"><label>Forma de recebimento da implantação</label><select id="sPagamento" class="select" onchange="togglePaymentFields()">${paymentMethodOptions(sale.formaPagamento || "integral")}</select></div>
       <div class="form-group"><label>Data do primeiro recebimento</label><input id="sDataRecebimento" class="field" type="date" value="${sale.dataPrimeiroRecebimento || sale.dataVenda || todayISO()}"></div>
       <div class="form-group"><label>Entrada recebida</label><input id="sEntrada" class="field" type="number" step="0.01" value="${sale.entrada || 0}"></div>
-      <div class="form-group"><label>Nº de parcelas</label><input id="sParcelas" class="field" type="number" min="1" step="1" value="${sale.parcelas || 1}"></div>
+      <div class="form-group"><label>Nº de parcelas</label><input id="sParcelas" class="field" type="number" min="1" step="1" value="${sale.parcelas || 1}"><small class="help">No cartão, as parcelas são informativas e o valor entra integral no mês.</small></div>
       <div class="form-group"><label>Status</label><select id="sStatus" class="select"><option${sale.status === "Fechada" ? " selected" : ""}>Fechada</option><option${sale.status === "Cancelada" ? " selected" : ""}>Cancelada</option></select></div>
       <div class="form-group"><label>Observação</label><input id="sObs" class="field" value="${escapeHTML(sale.observacao || "")}"></div>
     </div>
@@ -4220,11 +4603,13 @@ function fillSaleProductValues() {
 function togglePaymentFields() {
   const method = $("sPagamento")?.value || "integral";
   const isParcel = method === "parcelado" || method === "entrada";
-  if ($("sParcelas")) $("sParcelas").disabled = !isParcel;
+  const isCard = method === "cartao";
+  // Cartão pode ser parcelado para registro gerencial, mas é recebido integralmente para comissão.
+  if ($("sParcelas")) $("sParcelas").disabled = !(isParcel || isCard);
   if ($("sEntrada")) $("sEntrada").disabled = !isParcel;
   if (!isParcel) {
-    if ($("sParcelas")) $("sParcelas").value = 1;
     if ($("sEntrada")) $("sEntrada").value = 0;
+    if (!isCard && $("sParcelas")) $("sParcelas").value = 1;
   }
 }
 
@@ -4236,6 +4621,7 @@ function saveSale(id = "") {
   const existing = id ? findById(state.sales, id) : null;
   const data = {
     id: id || uid("s"),
+    leadId: existing?.leadId || "",
     cliente,
     produtoId: $("sProduto").value,
     vendedorId: $("sVendedor").value,
@@ -4263,6 +4649,10 @@ function saveSale(id = "") {
   } else {
     state.sales.push(data);
   }
+
+  // Mantém Gestão de Vendas e Leads sincronizados quando a venda tem lead vinculado.
+  syncLeadFromSale(data);
+
   persist();
   closeModal();
   renderAll();
