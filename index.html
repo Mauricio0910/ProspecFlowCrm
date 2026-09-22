@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="crm-version" content="2026-09-18-1557-comissao-recebimentos">
+  <meta name="crm-version" content="2026-09-22-1619-relatorios-produtividade-prospeccao">
 <title>RenSoftware CRM Comercial</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -924,14 +924,14 @@
               <select id="goalProductFilter" class="select" style="max-width:220px" onchange="renderGoals()"></select>
               <button class="btn btn-outline" onclick="exportTable('goals')"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Consultor</th><th>Produto</th><th>Meta Implantação</th><th>Meta Mensalidade</th><th>Realizado</th><th>Atingimento</th><th>Falta atingir</th><th>Ações</th></tr></thead><tbody id="goalsTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Consultor</th><th>Produto</th><th>Meta Prospecção</th><th>Leads Gerados</th><th>Ating. Prospecção</th><th>Meta Implantação</th><th>Meta Mensalidade</th><th>Realizado</th><th>Atingimento</th><th>Falta atingir</th><th>Ações</th></tr></thead><tbody id="goalsTable"></tbody></table></div>
           </div>
 
           <div class="card">
             <div class="card-header">
               <div><div class="card-title">Produtividade por vendedor</div><div class="card-subtitle">Lista automática baseada somente nos consultores de vendas cadastrados em Usuários</div></div>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Consultor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th><th>Meta</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="productivityTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Consultor</th><th>Prospecções</th><th>Meta Prospecção</th><th>Ating. Prospecção</th><th>Captação</th><th>Apresentação</th><th>Negociação</th><th>Fechamento</th><th>Conversão</th><th>Implantação</th><th>Mensalidade</th><th>Meta Comercial</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="productivityTable"></tbody></table></div>
           </div>
         </section>
 
@@ -1000,7 +1000,39 @@
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-users-line"></i></div><div id="reportLeadsGenerated" class="stat-value">0</div><div class="stat-label">Leads gerados</div></div>
             <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-chart-pie"></i></div><div id="reportTicket" class="stat-value">R$ 0</div><div class="stat-label">Ticket médio</div></div>
           </div>
+          
           <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Dashboard Gerencial de Relatórios</div>
+                <div class="card-subtitle">Escolha a visão de análise e use os filtros abaixo para cruzar vendedor, produto, período e status</div>
+              </div>
+              <select id="reportDashboardView" class="select" style="max-width:260px" onchange="renderReports()">
+                <option value="resumo">Resumo comercial</option>
+                <option value="estagios">Evolução do prospect por estágio</option>
+                <option value="produtividade">Produtividade por vendedor</option>
+                <option value="produtos">Resultado por produto</option>
+              </select>
+            </div>
+            <div class="grid stats-grid">
+              <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-bullseye"></i></div><div id="reportDashMetric1" class="stat-value">0</div><div id="reportDashLabel1" class="stat-label">Indicador 1</div></div>
+              <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-layer-group"></i></div><div id="reportDashMetric2" class="stat-value">0</div><div id="reportDashLabel2" class="stat-label">Indicador 2</div></div>
+              <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-chart-line"></i></div><div id="reportDashMetric3" class="stat-value">0</div><div id="reportDashLabel3" class="stat-label">Indicador 3</div></div>
+              <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div><div id="reportDashMetric4" class="stat-value">0</div><div id="reportDashLabel4" class="stat-label">Indicador 4</div></div>
+            </div>
+            <div class="grid two-col">
+              <div>
+                <h3 id="reportStageTitle" style="font-size:14px;margin-bottom:8px">Indicadores por estágio da evolução do prospect</h3>
+                <div class="table-wrap"><table><thead><tr><th>Estágio</th><th>Prospects</th><th>% da base</th><th>Impl. Forecast</th><th>MRR Forecast</th><th>Idade média</th></tr></thead><tbody id="reportStageEvolutionTable"></tbody></table></div>
+              </div>
+              <div>
+                <h3 id="reportDashTableTitle" style="font-size:14px;margin-bottom:8px">Visão selecionada</h3>
+                <div class="table-wrap"><table><thead id="reportDashTableHead"><tr><th>Indicador</th><th>Qtd.</th><th>Implantação</th><th>Mensalidade</th></tr></thead><tbody id="reportDashTableBody"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+
+<div class="card">
             <div class="card-header">
               <div><div class="card-title">Relatório Executivo</div><div class="card-subtitle">Resumo por vendedor, produto e filtros avançados</div></div>
               <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-outline" onclick="exportAllReports()"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button><button class="btn btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir/PDF</button></div>
@@ -1178,7 +1210,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-09-18-1212-recebimentos-sync-forecast-bi";
+const APP_BUILD_VERSION = "2026-09-22-1619-relatorios-produtividade-prospeccao";
 
 let state = null;
 let currentUser = null;
@@ -1850,9 +1882,9 @@ function seedData() {
 
   const currentMonth = monthKey();
   const goals = [
-    { id: "g_global", tipo: "Global", vendedorId: "", produtoId: "todos", periodo: currentMonth, implantacao: 100000, mensalidade: 20000 },
-    { id: "g_gusthavo", tipo: "Individual", vendedorId: "u_gusthavo", produtoId: "todos", periodo: currentMonth, implantacao: 35000, mensalidade: 7000 },
-    { id: "g_israel_sce", tipo: "Individual", vendedorId: "u_israel", produtoId: "p_sce", periodo: currentMonth, implantacao: 30000, mensalidade: 6000 }
+    { id: "g_global", tipo: "Global", vendedorId: "", produtoId: "todos", periodo: currentMonth, prospeccao: 120, implantacao: 100000, mensalidade: 20000 },
+    { id: "g_gusthavo", tipo: "Individual", vendedorId: "u_gusthavo", produtoId: "todos", periodo: currentMonth, prospeccao: 60, implantacao: 35000, mensalidade: 7000 },
+    { id: "g_israel_sce", tipo: "Individual", vendedorId: "u_israel", produtoId: "p_sce", periodo: currentMonth, prospeccao: 45, implantacao: 30000, mensalidade: 6000 }
   ];
 
   return {
@@ -2070,7 +2102,7 @@ function normalizeState(raw) {
     };
   });
   data.goals = data.goals
-    .map(g => ({ ...g, tipo: g.tipo || (g.vendedorId ? "Individual" : "Global"), produtoId: g.produtoId || "todos", periodo: g.periodo || monthKey(), implantacao: Number(g.implantacao ?? g.adesao ?? 0), mensalidade: Number(g.mensalidade ?? 0) }))
+    .map(g => ({ ...g, tipo: g.tipo || (g.vendedorId ? "Individual" : "Global"), produtoId: g.produtoId || "todos", periodo: g.periodo || monthKey(), prospeccao: Number(g.prospeccao ?? g.prospeccoes ?? g.leads ?? g.metaProspeccao ?? 0), implantacao: Number(g.implantacao ?? g.adesao ?? 0), mensalidade: Number(g.mensalidade ?? 0) }))
     // Remove metas individuais vinculadas a SDR, Marketing, gerente, administrador ou usuário inativo.
     .filter(g => g.tipo === "Global" || !g.vendedorId || isSalesConsultant(findById(data.users, g.vendedorId)));
 
@@ -2080,6 +2112,7 @@ function normalizeState(raw) {
     data.goals
       .filter(g => g.tipo === "Global" && isValidGoal(g))
       .forEach(globalGoal => {
+        const shareProspeccao = (Number(globalGoal.prospeccao) || 0) / consultants.length;
         const shareImplantacao = (Number(globalGoal.implantacao) || 0) / consultants.length;
         const shareMensalidade = (Number(globalGoal.mensalidade) || 0) / consultants.length;
         consultants.forEach(user => {
@@ -2097,6 +2130,7 @@ function normalizeState(raw) {
               vendedorId: user.id,
               produtoId: globalGoal.produtoId || "todos",
               periodo: globalGoal.periodo,
+              prospeccao: Math.round(shareProspeccao),
               implantacao: Number(shareImplantacao.toFixed(2)),
               mensalidade: Number(shareMensalidade.toFixed(2)),
               geradaDaMetaGlobalId: globalGoal.id,
@@ -2645,10 +2679,11 @@ function totalGoalForSeller(sellerId, period = monthKey()) {
 }
 function sumGoals(goals) {
   return goals.reduce((acc, g) => {
+    acc.prospeccao += Number(g.prospeccao) || 0;
     acc.implantacao += Number(g.implantacao) || 0;
     acc.mensalidade += Number(g.mensalidade) || 0;
     return acc;
-  }, { implantacao: 0, mensalidade: 0 });
+  }, { prospeccao: 0, implantacao: 0, mensalidade: 0 });
 }
 function totalGoalForSellerRange(sellerId, start, end) {
   const goals = state.goals.filter(g => goalInRange(g, start, end) && g.tipo === "Individual" && g.vendedorId === sellerId && isValidGoal(g));
@@ -2659,6 +2694,10 @@ function goalPct(done, goal) {
   const realized = (Number(done.implantacao) || 0) + (Number(done.mensalidade) || 0);
   return target > 0 ? Math.round((realized / target) * 100) : 0;
 }
+function prospectingGoalPct(doneLeads, goal) {
+  const target = Number(goal?.prospeccao) || 0;
+  return target > 0 ? Math.round((Number(doneLeads) || 0) / target * 100) : 0;
+}
 function overlapDays(startA, endA, startB, endB) {
   if (!startA || !endA || !startB || !endB) return 0;
   const start = new Date(Math.max(startA.getTime(), startB.getTime()));
@@ -2667,14 +2706,15 @@ function overlapDays(startA, endA, startB, endB) {
 }
 
 function proratedGoalForRange(goal, start, end) {
-  if (!isValidGoal(goal)) return { implantacao: 0, mensalidade: 0 };
-  if (!start || !end) return { implantacao: Number(goal.implantacao) || 0, mensalidade: Number(goal.mensalidade) || 0 };
+  if (!isValidGoal(goal)) return { prospeccao: 0, implantacao: 0, mensalidade: 0 };
+  if (!start || !end) return { prospeccao: Number(goal.prospeccao) || 0, implantacao: Number(goal.implantacao) || 0, mensalidade: Number(goal.mensalidade) || 0 };
   const month = monthRange(goal.periodo || monthKey());
   const overlap = overlapDays(start, end, month.start, month.end);
-  if (overlap <= 0) return { implantacao: 0, mensalidade: 0 };
+  if (overlap <= 0) return { prospeccao: 0, implantacao: 0, mensalidade: 0 };
   const totalDays = daysBetweenInclusive(month.start, month.end) || 1;
   const ratio = overlap / totalDays;
   return {
+    prospeccao: (Number(goal.prospeccao) || 0) * ratio,
     implantacao: (Number(goal.implantacao) || 0) * ratio,
     mensalidade: (Number(goal.mensalidade) || 0) * ratio
   };
@@ -2683,10 +2723,11 @@ function proratedGoalForRange(goal, start, end) {
 function sumProratedGoals(goals, start, end) {
   return goals.reduce((acc, g) => {
     const v = proratedGoalForRange(g, start, end);
+    acc.prospeccao += v.prospeccao;
     acc.implantacao += v.implantacao;
     acc.mensalidade += v.mensalidade;
     return acc;
-  }, { implantacao: 0, mensalidade: 0 });
+  }, { prospeccao: 0, implantacao: 0, mensalidade: 0 });
 }
 
 function totalGoalForSellerRangeProrated(sellerId, start, end, productId = "") {
@@ -2705,6 +2746,7 @@ function distributeGlobalGoal(globalGoal) {
   const consultants = salesConsultants();
   if (!consultants.length) return 0;
 
+  const shareProspeccao = (Number(globalGoal.prospeccao) || 0) / consultants.length;
   const shareImplantacao = (Number(globalGoal.implantacao) || 0) / consultants.length;
   const shareMensalidade = (Number(globalGoal.mensalidade) || 0) / consultants.length;
   let count = 0;
@@ -2724,6 +2766,7 @@ function distributeGlobalGoal(globalGoal) {
         vendedorId: user.id,
         produtoId: globalGoal.produtoId || "todos",
         periodo: globalGoal.periodo,
+        prospeccao: 0,
         implantacao: 0,
         mensalidade: 0,
         geradaDaMetaGlobalId: globalGoal.id
@@ -2731,6 +2774,7 @@ function distributeGlobalGoal(globalGoal) {
       state.goals.push(goal);
     }
 
+    goal.prospeccao = Math.round(shareProspeccao);
     goal.implantacao = Number(shareImplantacao.toFixed(2));
     goal.mensalidade = Number(shareMensalidade.toFixed(2));
     goal.geradaDaMetaGlobalId = globalGoal.id;
@@ -2913,6 +2957,81 @@ function filteredVisibleLeads({ sellerId = "", productId = "", stage = "", start
     const dateOk = (!start || !end) || inDateRange(dateValue, start, end);
     return sellerOk && productOk && stageOk && dateOk;
   });
+}
+
+function prospectStage(lead = {}) {
+  const normalizedStatus = normalizeSaleStatus(lead.status || "");
+  if (normalizedStatus === "Cancelada" || normalizedStatus === "Perdida" || lead.status === "Perdido") return "Perdido";
+  if (normalizedStatus === "Fechada" || lead.status === "Fechado") return "Fechamento";
+  return lead.pipeline || "Captação";
+}
+function stageOrderIndex(stage) {
+  const idx = PIPELINE.findIndex(p => p.nome === stage);
+  return idx >= 0 ? idx : 0;
+}
+function stageReached(lead, stage) {
+  return stageOrderIndex(prospectStage(lead)) >= stageOrderIndex(stage);
+}
+function leadAgeDays(lead) {
+  return daysBetweenExclusive(leadCreatedDate(lead), todayISO());
+}
+function filteredReportLeads(ctx = {}) {
+  const { start = null, end = null, sellerId = "", productId = "" } = ctx;
+  return visibleLeads().filter(l => {
+    const sellerOk = !sellerId || l.vendedorId === sellerId;
+    const productOk = !productId || l.produtoId === productId;
+    const dateOk = (!start || !end) || inDateRange(leadCreatedDate(l), start, end);
+    return sellerOk && productOk && dateOk;
+  });
+}
+function stageEvolutionRows(leads = []) {
+  const total = leads.length || 0;
+  return PIPELINE.filter(p => p.nome !== "Perdido").map(p => {
+    const stageLeads = leads.filter(l => prospectStage(l) === p.nome);
+    const reached = leads.filter(l => stageReached(l, p.nome));
+    const forecastImpl = stageLeads.reduce((sum, l) => sum + forecastImplantacaoValue(l), 0);
+    const forecastMrr = stageLeads.reduce((sum, l) => sum + forecastMensalidadeValue(l), 0);
+    const avgAge = stageLeads.length ? Math.round(stageLeads.reduce((sum, l) => sum + leadAgeDays(l), 0) / stageLeads.length) : 0;
+    return {
+      stage: p.nome,
+      count: stageLeads.length,
+      reached: reached.length,
+      basePct: total ? Math.round((stageLeads.length / total) * 100) : 0,
+      conversionPct: total ? Math.round((reached.length / total) * 100) : 0,
+      forecastImpl,
+      forecastMrr,
+      avgAge
+    };
+  });
+}
+function productivityMetricsForSeller(user, rangeInfo, productId = "") {
+  const leads = visibleLeads()
+    .filter(l => l.vendedorId === user.id)
+    .filter(l => !productId || l.produtoId === productId)
+    .filter(l => inDateRange(leadCreatedDate(l), rangeInfo.start, rangeInfo.end));
+  const sales = salesInRange(rangeInfo.start, rangeInfo.end)
+    .filter(s => s.vendedorId === user.id)
+    .filter(s => !productId || s.produtoId === productId);
+  const goal = totalGoalForSellerRangeProrated(user.id, rangeInfo.start, rangeInfo.end, productId);
+  const done = sumSales(sales);
+  return {
+    user,
+    leads,
+    sales,
+    done,
+    goal,
+    captacao: leads.filter(l => prospectStage(l) === "Captação").length,
+    agendamento: leads.filter(l => stageReached(l, "Agendamento")).length,
+    apresentacao: leads.filter(l => stageReached(l, "Apresentação")).length,
+    negociacao: leads.filter(l => stageReached(l, "Negociação")).length,
+    fechamento: sales.length,
+    conversao: leads.length ? Math.round((sales.length / leads.length) * 100) : 0,
+    prospeccaoPct: prospectingGoalPct(leads.length, goal),
+    comercialPct: goalPct(done, goal),
+    faltaImpl: Math.max((goal.implantacao || 0) - (done.implantacao || 0), 0),
+    faltaMens: Math.max((goal.mensalidade || 0) - (done.mensalidade || 0), 0),
+    faltaProspeccao: Math.max(Math.round(goal.prospeccao || 0) - leads.length, 0)
+  };
 }
 function projectionGoal(periodType, sellerId = "", productId = "") {
   const range = projectionRange();
@@ -3251,17 +3370,29 @@ function renderGoals() {
     const done = sumSales(salesForGoalRange(g, rangeInfo.start, rangeInfo.end)
       .filter(s => canViewAllCommercialData() || s.vendedorId === currentUser?.id));
     const target = proratedGoalForRange(g, rangeInfo.start, rangeInfo.end);
+    const goalLeads = visibleLeads()
+      .filter(l => g.tipo === "Global" || !g.vendedorId || l.vendedorId === g.vendedorId)
+      .filter(l => !productId || l.produtoId === productId)
+      .filter(l => !g.produtoId || g.produtoId === "todos" || l.produtoId === g.produtoId)
+      .filter(l => canViewAllCommercialData() || l.vendedorId === currentUser?.id)
+      .filter(l => inDateRange(leadCreatedDate(l), rangeInfo.start, rangeInfo.end));
     const pct = goalPct(done, target);
+    const pctProspeccao = prospectingGoalPct(goalLeads.length, target);
     const falta = {
+      prospeccao: Math.max(Math.round(target.prospeccao || 0) - goalLeads.length, 0),
       implantacao: Math.max((target.implantacao || 0) - done.implantacao, 0),
       mensalidade: Math.max((target.mensalidade || 0) - done.mensalidade, 0)
     };
+    const proportional = rangeInfo.type === "day" || rangeInfo.type === "week" ? `<br><small>proporcional</small>` : "";
     return `<tr>
       <td>${statusTag(g.tipo)}</td>
       <td>${g.tipo === "Global" ? "Todos" : escapeHTML(userName(g.vendedorId))}</td>
       <td>${escapeHTML(productName(g.produtoId))}</td>
-      <td>${money(target.implantacao)}${rangeInfo.type === "day" || rangeInfo.type === "week" ? `<br><small>proporcional</small>` : ""}</td>
-      <td>${money(target.mensalidade)}${rangeInfo.type === "day" || rangeInfo.type === "week" ? `<br><small>proporcional</small>` : ""}</td>
+      <td>${Math.round(target.prospeccao || 0)}${proportional}</td>
+      <td>${goalLeads.length}<br><small>falta: ${falta.prospeccao}</small></td>
+      <td>${progressBar(pctProspeccao)}</td>
+      <td>${money(target.implantacao)}${proportional}</td>
+      <td>${money(target.mensalidade)}${proportional}</td>
       <td>${money(done.implantacao)}<br><small>MRR: ${money(done.mensalidade)}</small></td>
       <td>${progressBar(pct)}</td>
       <td>${money(falta.implantacao)}<br><small>MRR: ${money(falta.mensalidade)}</small></td>
@@ -3270,9 +3401,9 @@ function renderGoals() {
         <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>` : "—"}
       </td>
     </tr>`;
-  }).join("") || `<tr><td class="empty" colspan="9">Nenhuma meta cadastrada para o ${periodLabel}.</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="12">Nenhuma meta cadastrada para o ${periodLabel}.</td></tr>`;
 
-  $("productivityTable").innerHTML = productivityRows(rangeInfo, { sellerId: visibleSeller, productId }).join("") || `<tr><td class="empty" colspan="8">Nenhum consultor de vendas ativo disponível para seu perfil.</td></tr>`;
+  $("productivityTable").innerHTML = productivityRows(rangeInfo, { sellerId: visibleSeller, productId }).join("") || `<tr><td class="empty" colspan="14">Nenhum consultor de vendas ativo disponível para seu perfil.</td></tr>`;
 }
 
 
@@ -3288,31 +3419,25 @@ function productivityRows(periodInfo = monthKey(), filters = {}) {
   if (sellerId) users = users.filter(u => u.id === sellerId);
 
   return users.map(u => {
-    const sales = salesInRange(rangeInfo.start, rangeInfo.end)
-      .filter(s => s.vendedorId === u.id)
-      .filter(s => !productId || s.produtoId === productId);
-    const leads = visibleLeads()
-      .filter(l => l.vendedorId === u.id)
-      .filter(l => !productId || l.produtoId === productId)
-      .filter(l => inDateRange(leadCreatedDate(l), rangeInfo.start, rangeInfo.end));
-    const done = sumSales(sales);
-    const goal = totalGoalForSellerRangeProrated(u.id, rangeInfo.start, rangeInfo.end, productId);
-    const pct = goalPct(done, goal);
-    const faltaImpl = Math.max((goal.implantacao || 0) - (done.implantacao || 0), 0);
-    const faltaMens = Math.max((goal.mensalidade || 0) - (done.mensalidade || 0), 0);
+    const m = productivityMetricsForSeller(u, rangeInfo, productId);
     return `<tr>
       <td><strong>${escapeHTML(u.nome)}</strong><br><small>${escapeHTML(u.perfil)}</small></td>
-      <td>${leads.length}</td>
-      <td>${sales.length}</td>
-      <td>${money(done.implantacao)}</td>
-      <td>${money(done.mensalidade)}</td>
-      <td>${money(goal.implantacao)}<br><small>MRR: ${money(goal.mensalidade)}</small></td>
-      <td>${progressBar(pct)}</td>
-      <td>${money(faltaImpl)}<br><small>MRR: ${money(faltaMens)}</small></td>
+      <td>${m.leads.length}</td>
+      <td>${Math.round(m.goal.prospeccao || 0)}<br><small>falta: ${m.faltaProspeccao}</small></td>
+      <td>${progressBar(m.prospeccaoPct)}</td>
+      <td>${m.captacao}</td>
+      <td>${m.apresentacao}</td>
+      <td>${m.negociacao}</td>
+      <td>${m.fechamento}</td>
+      <td>${m.conversao}%</td>
+      <td>${money(m.done.implantacao)}</td>
+      <td>${money(m.done.mensalidade)}</td>
+      <td>${money(m.goal.implantacao)}<br><small>MRR: ${money(m.goal.mensalidade)}</small></td>
+      <td>${progressBar(m.comercialPct)}</td>
+      <td>${money(m.faltaImpl)}<br><small>MRR: ${money(m.faltaMens)}</small></td>
     </tr>`;
   });
 }
-
 
 function commissionSaleMonthKey(saleOrReceipt) {
   const date = String(saleOrReceipt?.data || saleOrReceipt?.dataRecebimento || saleOrReceipt?.dataVenda || todayISO());
@@ -4251,6 +4376,86 @@ function exportForecastReport() {
   XLSX.writeFile(wb, `forecast_semanal_${todayISO()}.xlsx`);
 }
 
+function renderReportDashboard(ctx, leadBase, validSales, total) {
+  if (!$("reportDashboardView")) return;
+  const view = $("reportDashboardView").value || "resumo";
+  const stageRows = stageEvolutionRows(leadBase);
+  const setCard = (idx, value, label) => {
+    const metric = $(`reportDashMetric${idx}`);
+    const lbl = $(`reportDashLabel${idx}`);
+    if (metric) metric.textContent = value;
+    if (lbl) lbl.textContent = label;
+  };
+
+  $("reportStageEvolutionTable").innerHTML = stageRows.map(r => `<tr>
+    <td>${stageTag(r.stage)}</td>
+    <td>${r.count}<br><small>${r.reached} alcançaram ou superaram</small></td>
+    <td>${r.basePct}%</td>
+    <td>${money(r.forecastImpl)}</td>
+    <td>${money(r.forecastMrr)}</td>
+    <td>${r.avgAge} dias</td>
+  </tr>`).join("") || `<tr><td class="empty" colspan="6">Sem prospects no filtro.</td></tr>`;
+
+  const productId = ctx.productId || "";
+  const users = canViewTeamProductivity()
+    ? salesConsultants().filter(u => !ctx.sellerId || u.id === ctx.sellerId)
+    : (isSalesConsultant(currentUser) ? [currentUser] : []);
+  const fallbackRange = monthRange(monthKey());
+  const rangeInfo = { start: ctx.start || fallbackRange.start, end: ctx.end || fallbackRange.end };
+  const productivity = users.map(u => productivityMetricsForSeller(u, rangeInfo, productId));
+  const conversion = leadBase.length ? Math.round((validSales.length / leadBase.length) * 100) : 0;
+  const proposalCount = leadBase.filter(l => stageReached(l, "Negociação")).length;
+  const presentationCount = leadBase.filter(l => stageReached(l, "Apresentação")).length;
+
+  if (view === "estagios") {
+    setCard(1, String(leadBase.length), "Prospects no período");
+    setCard(2, String(presentationCount), "Chegaram em apresentação");
+    setCard(3, String(proposalCount), "Chegaram em negociação");
+    setCard(4, `${conversion}%`, "Conversão em vendas");
+    $("reportDashTableTitle").textContent = "Evolução acumulada por estágio";
+    $("reportDashTableHead").innerHTML = `<tr><th>Estágio</th><th>No estágio</th><th>Alcançaram</th><th>Conversão base</th></tr>`;
+    $("reportDashTableBody").innerHTML = stageRows.map(r => `<tr><td>${stageTag(r.stage)}</td><td>${r.count}</td><td>${r.reached}</td><td>${r.conversionPct}%</td></tr>`).join("") || `<tr><td class="empty" colspan="4">Sem prospects no filtro.</td></tr>`;
+  } else if (view === "produtividade") {
+    const totalProspectingGoal = productivity.reduce((sum, r) => sum + (Number(r.goal.prospeccao) || 0), 0);
+    const totalLeads = productivity.reduce((sum, r) => sum + r.leads.length, 0);
+    const totalSales = productivity.reduce((sum, r) => sum + r.sales.length, 0);
+    setCard(1, String(totalLeads), "Prospecções realizadas");
+    setCard(2, String(Math.round(totalProspectingGoal)), "Meta de prospecção");
+    setCard(3, `${prospectingGoalPct(totalLeads, { prospeccao: totalProspectingGoal })}%`, "Atingimento prospecção");
+    setCard(4, `${totalLeads ? Math.round(totalSales / totalLeads * 100) : 0}%`, "Conversão prospecção → venda");
+    $("reportDashTableTitle").textContent = "Produtividade da prospecção ao fechamento";
+    $("reportDashTableHead").innerHTML = `<tr><th>Vendedor</th><th>Prospecções</th><th>Meta Pros.</th><th>Apresentações</th><th>Negociações</th><th>Fechamentos</th><th>Conversão</th></tr>`;
+    $("reportDashTableBody").innerHTML = productivity.map(r => `<tr>
+      <td>${escapeHTML(r.user.nome)}</td>
+      <td>${r.leads.length}</td>
+      <td>${Math.round(r.goal.prospeccao || 0)}</td>
+      <td>${r.apresentacao}</td>
+      <td>${r.negociacao}</td>
+      <td>${r.fechamento}</td>
+      <td>${r.conversao}%</td>
+    </tr>`).join("") || `<tr><td class="empty" colspan="7">Sem vendedores disponíveis no filtro.</td></tr>`;
+  } else if (view === "produtos") {
+    const byProduct = groupSales(validSales, "produtoId", productName);
+    const topProduct = byProduct[0];
+    setCard(1, String(byProduct.length), "Produtos com venda");
+    setCard(2, topProduct ? topProduct.nome : "—", "Produto líder");
+    setCard(3, money(total.implantacao), "Implantação vendida");
+    setCard(4, money(total.mensalidade), "MRR vendido");
+    $("reportDashTableTitle").textContent = "Resultado por produto";
+    $("reportDashTableHead").innerHTML = `<tr><th>Produto</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th></tr>`;
+    $("reportDashTableBody").innerHTML = byProduct.map(r => `<tr><td>${escapeHTML(r.nome)}</td><td>${r.count}</td><td>${money(r.implantacao)}</td><td>${money(r.mensalidade)}</td></tr>`).join("") || `<tr><td class="empty" colspan="4">Sem vendas no filtro.</td></tr>`;
+  } else {
+    setCard(1, String(leadBase.length), "Leads/prospects gerados");
+    setCard(2, String(validSales.length), "Vendas fechadas");
+    setCard(3, money(total.implantacao), "Implantação vendida");
+    setCard(4, money(total.mensalidade), "MRR vendido");
+    $("reportDashTableTitle").textContent = "Resumo por vendedor";
+    $("reportDashTableHead").innerHTML = `<tr><th>Vendedor</th><th>Leads</th><th>Vendas</th><th>Implantação</th><th>Mensalidade</th></tr>`;
+    const rows = productivity.map(r => `<tr><td>${escapeHTML(r.user.nome)}</td><td>${r.leads.length}</td><td>${r.sales.length}</td><td>${money(r.done.implantacao)}</td><td>${money(r.done.mensalidade)}</td></tr>`);
+    $("reportDashTableBody").innerHTML = rows.join("") || `<tr><td class="empty" colspan="5">Sem dados no filtro.</td></tr>`;
+  }
+}
+
 function renderReports() {
   const ctx = reportFilterContext();
   const { start, end, sellerId, productId, status } = ctx;
@@ -4282,6 +4487,7 @@ function renderReports() {
     .map(s => `<tr><td><strong>${escapeHTML(s.cliente)}</strong></td><td>${escapeHTML(productName(s.produtoId))}</td><td>${escapeHTML(userName(s.vendedorId))}</td><td>${money(s.implantacao)}</td><td>${money(s.mensalidade)}</td><td>${formatDate(s.dataVenda)}</td><td>${statusTag(s.status)}</td></tr>`)
     .join("") || `<tr><td class="empty" colspan="7">Nenhuma venda encontrada com os filtros atuais.</td></tr>`;
 
+  renderReportDashboard(ctx, leadBase, validSales, total);
   renderReportForecast();
   refreshReportTab();
 }
@@ -4752,13 +4958,14 @@ function deleteSale(id) {
 
 function openGoalModal(id = "") {
   if (!canManageGoals()) return showToast("Metas só podem ser alteradas por Administrador ou Gerente.", "fa-lock");
-  const goal = id ? findById(state.goals, id) : { id: "", tipo: "Global", vendedorId: "", produtoId: "todos", periodo: monthKey(), implantacao: 0, mensalidade: 0 };
+  const goal = id ? findById(state.goals, id) : { id: "", tipo: "Global", vendedorId: "", produtoId: "todos", periodo: monthKey(), prospeccao: 0, implantacao: 0, mensalidade: 0 };
   openModal(id ? "Editar Meta" : "Nova Meta", `
     <div class="form-grid">
       <div class="form-group"><label>Tipo de meta</label><select id="gTipo" class="select" onchange="toggleGoalSeller()"><option${goal.tipo === "Global" ? " selected" : ""}>Global</option><option${goal.tipo === "Individual" ? " selected" : ""}>Individual</option></select></div>
       <div class="form-group"><label>Período</label><input id="gPeriodo" class="field" type="month" value="${goal.periodo || monthKey()}"></div>
       <div class="form-group"><label>Consultor de vendas</label><select id="gVendedor" class="select">${goalSellerOptions(goal.vendedorId, true)}</select></div>
       <div class="form-group"><label>Produto</label><select id="gProduto" class="select">${productOptions(goal.produtoId || "todos", true)}</select></div>
+      <div class="form-group"><label>Meta prospecção</label><input id="gProspeccao" class="field" type="number" step="1" min="0" value="${goal.prospeccao || 0}"></div>
       <div class="form-group"><label>Meta implantação</label><input id="gImplantacao" class="field" type="number" step="0.01" value="${goal.implantacao || 0}"></div>
       <div class="form-group"><label>Meta mensalidade</label><input id="gMensalidade" class="field" type="number" step="0.01" value="${goal.mensalidade || 0}"></div>
     </div>
@@ -4786,6 +4993,7 @@ function saveGoal(id = "") {
     vendedorId,
     produtoId: $("gProduto").value,
     periodo: $("gPeriodo").value || monthKey(),
+    prospeccao: Math.max(0, Math.round(number($("gProspeccao").value))),
     implantacao: number($("gImplantacao").value),
     mensalidade: number($("gMensalidade").value)
   };
@@ -5163,13 +5371,18 @@ function exportAllReports() {
       const rs = receiptSummary(s);
       return { Cliente: s.cliente, Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, FormaPagamento: paymentMethodLabel(s.formaPagamento), RecebidoImplantacao: rs.paid, PendenteImplantacao: rs.pending, Status: s.status };
     }),
-    Leads: reportLeads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Etapa: l.pipeline, Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l) })),
+    Leads: reportLeads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Etapa: prospectStage(l), Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastImplantacaoValue(l), ForecastMensalidade: forecastMensalidadeValue(l) })),
+    EvolucaoProspect: stageEvolutionRows(reportLeads).map(r => ({ Estagio: r.stage, ProspectsNoEstagio: r.count, AlcancaramOuSuperaram: r.reached, PercentualBase: `${r.basePct}%`, ConversaoBase: `${r.conversionPct}%`, ForecastImplantacao: r.forecastImpl, ForecastMensalidade: r.forecastMrr, IdadeMediaDias: r.avgAge })),
     ForecastSemanal: forecastReportRowsForExport().semanal,
     ForecastPorVendedor: forecastReportRowsForExport().vendedores,
     ForecastPorProduto: forecastReportRowsForExport().produtos,
     Agendamentos: filteredVisibleAppointments({ start, end, sellerId }).map(a => ({ Data: a.data, Hora: a.hora, LeadCliente: a.empresa || leadName(a.leadId), Contato: a.contato, Vendedor: userName(a.vendedorId), Tipo: a.tipo, Status: a.status, Observacao: a.observacao })),
     Comissionamento: commissionRowsData().map(r => ({ DataRecebimento: r.dataRecebimento, Cliente: r.sale.cliente, Produto: productName(r.sale.produtoId), Vendedor: userName(r.sale.vendedorId), BaseRecebida: r.implantacao, PercentualVendedor: `${r.vendedorPercent}%`, ComissaoVendedor: r.comImpl, ComissaoGestor: canViewManagerCommission() ? r.comGestor : "" })),
-    Metas: state.goals.filter(g => isValidGoal(g) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)).map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Implantacao: g.implantacao, Mensalidade: g.mensalidade }))
+    ProdutividadeProspeccao: (canViewTeamProductivity() ? salesConsultants() : (isSalesConsultant(currentUser) ? [currentUser] : [])).map(u => {
+      const r = productivityMetricsForSeller(u, { start, end }, productId);
+      return { Vendedor: u.nome, Prospeccoes: r.leads.length, MetaProspeccao: Math.round(r.goal.prospeccao || 0), AtingimentoProspeccao: `${r.prospeccaoPct}%`, Apresentacoes: r.apresentacao, Negociacoes: r.negociacao, Fechamentos: r.fechamento, Conversao: `${r.conversao}%`, Implantacao: r.done.implantacao, Mensalidade: r.done.mensalidade };
+    }),
+    Metas: state.goals.filter(g => isValidGoal(g) && (canViewTeamProductivity() || g.tipo === "Global" || g.vendedorId === currentUser?.id)).map(g => ({ Tipo: g.tipo, Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Prospecao: g.prospeccao || 0, Implantacao: g.implantacao, Mensalidade: g.mensalidade }))
   };
   if (isAdmin()) {
     sheets.Usuarios = state.users.map(u => ({ Nome: u.nome, Login: u.login, Perfil: u.perfil, Equipe: u.equipe, Ativo: u.ativo !== false }));
