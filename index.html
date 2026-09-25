@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="crm-version" content="2026-09-22-1640-layout-monitor">
+  <meta name="crm-version" content="2026-09-25-1008-comissao-por-recebimento-atual">
 <title>RenSoftware CRM Comercial</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -898,7 +898,7 @@
           </div>
           <div class="topbar-actions">
             <span id="syncBadge" class="sync-badge warn"><i class="fa-solid fa-cloud"></i> Conectando Firestore...</span>
-            <span id="buildBadge" class="sync-badge ok"><i class="fa-solid fa-code-branch"></i> Histórico + Recebimentos</span>
+            <span id="buildBadge" class="sync-badge ok"><i class="fa-solid fa-code-branch"></i> 2026-09-25-1008-comissao-por-recebimento-atual</span>
             <button class="btn btn-outline" onclick="toggleMobileMenu()"><i class="fa-solid fa-bars"></i> Menu</button>
             <div class="user-pill">
               <div id="userAvatar" class="avatar">A</div>
@@ -1126,7 +1126,7 @@
             <div class="card-header">
               <div>
                 <div class="card-title">Comissionamento</div>
-                <div class="card-subtitle">Comissão apurada por recebimento: entrada, integral e cartão entram no mês; parcelas entram somente quando marcadas como pagas.</div>
+                <div class="card-subtitle">Comissão apurada por recebimento: entrada, integral e cartão entram no mês do recebimento; parcelas de meses anteriores entram na comissão somente quando pagas, pela data de pagamento.</div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-outline" onclick="rebuildReceiptHistory()"><i class="fa-solid fa-rotate"></i> Atualizar histórico</button>
@@ -1157,7 +1157,7 @@
 
             <div class="note" style="margin-bottom:14px">
               Fórmula aplicada: <strong id="commissionRateLabel">Comissão sobre implantação recebida, conforme metas de mensalidade e implantação</strong>.
-              A mensalidade não gera comissão direta; ela define o indicador. A comissão do vendedor é paga sobre a implantação efetivamente recebida no período: 20% sem bater indicadores, 25% ao bater um indicador e 30% ao bater mensalidade e implantação. Gestor: 25% sobre a implantação recebida da equipe.
+              A mensalidade não gera comissão direta; ela define o indicador. A comissão do vendedor é paga sobre a implantação efetivamente recebida no período. Parcelas pagas em meses posteriores entram no mês do pagamento; cartão de crédito, mesmo parcelado, entra integralmente na data do recebimento.
             </div>
 
             <div class="table-wrap" style="margin-bottom:14px">
@@ -1190,7 +1190,7 @@
               <div class="card-header">
                 <div>
                   <div class="card-title">Recebimentos a receber no período</div>
-                  <div id="commissionReceivableSummary" class="card-subtitle">Parcelas pendentes por vencimento, incluindo vendas de meses anteriores. <strong>Versão: 2026-09-18-1557-comissao-recebimentos</strong></div>
+                  <div id="commissionReceivableSummary" class="card-subtitle">Parcelas pendentes por vencimento, incluindo vendas de meses anteriores. <strong>Versão: 2026-09-25-1008-comissao-por-recebimento-atual</strong></div>
                 </div>
               </div>
               <div class="table-wrap">
@@ -1546,7 +1546,7 @@ const firebaseConfig = {
 const FIRESTORE_COLLECTION = "prospectflow_crm";
 const FIRESTORE_DOC = "database";
 const STORAGE_KEY = "prospectflow_db";
-const APP_BUILD_VERSION = "2026-09-22-1640-layout-monitor";
+const APP_BUILD_VERSION = "2026-09-25-1008-comissao-por-recebimento-atual";
 
 let state = null;
 let currentUser = null;
@@ -2026,7 +2026,10 @@ function generateReceivablesForSale(sale = {}) {
     if (amount <= 0) return;
     receipts.push({
       id: uid("rc"),
+      // data = vencimento/base histórica; dataPagamento = mês real de comissão quando pago
       data,
+      vencimento: data,
+      dataPagamento: Boolean(pago) ? data : "",
       valor: Number(amount.toFixed(2)),
       pago: Boolean(pago),
       tipo,
@@ -2158,12 +2161,35 @@ function getSaleReceipts(sale = {}) {
   const normalized = Array.isArray(sale.recebimentos) && sale.recebimentos.length
     ? sale.recebimentos
     : generateReceivablesForSale(normalizeSaleRecord(sale));
-  return normalized.map(r => ({
-    ...r,
-    valor: Number(r.valor || 0),
-    data: r.data || sale.dataVenda || todayISO(),
-    pago: Boolean(r.pago)
-  })).filter(r => r.valor > 0);
+  return normalized.map(r => {
+    const due = r.vencimento || r.dataVencimento || r.vencimentoParcela || r.data || sale.dataVenda || todayISO();
+    const paid = Boolean(r.pago);
+    const paymentDate = paid
+      ? (r.dataPagamento || r.dataRecebimento || r.recebidoEm || r.pagamentoEm || r.paidAt || r.data || due)
+      : "";
+    return {
+      ...r,
+      id: r.id || uid("rc"),
+      valor: Number(r.valor || 0),
+      data: due,
+      vencimento: due,
+      dataPagamento: paymentDate,
+      pago: paid
+    };
+  }).filter(r => r.valor > 0);
+}
+
+function receiptDueDate(receipt = {}, sale = {}) {
+  return receipt.vencimento || receipt.dataVencimento || receipt.vencimentoParcela || receipt.data || sale.dataVenda || todayISO();
+}
+
+function receiptPaymentDate(receipt = {}, sale = {}) {
+  if (!receipt?.pago) return "";
+  return receipt.dataPagamento || receipt.dataRecebimento || receipt.recebidoEm || receipt.pagamentoEm || receipt.paidAt || receipt.data || sale.dataVenda || todayISO();
+}
+
+function receiptCommissionDate(receipt = {}, sale = {}) {
+  return receipt?.pago ? receiptPaymentDate(receipt, sale) : receiptDueDate(receipt, sale);
 }
 
 function receiptSummary(sale = {}) {
@@ -3776,7 +3802,15 @@ function productivityRows(periodInfo = monthKey(), filters = {}) {
 }
 
 function commissionSaleMonthKey(saleOrReceipt) {
-  const date = String(saleOrReceipt?.data || saleOrReceipt?.dataRecebimento || saleOrReceipt?.dataVenda || todayISO());
+  const date = String(
+    saleOrReceipt?.dataPagamento
+    || saleOrReceipt?.dataRecebimento
+    || saleOrReceipt?.recebidoEm
+    || saleOrReceipt?.pagamentoEm
+    || saleOrReceipt?.data
+    || saleOrReceipt?.dataVenda
+    || todayISO()
+  );
   return /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : monthKey();
 }
 
@@ -3802,7 +3836,17 @@ function receivableEntries({ start = null, end = null, sellerId = "", productId 
     getSaleReceipts(sale).forEach(receipt => {
       if (onlyPaid && !receipt.pago) return;
       if (onlyPending && receipt.pago) return;
-      const dateOk = (!start || !end) || inDateRange(receipt.data || sale.dataVenda || todayISO(), start, end);
+      const dateForFilter = onlyPaid ? receiptPaymentDate(receipt, sale) : receiptDueDate(receipt, sale);
+      let dateOk = true;
+      if (start && end) {
+        if (onlyPending) {
+          // Parcelas vencidas em meses anteriores também precisam aparecer no mês atual como "a receber".
+          dateOk = parseLocalDate(dateForFilter) <= end;
+        } else {
+          // Comissão paga sempre entra pelo mês real do recebimento/pagamento.
+          dateOk = inDateRange(dateForFilter, start, end);
+        }
+      }
       if (!dateOk) return;
       rows.push({ sale, receipt });
     });
@@ -3879,7 +3923,7 @@ function commissionEntries() {
   const status = $("commissionStatusFilter")?.value ?? "Fechada";
   return paidCommissionEntries({ start: range.start, end: range.end, sellerId, productId, status })
     .filter(row => canAccessCommercialRecord(row.sale.vendedorId))
-    .sort((a,b) => String(b.receipt.data || b.sale.dataVenda || "").localeCompare(String(a.receipt.data || a.sale.dataVenda || "")));
+    .sort((a,b) => String(receiptPaymentDate(b.receipt, b.sale) || "").localeCompare(String(receiptPaymentDate(a.receipt, a.sale) || "")));
 }
 
 function commissionRowsData() {
@@ -3894,7 +3938,7 @@ function commissionRowsData() {
     return {
       sale,
       receipt,
-      dataRecebimento: receipt.data || sale.dataVenda,
+      dataRecebimento: receiptPaymentDate(receipt, sale) || receiptDueDate(receipt, sale),
       implantacao,
       mensalidade,
       policy,
@@ -3941,7 +3985,7 @@ function pendingReceivableRowsData() {
   const status = $("commissionStatusFilter")?.value ?? "Fechada";
   return receivableEntries({ start: range.start, end: range.end, sellerId, productId, status, onlyPending: true })
     .filter(row => canAccessCommercialRecord(row.sale.vendedorId))
-    .sort((a,b) => String(a.receipt.data || a.sale.dataVenda || "").localeCompare(String(b.receipt.data || b.sale.dataVenda || "")));
+    .sort((a,b) => String(receiptDueDate(a.receipt, a.sale) || "").localeCompare(String(receiptDueDate(b.receipt, b.sale) || "")));
 }
 
 function reconcileReceiptsForUpdatedSale(existing = {}, updated = {}) {
@@ -4017,6 +4061,32 @@ function syncLeadFromSale(sale = {}) {
   };
 }
 
+
+function markReceiptPaidToday(saleId, receiptId) {
+  if (!canViewManagerCommission()) {
+    showToast("Baixa de recebimento disponível apenas para Administrador/Gerente.", "fa-lock");
+    return;
+  }
+  const sale = findById(state.sales, saleId);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+  const receipts = getSaleReceipts(sale);
+  const targetId = String(receiptId || "");
+  const idx = receipts.findIndex(r => String(r.id || "") === targetId);
+  if (idx < 0) return showToast("Parcela não encontrada. Abra a venda e atualize os recebimentos.", "fa-triangle-exclamation");
+  receipts[idx] = {
+    ...receipts[idx],
+    pago: true,
+    dataPagamento: todayISO(),
+    observacao: [receipts[idx].observacao || "", "Baixado pelo comissionamento"].filter(Boolean).join(" | ")
+  };
+  sale.recebimentos = receipts;
+  sale.paymentSignature = salePaymentSignature(sale);
+  sale.updatedAt = new Date().toISOString();
+  persist();
+  renderAll();
+  showToast("Recebimento baixado. A comissão entrou no mês da data de pagamento.");
+}
+
 function renderCommission() {
   if (!$("commissionTable")) return;
 
@@ -4070,19 +4140,22 @@ function renderCommission() {
   }).join("") || `<tr><td class="empty" colspan="14">Nenhum recebimento pago encontrado para comissionamento no filtro selecionado.</td></tr>`;
 
   if ($("commissionReceivableSummary")) {
-    $("commissionReceivableSummary").innerHTML = `A receber no período filtrado: <strong>${money(totalPending)}</strong>. Parcelas de vendas antigas aparecem aqui pela data de vencimento/recebimento, mesmo que a venda tenha sido feita em mês anterior.`;
+    $("commissionReceivableSummary").innerHTML = `A receber até o fim do período filtrado: <strong>${money(totalPending)}</strong>. Parcelas vencidas de meses anteriores continuam aparecendo até a baixa; ao marcar como pago, a comissão entra no mês da data de pagamento.`;
   }
   if ($("commissionReceivableTable")) {
     $("commissionReceivableTable").innerHTML = pendingRows.map(({ sale, receipt }) => `
       <tr>
-        <td>${formatDate(receipt.data || sale.dataVenda)}</td>
+        <td>${formatDate(receiptDueDate(receipt, sale))}</td>
         <td><strong>${escapeHTML(sale.cliente)}</strong><br><small>Venda: ${formatDate(sale.dataVenda)}</small></td>
         <td>${escapeHTML(productName(sale.produtoId))}</td>
         <td>${escapeHTML(userName(sale.vendedorId))}</td>
         <td>${escapeHTML(receipt.tipo || paymentMethodLabel(sale.formaPagamento))}<br><small>${escapeHTML(receipt.parcela || "")}</small></td>
         <td><strong>${money(receipt.valor)}</strong></td>
         <td>${statusTag("Pendente")}</td>
-        <td>${canViewManagerCommission() ? `<button class="btn btn-outline btn-sm" onclick="openReceiptsModal('${sale.id}')" title="Baixar recebimento"><i class="fa-solid fa-money-check-dollar"></i></button>` : "—"}</td>
+        <td>${canViewManagerCommission() ? `
+          <button class="btn btn-success btn-sm" onclick="markReceiptPaidToday('${sale.id}', '${receipt.id || ""}')" title="Marcar como pago hoje"><i class="fa-solid fa-check"></i></button>
+          <button class="btn btn-outline btn-sm" onclick="openReceiptsModal('${sale.id}')" title="Editar recebimentos"><i class="fa-solid fa-money-check-dollar"></i></button>
+        ` : "—"}</td>
       </tr>
     `).join("") || `<tr><td class="empty" colspan="8">Nenhuma parcela pendente com vencimento no período filtrado.</td></tr>`;
   }
@@ -5205,8 +5278,11 @@ function saveSale(id = "") {
 let receiptModalIndex = 0;
 
 function receiptRowHTML(receipt = {}, idx = 0) {
-  return `<tr data-receipt-row="${idx}">
-    <td><input id="rData_${idx}" class="field" type="date" value="${escapeHTML(receipt.data || todayISO())}"></td>
+  const due = receiptDueDate(receipt, {});
+  const paymentDate = receiptPaymentDate(receipt, {}) || "";
+  return `<tr data-receipt-row="${idx}" data-receipt-id="${escapeHTML(receipt.id || "")}" data-original-pago="${receipt.pago ? "true" : "false"}">
+    <td><input id="rData_${idx}" class="field" type="date" value="${escapeHTML(due || todayISO())}" title="Vencimento da parcela"></td>
+    <td><input id="rDataPagamento_${idx}" class="field" type="date" value="${escapeHTML(paymentDate)}" title="Data real do recebimento/pagamento"></td>
     <td><input id="rValor_${idx}" class="field" type="number" step="0.01" value="${Number(receipt.valor || 0)}"></td>
     <td>
       <select id="rPago_${idx}" class="select">
@@ -5238,15 +5314,15 @@ function openReceiptsModal(saleId) {
   openModal("Recebimentos da implantação", `
     <div class="note" style="margin-bottom:14px">
       Cliente: <strong>${escapeHTML(sale.cliente)}</strong>. Marque como <strong>Pago</strong> somente o que já foi recebido.
-      A comissão do mês considera a data e o valor recebido de cada linha paga.
+      A comissão do mês considera a <strong>data de pagamento</strong> de cada linha paga. Se marcar uma parcela como paga e não informar data de pagamento, o CRM usa a data de hoje.
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Data receb.</th><th>Valor</th><th>Status</th><th>Tipo</th><th>Parcela</th><th>Obs.</th><th></th></tr></thead>
+        <thead><tr><th>Vencimento</th><th>Data pagamento</th><th>Valor</th><th>Status</th><th>Tipo</th><th>Parcela</th><th>Obs.</th><th></th></tr></thead>
         <tbody id="receiptRows"></tbody>
       </table>
     </div>
-    <button class="btn btn-outline" style="margin-top:12px" onclick="addReceiptRowToModal({ data: todayISO(), valor: 0, pago: false, tipo: 'Manual', parcela: '' })"><i class="fa-solid fa-plus"></i> Adicionar recebimento</button>
+    <button class="btn btn-outline" style="margin-top:12px" onclick="addReceiptRowToModal({ data: todayISO(), vencimento: todayISO(), dataPagamento: '', valor: 0, pago: false, tipo: 'Manual', parcela: '' })"><i class="fa-solid fa-plus"></i> Adicionar recebimento</button>
   `, `
     <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveReceipts('${saleId}')"><i class="fa-solid fa-floppy-disk"></i> Salvar recebimentos</button>
@@ -5262,11 +5338,18 @@ function saveReceipts(saleId) {
   const rows = [...document.querySelectorAll("#receiptRows tr[data-receipt-row]")];
   const receipts = rows.map(row => {
     const idx = row.dataset.receiptRow;
+    const dueDate = $(`rData_${idx}`)?.value || todayISO();
+    const isPaid = $(`rPago_${idx}`)?.value === "true";
+    const wasPaid = row.dataset.originalPago === "true";
+    const paymentInput = $(`rDataPagamento_${idx}`)?.value || "";
+    const paymentDate = isPaid ? (paymentInput || (!wasPaid ? todayISO() : dueDate)) : "";
     return {
-      id: uid("rc"),
-      data: $(`rData_${idx}`)?.value || todayISO(),
+      id: row.dataset.receiptId || uid("rc"),
+      data: dueDate,
+      vencimento: dueDate,
+      dataPagamento: paymentDate,
       valor: number($(`rValor_${idx}`)?.value || 0),
-      pago: $(`rPago_${idx}`)?.value === "true",
+      pago: isPaid,
       tipo: $(`rTipo_${idx}`)?.value.trim() || "Recebimento",
       parcela: $(`rParcela_${idx}`)?.value.trim(),
       observacao: $(`rObs_${idx}`)?.value.trim()
