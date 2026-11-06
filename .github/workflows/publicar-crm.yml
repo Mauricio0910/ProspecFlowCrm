@@ -1,0 +1,50 @@
+name: Publicar CRM Rensoftware no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/publicar-crm.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: rensoftware-pages-publicacao
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Baixar arquivos do repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar e montar site estatico
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s index.html || { echo "ERRO: index.html ausente ou vazio"; exit 1; }
+          mkdir -p publicacao
+          cp index.html publicacao/index.html
+          touch publicacao/.nojekyll
+          echo "Site pronto para envio."
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Enviar arquivos do site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: publicacao
+
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
