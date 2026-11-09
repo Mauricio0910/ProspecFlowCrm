@@ -284,7 +284,7 @@
         <button class="nav-item" onclick="doLogout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="nav-label">Sair</span></button>
 
         <div class="sidebar-footer">
-          <strong>Versão:</strong> v20 — Datas por venda/cadastro<br>
+          <strong>Versão:</strong> v21 — Auditoria de datas de vendas<br>
           <strong>Ambiente:</strong> <span id="sidebarWorkspace">CRM Comercial</span><br>
           <strong>Firebase:</strong> <span id="sidebarSync">modo local</span><br>
           As alterações são salvas automaticamente em bases separadas.
@@ -465,6 +465,7 @@
               <select id="saleSellerFilter" class="select" style="max-width:210px" onchange="renderSales()"><option value="">Todos os vendedores</option></select>
               <span id="salesPeriodCaption" class="help"></span>
               <button class="btn btn-muted" onclick="syncClosedLeadsIntoSales(state, false);renderAll()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar leads fechados</button>
+              <button class="btn btn-outline" onclick="openSaleDatesReview()"><i class="fa-solid fa-calendar-check"></i> Conferir datas de vendas</button>
               <button class="btn btn-outline" onclick="exportSalesPeriod()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="table-wrap"><table><thead><tr id="salesTableHeader"><th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
@@ -1099,6 +1100,8 @@ function migrateOldShape(raw) {
     const vendedorId = l.vendedorId || userIdByName(l.vendedor);
     const stage = l.status === "Fechado" ? "Fechamento" : (l.status === "Descartado" || l.status === "Perdido" ? "Perdido" : (l.pipeline || "Captação"));
     return {
+      // Preserva histórico de pagamentos, auditoria e edições manuais em cada recarga.
+      ...l,
       id: String(l.id || uid("l")),
       empresa: l.empresa || "Empresa",
       contato: l.contato || "",
@@ -1248,7 +1251,8 @@ function normalizeState(raw) {
       // Nunca transforme a ausência de data histórica em "hoje" ao carregar/sincronizar.
       createdAt: l.createdAt || l.dataCadastro || l.cadastradoEm || "",
       updatedAt: l.updatedAt || l.dataAtualizacao || "",
-      fechadoEm: l.fechadoEm || l.dataFechamento || l.dataVenda || "",
+      fechadoEm: Object.prototype.hasOwnProperty.call(l, "fechadoEm")
+        ? (l.fechadoEm || "") : (l.dataFechamento || l.dataVenda || ""),
       lostAt: l.lostAt || l.dataPerda || "",
       motivoPerda: l.motivoPerda || "",
       remarketingStatus: l.remarketingStatus || (l.status === "Perdido" ? "Aguardando" : ""),
@@ -1266,6 +1270,8 @@ function normalizeState(raw) {
   });
 
   data.sales = data.sales.map(s => ({
+    // Sem esse spread, manualEdit e dateHistory desapareciam ao recarregar o Firebase.
+    ...s,
     id: String(s.id || uid("s")),
     leadId: s.leadId || "",
     cliente: s.cliente || s.empresa || "Cliente",
@@ -1274,7 +1280,8 @@ function normalizeState(raw) {
     campaignId: s.campaignId || "",
     implantacao: Number(s.implantacao ?? s.adesao ?? 0),
     mensalidade: Number(s.mensalidade ?? 0),
-    dataVenda: s.dataVenda || s.data || s.fechadoEm || "",
+    dataVenda: Object.prototype.hasOwnProperty.call(s, "dataVenda")
+      ? (s.dataVenda || "") : (s.data || s.fechadoEm || ""),
     status: s.status || "Fechada",
     observacao: s.observacao || "",
     origem: s.origem || "",
@@ -4275,7 +4282,14 @@ function saveLead(id = "") {
     if (correctedDate) {
       const linkedSale = activeSaleForLead(saved);
       if (linkedSale && validCommercialDate(linkedSale.dataVenda) !== correctedDate) {
+        const oldDate = validCommercialDate(linkedSale.dataVenda);
+        linkedSale.dateHistory = [
+          ...(Array.isArray(linkedSale.dateHistory) ? linkedSale.dateHistory : []),
+          { anterior: oldDate, nova: correctedDate, usuarioId: currentUser?.id || "",
+            registradoEm: new Date().toISOString(), origem: "Edição de lead fechado" }
+        ].slice(-100);
         linkedSale.dataVenda = correctedDate;
+        linkedSale.dataVendaCorrigida = true;
         linkedSale.manualEdit = true;
         linkedSale.editadoManualmente = true;
       }
@@ -4574,10 +4588,14 @@ function addMonthsISO(baseDate, months) {
 }
 function effectiveSaleDate(sale) {
   if (!sale) return "";
+  // Fonte primária: a data da venda gravada no pedido, jamais a atualização.
+  const venda = validCommercialDate(sale.dataVenda);
+  if (venda) return venda;
+  // Quando uma data é explicitamente corrigida/limpa, não reconstruir a partir
+  // do lead: essa data poderia ser a que estava errada originalmente.
+  if (sale.manualEdit || sale.editadoManualmente || sale.dataVendaCorrigida) return "";
   const lead = saleLead(sale);
-  // Não usar createdAt, updatedAt nem a data de hoje como data do fechamento.
-  return validCommercialDate(sale.dataVenda) ||
-         validCommercialDate(lead?.fechadoEm) ||
+  return validCommercialDate(lead?.fechadoEm) ||
          validCommercialDate(lead?.dataFechamento) || "";
 }
 // Data comercial efetiva: a venda editada em Gestão de Vendas prevalece sobre o histórico do lead.
@@ -4600,9 +4618,12 @@ function activeSaleForLead(lead) {
 }
 function closingDateForLead(lead) {
   const sale = activeSaleForLead(lead);
-  return validCommercialDate(sale?.dataVenda) ||
-         validCommercialDate(sale?.fechadoEm) ||
-         validCommercialDate(lead?.fechadoEm) ||
+  if (sale) {
+    const date = validCommercialDate(sale.dataVenda);
+    if (date) return date;
+    if (sale.manualEdit || sale.editadoManualmente || sale.dataVendaCorrigida) return "";
+  }
+  return validCommercialDate(lead?.fechadoEm) ||
          validCommercialDate(lead?.dataFechamento) ||
          validCommercialDate(lead?.dataVenda) || "";
 }
@@ -4802,10 +4823,12 @@ function transferPaymentPlan(from, to = {}) {
 // Recria venda a partir do lead fechado preservando parcelas já marcadas como pagas.
 function saleFromLead(lead, existing = {}) {
   // Priorizar a data real corrigida na venda; não usar "hoje" em migrações.
-  const dataVenda = validCommercialDate(existing.dataVenda) ||
-    validCommercialDate(lead.fechadoEm) ||
-    validCommercialDate(lead.dataFechamento) ||
-    validCommercialDate(lead.dataVenda) || "";
+  const dataVenda = (existing.manualEdit || existing.editadoManualmente || existing.dataVendaCorrigida)
+    ? validCommercialDate(existing.dataVenda)
+    : (validCommercialDate(existing.dataVenda) ||
+       validCommercialDate(lead.fechadoEm) ||
+       validCommercialDate(lead.dataFechamento) ||
+       validCommercialDate(lead.dataVenda) || "");
   const sale = {
     ...existing,
     id: existing.id || uid("s"),
@@ -4820,7 +4843,9 @@ function saleFromLead(lead, existing = {}) {
     status: "Fechada",
     observacao: existing.observacao || "Criada automaticamente a partir do lead fechado",
     origem: lead.origem || existing.origem || "",
-    updatedAt: new Date().toISOString()
+    // Não atualizar automaticamente a cada render/sincronização.
+    // Isso disparava gravações repetidas no Firebase e embaralhava o histórico.
+    updatedAt: existing.updatedAt || new Date().toISOString()
   };
   return transferPaymentPlan(lead, sale);
 }
@@ -5170,7 +5195,14 @@ function saveLeadDateCorrection(id) {
       lead.dataVenda = dataVenda;
       const sale = activeSaleForLead(lead);
       if (sale) {
+        const anterior = validCommercialDate(sale.dataVenda);
+        sale.dateHistory = [
+          ...(Array.isArray(sale.dateHistory) ? sale.dateHistory : []),
+          { anterior, nova: dataVenda, usuarioId: currentUser?.id || "",
+            registradoEm: new Date().toISOString(), origem: "Revisar datas de lead" }
+        ].slice(-100);
         sale.dataVenda = dataVenda;
+        sale.dataVendaCorrigida = true;
         // Impede que a sincronização sobrescreva uma correção humana.
         sale.manualEdit = true;
         sale.editadoManualmente = true;
@@ -5871,6 +5903,16 @@ function saveSale(id = "") {
   };
 
   if (!revendas) applyPaymentPlanFromForm(data, "s");
+  // Auditoria: registrar alterações de data feitas pela Gestão de Vendas.
+  const anterior = oldSale ? validCommercialDate(oldSale.dataVenda) : "";
+  if (oldSale && anterior !== data.dataVenda) {
+    data.dateHistory = [
+      ...(Array.isArray(oldSale.dateHistory) ? oldSale.dateHistory : []),
+      { anterior, nova: data.dataVenda, usuarioId: currentUser?.id || "",
+        registradoEm: new Date().toISOString(), origem: "Edição de venda" }
+    ].slice(-100);
+    data.dataVendaCorrigida = true;
+  }
 
   if (id) {
     const idx = state.sales.findIndex(s => s.id === id);
@@ -5886,6 +5928,8 @@ function saveSale(id = "") {
     lead.pipeline = "Fechamento";
     lead.probabilidade = 100;
     lead.fechadoEm = data.dataVenda;
+    lead.dataFechamento = data.dataVenda;
+    lead.dataVenda = data.dataVenda;
     lead.updatedAt = new Date().toISOString();
     delete lead.saleDeletedAt;
     delete lead.vendaExcluida;
@@ -6210,10 +6254,7 @@ function dateInside(value, range) {
 
 // Não recorrer à data atual para registros sem data comercial comprovada.
 function trustedSaleDate(sale) {
-  const lead = sale?.leadId ? (state.leads || []).find(l => l.id === sale.leadId) : null;
-  return validCommercialDate(sale?.dataVenda) ||
-         validCommercialDate(sale?.fechadoEm) ||
-         validCommercialDate(lead?.fechadoEm) || "";
+  return effectiveSaleDate(sale);
 }
 function analysisSales(range, seller = "") {
   return range.valid ? (state.sales || []).filter(s =>
@@ -6402,6 +6443,115 @@ function exportAllReports() {
   Object.entries(sheets).forEach(([name,rows])=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),name));
   XLSX.writeFile(wb,`relatorios_${range.start}_a_${range.end}.xlsx`);
   showToast("Relatório exportado conforme o período selecionado.");
+}
+
+
+// V21: conferência de datas de venda. Nenhuma data histórica é presumida ou corrigida sozinha.
+function openSaleDatesReview() {
+  const all = (state.sales || []).slice().sort((a,b) =>
+    String(a.cliente || "").localeCompare(String(b.cliente || ""), "pt-BR"));
+  let diverge = 0, semData = 0;
+  const rows = all.map(sale => {
+    const lead = sale.leadId ? findById(state.leads || [], sale.leadId) : null;
+    const pedido = validCommercialDate(sale.dataVenda);
+    const noLead = validCommercialDate(lead?.fechadoEm);
+    const difere = Boolean(pedido && noLead && pedido !== noLead);
+    if (!pedido) semData++;
+    if (difere) diverge++;
+    const classe = !pedido ? "Sem data" : difere ? "Datas divergentes" : "Conferir";
+    return `<tr>
+      <td><strong>${escapeHTML(sale.cliente || "Sem cliente")}</strong>
+        <small>${escapeHTML(userName(sale.vendedorId))}</small></td>
+      <td>${pedido ? formatDate(pedido) : "<strong>Não informada</strong>"}</td>
+      <td>${noLead ? formatDate(noLead) : "—"}</td>
+      <td>${lead ? formatDate(validCommercialDate(lead.createdAt)) : "—"}</td>
+      <td>${escapeHTML(classe)}</td>
+      <td><button class="btn btn-outline btn-sm"
+        onclick="openSaleDateCorrection('${escapeHTML(sale.id)}')">Corrigir</button></td>
+    </tr>`;
+  }).join("");
+  openModal("Conferir datas das vendas", `
+    <div class="note" style="margin-bottom:14px">
+      <strong>${all.length} vendas • ${semData} sem data de fechamento •
+      ${diverge} com divergência entre venda e lead.</strong><br>
+      A data da venda é a data efetiva de fechamento, não a data de cadastro,
+      atualização, previsão ou pagamento da parcela. As datas antigas não serão
+      alteradas automaticamente. Confira cada data com o pedido/contrato real.
+      A lista abaixo inclui todos os períodos para facilitar a conferência.
+    </div>
+    <div class="table-wrap" style="max-height:55vh;overflow:auto">
+      <table><thead><tr>
+        <th>Cliente / vendedor</th><th>Venda salva</th><th>Fechamento no lead</th>
+        <th>Cadastro</th><th>Conferência</th><th>Ação</th>
+      </tr></thead><tbody>${rows || '<tr><td colspan="6">Nenhuma venda registrada.</td></tr>'}</tbody></table>
+    </div>
+  `, `<button class="btn btn-outline" onclick="closeModal()">Fechar</button>`);
+}
+function openSaleDateCorrection(id) {
+  const sale = findById(state.sales || [], id);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+  const lead = sale.leadId ? findById(state.leads || [], sale.leadId) : null;
+  const saved = validCommercialDate(sale.dataVenda);
+  const history = Array.isArray(sale.dateHistory) ? sale.dateHistory.slice(-6).reverse() : [];
+  const historyText = history.map(h => `<div class="help">
+    ${escapeHTML(h.anterior || "Sem data")} → ${escapeHTML(h.nova || "Sem data")}
+    (${escapeHTML(formatDate(h.registradoEm || ""))})</div>`).join("");
+  openModal(`Corrigir data — ${escapeHTML(sale.cliente || "")}`, `
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Data real do fechamento da venda</label>
+        <input id="fixSaleDate" class="field" type="date" value="${saved}">
+        <small class="help">Confira no pedido/contrato de venda. Deixe vazio apenas se for desconhecida.</small>
+      </div>
+      <div class="form-group">
+        <label>Data registrada no lead vinculado</label>
+        <input class="field" readonly value="${escapeHTML(lead?.fechadoEm || "Não vinculada")}">
+        <small class="help">O cadastro do lead não será alterado.</small>
+      </div>
+    </div>
+    <div class="note" style="margin-top:12px">
+      Esta alteração atualiza a data do pedido e do fechamento do lead vinculado
+      e reclassifica o resultado nos relatórios por período. Não modifica as datas
+      de pagamentos/parcelas, nem cria ou exclui vendas.
+    </div>
+    ${history.length ? `<div style="margin-top:12px"><strong>Histórico de correções</strong>${historyText}</div>` : ""}
+  `, `<button class="btn btn-outline" onclick="openSaleDatesReview()">Voltar</button>
+      <button class="btn btn-primary" onclick="saveSaleDateCorrection('${escapeHTML(sale.id)}')">Salvar data correta</button>`);
+}
+function saveSaleDateCorrection(id) {
+  const sale = findById(state.sales || [], id);
+  if (!sale) return showToast("Venda não encontrada.", "fa-triangle-exclamation");
+  const nova = $("fixSaleDate")?.value || "";
+  if (nova && !validCommercialDate(nova))
+    return showToast("Informe uma data válida.", "fa-triangle-exclamation");
+  const antiga = validCommercialDate(sale.dataVenda);
+  if (nova === antiga) return showToast("A data já está igual à registrada.");
+  if (!confirm(`Confirmar data de fechamento da venda "${sale.cliente || ""}" de
+${antiga || "(desconhecida)"} para ${nova || "(desconhecida)"}?
+Esta correção repercute nos relatórios e nas metas.`)) return;
+
+  const instante = new Date().toISOString();
+  sale.dateHistory = [
+    ...(Array.isArray(sale.dateHistory) ? sale.dateHistory : []),
+    { anterior: antiga, nova, registradoEm: instante,
+      usuarioId: currentUser?.id || "", origem: "Conferência manual" }
+  ].slice(-100);
+  sale.dataVenda = nova;
+  sale.dataVendaCorrigida = true;
+  sale.manualEdit = true;
+  sale.editadoManualmente = true;
+  sale.updatedAt = instante;
+  const lead = sale.leadId ? findById(state.leads || [], sale.leadId) : null;
+  if (lead) {
+    lead.fechadoEm = nova;
+    lead.dataFechamento = nova;
+    lead.dataVenda = nova;
+    lead.updatedAt = instante;
+  }
+  persist();
+  closeModal();
+  renderAll();
+  showToast("Data corrigida e registrada no histórico. Confira o relatório do período.");
 }
 
 // =============== EVENTOS ===============
