@@ -466,6 +466,7 @@
               <span id="salesPeriodCaption" class="help"></span>
               <button class="btn btn-muted" onclick="syncClosedLeadsIntoSales(state, false);renderAll()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar leads fechados</button>
               <button class="btn btn-outline" onclick="openSaleDatesReview()"><i class="fa-solid fa-calendar-check"></i> Conferir datas de vendas</button>
+              <button class="btn btn-outline" onclick="openHistoricalSalesAudit()"><i class="fa-solid fa-clock-rotate-left"></i> Recuperar datas históricas</button>
               <button class="btn btn-outline" onclick="exportSalesPeriod()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
             <div class="table-wrap"><table><thead><tr id="salesTableHeader"><th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
@@ -1184,7 +1185,7 @@ function normalizeState(raw) {
   const data = ensureRequiredDefaults({ ...seed, ...(raw || {}) });
   data.version = 11;
   data.createdAt = data.createdAt || new Date().toISOString();
-  data.updatedAt = new Date().toISOString();
+  data.updatedAt = data.updatedAt || "";
 
   data.products = data.products.map(p => ({
     id: String(p.id || uid("p")),
@@ -1325,7 +1326,8 @@ function normalizeState(raw) {
   });
 
   ensureRequiredDefaults(data);
-  syncClosedLeadsIntoSales(data);
+  // V22: hidratação é somente leitura. Não criar/alterar datas de vendas durante carga.
+  // Vendas novas são criadas apenas por operação comercial explícita e datada.
   distributeGlobalGoals(data);
   if ((data.workspace || currentWorkspace) === "revendas") {
     (data.products || []).forEach(p => { p.mensalidade = 0; });
@@ -1626,11 +1628,13 @@ function saleFromLead(lead, existing = {}) {
     mensalidade: Number(lead.mensalidade) || 0,
     // Nunca fabricar a data da venda durante sincronização/hidratação.
     // Se a venda foi corrigida, sua data prevalece sobre a data antiga do lead.
-    dataVenda: existing.dataVenda || lead.fechadoEm || lead.dataFechamento || lead.dataVenda || "",
+    dataVenda: Object.prototype.hasOwnProperty.call(existing, "dataVenda")
+      ? (existing.dataVenda || "")
+      : (validCommercialDate(lead.fechadoEm) || validCommercialDate(lead.dataFechamento) || ""),
     status: "Fechada",
     observacao: existing.observacao || "Criada automaticamente a partir do lead fechado",
     origem: lead.origem || existing.origem || "",
-    updatedAt: new Date().toISOString()
+    updatedAt: existing.updatedAt || new Date().toISOString()
   };
 }
 function syncClosedLeadsIntoSales(data = state, silent = true) {
@@ -2651,8 +2655,7 @@ function saveLead(id = "") {
   if (data.status === "Fechado") {
     data.pipeline = "Fechamento";
     data.probabilidade = 100;
-    data.fechadoEm = oldLead?.fechadoEm ||
-      (oldLead?.status === "Fechado" ? "" : todayISO());
+    data.fechadoEm = oldLead?.fechadoEm || "";
   }
   if (data.status === "Perdido") {
     data.pipeline = "Perdido";
@@ -4247,7 +4250,7 @@ function saveLead(id = "") {
   if (data.status === "Fechado") {
     data.pipeline = "Fechamento";
     data.probabilidade = 100;
-    data.fechadoEm = oldLead?.fechadoEm || todayISO();
+    data.fechadoEm = oldLead?.fechadoEm || "";
   }
   if (data.status === "Perdido") {
     data.pipeline = "Perdido";
@@ -4956,8 +4959,10 @@ function saveLead(id = "") {
     data.probabilidade = 100;
     // A data só nasce como "hoje" na PRIMEIRA transição para Fechado.
     // Uma simples edição de lead antigo já fechado não pode criar venda neste mês.
-    data.fechadoEm = $("fDataFechamento")?.value || oldLead?.fechadoEm ||
-      (oldLead?.status === "Fechado" ? "" : todayISO());
+    data.fechadoEm = $("fDataFechamento")?.value || oldLead?.fechadoEm || "";
+    if (oldLead?.status !== "Fechado" && !validCommercialDate(data.fechadoEm)) {
+      return showToast("Informe a data REAL de fechamento antes de concluir o lead.", "fa-triangle-exclamation");
+    }
     if (Array.isArray(data.paymentSchedule)) {
       data.paymentSchedule = data.paymentSchedule.map(item => item.descricao === "À vista"
         ? { ...item, vencimento: data.fechadoEm, dataPagamento: item.pago ? data.fechadoEm : item.dataPagamento }
@@ -5849,32 +5854,30 @@ function exportAllReports() {
   showToast(`Relatório mensal ${period} gerado.`);
 }
 
-// Evita que uma venda fechada editada manualmente seja sobrescrita pelo lead fechado
-// e impede que vendas excluídas sejam recriadas automaticamente.
+// V22: sincronização segura apenas para fechamento explícito com data confirmada.
 function syncClosedLeadsIntoSales(data = state, silent = true) {
   const leads = data?.leads || [];
   data.sales = Array.isArray(data.sales) ? data.sales : [];
   let changed = false;
-
-  leads
-    .filter(l => l.status === "Fechado" && !l.saleDeletedAt && !l.vendaExcluida)
+  leads.filter(l => l.status === "Fechado" && !l.saleDeletedAt && !l.vendaExcluida)
     .forEach(lead => {
-      const existing = data.sales.find(s => s.leadId === lead.id);
-      if (existing) {
-        if (existing.manualEdit || existing.editadoManualmente) return;
-        const before = JSON.stringify(existing);
-        Object.assign(existing, saleFromLead(lead, existing));
-        if (before !== JSON.stringify(existing)) changed = true;
-      } else {
-        data.sales.push(saleFromLead(lead));
-        changed = true;
-      }
+      // Vendas existentes nunca são regravadas por sincronização: evita alteração
+      // de data, valor, parcelas e histórico em uma simples edição do lead.
+      if (data.sales.some(s => s.leadId === lead.id)) return;
+      const date = validCommercialDate(lead.fechadoEm) ||
+                   validCommercialDate(lead.dataFechamento);
+      if (!date) return; // sem prova da data, não gerar pedido automático
+      const sale = saleFromLead(lead);
+      sale.dataVenda = date;
+      sale.origemRegistro = "Lead fechado com data informada";
+      data.sales.push(sale);
+      changed = true;
     });
-
   if (data === state && changed) persist();
-  if (data === state && !silent) showToast(changed ? "Leads fechados sincronizados com Gestão de Vendas." : "Nenhum lead fechado pendente de sincronização.");
+  if (data === state && !silent) showToast(changed
+    ? "Vendas com data confirmada sincronizadas."
+    : "Nenhuma venda nova com data confirmada.");
 }
-
 function saveSale(id = "") {
   const cliente = $("sCliente").value.trim();
   if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
@@ -6552,6 +6555,353 @@ Esta correção repercute nos relatórios e nas metas.`)) return;
   closeModal();
   renderAll();
   showToast("Data corrigida e registrada no histórico. Confira o relatório do período.");
+}
+
+
+// V22: Recuperação de datas históricas baseada em evidências do Firebase e backups.
+// Nenhuma data é inferida a partir de "updatedAt", publicação ou data corrente.
+let historicAudit = { remote: null, suggestions: [], source: "", capturedAt: "" };
+
+function dateAuditExtract(raw) {
+  let data = raw;
+  if (data && typeof data === "object" && data.state && (data.state.sales || data.state.leads))
+    data = data.state;
+  if (data && typeof data === "object" && data.prospectflow_crm?.database)
+    data = data.prospectflow_crm.database;
+  if (data && typeof data === "object" && data.database && (data.database.sales || data.database.leads))
+    data = data.database;
+  if (!data || typeof data !== "object") return null;
+  const sales = Array.isArray(data.sales) ? data.sales : (Array.isArray(data.vendas) ? data.vendas : null);
+  const leads = Array.isArray(data.leads) ? data.leads : null;
+  if (!sales && !leads) return null;
+  return { ...data, sales: sales || [], leads: leads || [] };
+}
+
+async function dateAuditReadRemote() {
+  if (!firebaseReady) throw new Error("Firebase não conectado. Verifique o status de sincronização.");
+  if (firebaseMode === "firestore" && firestore) {
+    const snap = await firestore.collection(FIRESTORE_COLLECTION).doc(activeFirestoreDoc()).get({ source: "server" });
+    if (!snap.exists) throw new Error("Documento comercial não localizado no Firestore.");
+    return snap.data();
+  }
+  if (firebaseMode === "database" && realtimeRef) {
+    const snap = await realtimeRef.get();
+    if (!snap.exists()) throw new Error("Documento comercial não localizado no Realtime Database.");
+    return snap.val();
+  }
+  throw new Error("Conexão com Firebase não disponível.");
+}
+function auditClosedSale(s) {
+  return !["Cancelada","Cancelado","Perdida","Perdido"].includes(String(s.status || ""));
+}
+function auditMonthCounts(db) {
+  const out = {};
+  (db.sales || []).filter(auditClosedSale).forEach(s => {
+    const day = validCommercialDate(s.dataVenda) || "";
+    const key = day ? day.slice(0,7) : "Sem data";
+    out[key] = (out[key] || 0) + 1;
+  });
+  return out;
+}
+function auditHtmlSummary(db) {
+  const sales = (db.sales || []).filter(auditClosedSale);
+  const dated = sales.filter(s => validCommercialDate(s.dataVenda));
+  const suspicious = sales.filter(s => validCommercialDate(s.dataVenda) === "2026-11-06");
+  const undated = sales.length - dated.length;
+  const leadMap = new Map((db.leads || []).map(l => [String(l.id),l]));
+  const conflicts = sales.filter(s => {
+    const lead=leadMap.get(String(s.leadId));
+    const a=validCommercialDate(s.dataVenda);
+    const b=validCommercialDate(lead?.fechadoEm);
+    return a && b && a!==b;
+  });
+  const months = Object.entries(auditMonthCounts(db)).sort((a,b)=>a[0].localeCompare(b[0]));
+  return `<div class="note" style="margin-bottom:12px">
+    <strong>${sales.length} vendas • ${undated} sem data • ${conflicts.length} com divergência •
+    ${suspicious.length} registradas em 06/11/2026</strong>
+    <p style="margin-top:7px">Estes números são lidos diretamente do Firebase, sem gravar nada.
+    A data 06/11 é apenas um sinal para conferir, não uma prova da data real de outra venda.</p>
+  </div><div class="table-wrap"><table><thead><tr><th>Mês da venda salvo</th><th>Pedidos</th></tr></thead><tbody>
+   ${months.map(([month,count])=>`<tr><td>${escapeHTML(month)}</td><td>${count}</td></tr>`).join("")}
+   </tbody></table></div>`;
+}
+function dateAuditDownload(filename, object) {
+  const blob = new Blob([JSON.stringify(object,null,2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download=filename;
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1200);
+}
+function exportCurrentSalesDateAudit() {
+  if (!historicAudit.remote) return showToast("Leia o Firebase antes de exportar.", "fa-triangle-exclamation");
+  const db=dateAuditExtract(historicAudit.remote);
+  // Exporta somente dados necessários à auditoria: não exporta usuários, senhas, e-mails ou telefones.
+  const clean = {
+    formato: "rensoftware-auditoria-datas-v22",
+    workspace: currentWorkspace,
+    capturadoEm: new Date().toISOString(),
+    sales: (db.sales||[]).map(s=>({
+      id:s.id,leadId:s.leadId,cliente:s.cliente||"",dataVenda:s.dataVenda||"",
+      data:s.data||"",fechadoEm:s.fechadoEm||"",status:s.status||"",
+      manualEdit:Boolean(s.manualEdit),dateHistory:s.dateHistory||[],
+      createdAt:s.createdAt||"",updatedAt:s.updatedAt||""
+    })),
+    leads: (db.leads||[]).map(l=>({
+      id:l.id,empresa:l.empresa||"",status:l.status||"",
+      fechadoEm:l.fechadoEm||"",dataFechamento:l.dataFechamento||"",
+      dataVenda:l.dataVenda||"",createdAt:l.createdAt||"",
+      movementHistory:l.movementHistory||[],activityHistory:l.activityHistory||[]
+    }))
+  };
+  dateAuditDownload(`auditoria-datas-${currentWorkspace}-${todayISO()}.json`,clean);
+  showToast("Relatório de auditoria exportado. Contém nomes de clientes: guarde em local seguro.");
+}
+async function openHistoricalSalesAudit() {
+  if (!currentUser || !["administrador","gerente"].includes(norm(currentUser.perfil||"")))
+    return showToast("Somente administrador/gerente pode auditar datas históricas.", "fa-triangle-exclamation");
+  openModal("Auditoria histórica de vendas", `<p>Consultando a base do Firebase (somente leitura)...</p>`,
+    `<button class="btn btn-outline" onclick="closeModal()">Fechar</button>`,true);
+  try {
+    const remote=await dateAuditReadRemote();
+    if (!document.getElementById("genericModal")?.classList.contains("open")) return;
+    const db=dateAuditExtract(remote);
+    if (!db) throw new Error("Base não contém arrays sales/leads reconhecíveis.");
+    if (db.workspace && db.workspace!==currentWorkspace)
+      throw new Error("A base consultada pertence a outro ambiente.");
+    historicAudit = { remote, suggestions: [], source: "", capturedAt: new Date().toISOString() };
+    openModal("Auditoria histórica — Firebase", `
+      ${auditHtmlSummary(db)}
+      <div class="note" style="margin:12px 0">
+        <strong>Para recuperar datas de agosto, setembro e outubro:</strong>
+        escolha um backup JSON do Firestore/CRM capturado antes da alteração de datas.
+        Arquivos HTML antigos contêm o programa, mas não o histórico das vendas.
+        Só serão propostas datas presentes no backup, vinculadas por ID da venda ou do lead.
+      </div>
+      <button class="btn btn-outline" style="margin:5px 0 12px"
+        onclick="dateAuditUseInternalHistory()"><i class="fa-solid fa-clock"></i>
+        Conferir datas do histórico interno (sem backup)</button>
+      <div class="form-group"><label>Backup histórico de dados (JSON)</label>
+        <input class="field" type="file" accept=".json,application/json"
+         onchange="dateAuditLoadHistoricFile(this)">
+      </div>
+      <div id="dateAuditCandidateResults" class="help" style="margin-top:10px">
+        Nenhum backup histórico carregado. Nenhuma venda será modificada.
+      </div>
+    `,`<button class="btn btn-outline" onclick="exportCurrentSalesDateAudit()"><i class="fa-solid fa-file-arrow-down"></i> Exportar auditoria atual</button>
+       <button class="btn btn-outline" onclick="closeModal()">Fechar</button>`,true);
+  } catch(e) {
+    console.error("Auditoria Firebase:",e);
+    openModal("Auditoria histórica — conexão",`
+      <div class="note"><strong>Não consegui ler a base do Firebase.</strong>
+        ${escapeHTML(e.message||String(e))}<br>
+        Não foi feita qualquer alteração. Verifique sincronização e permissões.</div>
+    `,`<button class="btn btn-outline" onclick="closeModal()">Fechar</button>`);
+  }
+}
+
+function dateAuditHistoricalCandidates(historical, current) {
+  const oldSales=historical.sales||[], oldLeads=historical.leads||[];
+  const bySaleId=new Map(oldSales.filter(s=>s.id).map(s=>[String(s.id),s]));
+  const byLeadId=new Map();
+  oldSales.forEach(s=>{ if(s.leadId){
+    const key=String(s.leadId);
+    byLeadId.set(key, [...(byLeadId.get(key)||[]),s]);
+  }});
+  const leadById=new Map(oldLeads.filter(l=>l.id).map(l=>[String(l.id),l]));
+  const currentLeads=new Map((current.leads||[]).map(l=>[String(l.id),l]));
+  const results=[];
+  (current.sales||[]).forEach(sale=>{
+    if (!auditClosedSale(sale)) return;
+    const old=bySaleId.get(String(sale.id)) ||
+              ((byLeadId.get(String(sale.leadId))||[]).length===1
+               ? byLeadId.get(String(sale.leadId))[0] : null);
+    const oldLead=sale.leadId ? leadById.get(String(sale.leadId)) : null;
+    const currentDate=validCommercialDate(sale.dataVenda);
+    const sources=[];
+    function consider(raw,from) {
+      const date=validCommercialDate(raw);
+      if(date && date!==currentDate && !sources.some(x=>x.date===date && x.from===from))
+        sources.push({date,from});
+    }
+    if(old){
+      consider(old.dataVenda,"Venda no backup histórico");
+      if(!Object.prototype.hasOwnProperty.call(old,"dataVenda")) {
+        consider(old.data,"Campo data no backup histórico");
+        consider(old.fechadoEm,"Campo fechadoEm no backup histórico");
+      }
+    }
+    if(oldLead && (oldLead.status==="Fechado" || oldLead.pipeline==="Fechamento")){
+      consider(oldLead.fechadoEm,"Fechamento do lead no backup histórico");
+      consider(oldLead.dataFechamento,"Data de fechamento no lead histórico");
+    }
+    // Histórico de correções possui evidência de valores anteriores, não de vendas reais por si só.
+    if(Array.isArray(sale.dateHistory))
+      sale.dateHistory.forEach(h=>consider(h.anterior,"Histórico de correção (confirmar no contrato)"));
+    if(!sources.length) return;
+    results.push({
+      saleId:String(sale.id),leadId:String(sale.leadId||""),
+      client:String(sale.cliente||"Cliente"), currentDate,sources,
+      hasHistoricSale:Boolean(old),hasHistoricLead:Boolean(oldLead)
+    });
+  });
+  return results;
+}
+
+function dateAuditUseInternalHistory() {
+  if (!historicAudit.remote) return showToast("Firebase não consultado.", "fa-triangle-exclamation");
+  const current=dateAuditExtract(historicAudit.remote);
+  historicAudit.source="Histórico interno do Firebase";
+  historicAudit.suggestions=dateAuditHistoricalCandidates({sales:[],leads:[]},current);
+  dateAuditRenderSuggestions(historicAudit.source);
+}
+function dateAuditRenderSuggestions(sourceName) {
+  const suggestions=historicAudit.suggestions;
+  const box=$("dateAuditCandidateResults");
+  if (!box) return;
+  box.innerHTML=`
+      <div class="note"><strong>Arquivo: ${escapeHTML(sourceName)}</strong>.
+      ${suggestions.length} venda(s) com datas alternativas documentadas.
+      Nenhuma data foi alterada. Se o backup for posterior à alteração, pode não conter a data verdadeira.
+      Não use datas de previsão, cadastro ou pagamento como fechamento.</div>
+      ${suggestions.length?`
+      <div class="table-wrap" style="max-height:45vh;overflow:auto;margin-top:10px"><table>
+      <thead><tr><th>Cliente</th><th>Data atual</th><th>Data do backup / evidência</th></tr></thead><tbody>
+      ${suggestions.map((r,i)=>`<tr>
+        <td>${escapeHTML(r.client)}</td>
+        <td>${r.currentDate ? formatDate(r.currentDate) : "Sem data"}</td>
+        <td><select id="auditCandidate_${i}" class="select">
+          <option value="">Não alterar (conferência pendente)</option>
+          ${r.sources.map((d,j)=>`<option value="${j}">${escapeHTML(formatDate(d.date))}
+            — ${escapeHTML(d.from)}</option>`).join("")}
+        </select></td></tr>`).join("")}
+      </tbody></table></div>
+      <button class="btn btn-primary" style="margin-top:12px"
+        onclick="applyHistoricallyVerifiedSaleDates()">
+        Aplicar SOMENTE as datas selecionadas
+      </button>`:"<p>Sem diferenças recuperáveis neste backup. Compare outro arquivo.</p>"}`;
+ }
+
+async function dateAuditLoadHistoricFile(input) {
+  const file=input?.files?.[0];
+  if(!file) return;
+  try {
+    if (file.size > 30*1024*1024) throw new Error("Arquivo excede 30 MB.");
+    const source=JSON.parse(await file.text());
+    if (source.workspace && source.workspace!==currentWorkspace)
+      throw new Error("Este backup pertence a outro ambiente (Comercial/Revendas).");
+    const historic=dateAuditExtract(source);
+    const current=dateAuditExtract(historicAudit.remote);
+    if(!historic || !current) throw new Error("JSON não contém sales/leads no formato do CRM.");
+    historicAudit.suggestions=dateAuditHistoricalCandidates(historic,current);
+    historicAudit.source=file.name;
+    dateAuditRenderSuggestions(file.name);
+  } catch(e) {
+    historicAudit.suggestions=[];
+    const box=$("dateAuditCandidateResults");
+    if(box) box.textContent=`Erro no backup: ${e.message||String(e)}`;
+  }
+}
+function dateAuditApplyRaw(db, choices, instant) {
+  const ids=new Map(choices.map(x=>[x.saleId,x]));
+  const touched = new Set();
+  db.sales=(db.sales||[]).map(s=>{
+    const choice=ids.get(String(s.id));
+    if(!choice) return s;
+    touched.add(choice.saleId);
+    const previous=validCommercialDate(s.dataVenda);
+    if(previous!==choice.expectedDate) throw new Error("Venda alterada por outro usuário. Atualize a auditoria.");
+    const entry={
+      anterior: previous, nova:choice.date, registradoEm:instant,
+      origem:`Restauração conferida: ${historicAudit.source} (${choice.from})`,
+      usuarioId:currentUser?.id||""
+    };
+    return {...s,dataVenda:choice.date,dataVendaCorrigida:true,
+      manualEdit:true,editadoManualmente:true,
+      dateHistory:[...(Array.isArray(s.dateHistory)?s.dateHistory:[]),entry].slice(-100),
+      updatedAt:instant};
+  });
+  if(touched.size!==choices.length)
+    throw new Error("Uma venda não foi encontrada na base atual.");
+  const leadDates=new Map();
+  db.sales.forEach(s=>{
+    if(ids.has(String(s.id)) && s.leadId) {
+      const key=String(s.leadId), prev=leadDates.get(key);
+      // Evitar duas vendas de um mesmo lead com datas diferentes.
+      if(prev && prev!==s.dataVenda) throw new Error("Vendas conflitantes no mesmo lead.");
+      leadDates.set(key,s.dataVenda);
+    }
+  });
+  db.leads=(db.leads||[]).map(l=>{
+    const day=leadDates.get(String(l.id));
+    if(!day) return l;
+    return {...l,fechadoEm:day,dataFechamento:day,dataVenda:day,updatedAt:instant};
+  });
+  db.dateRecoveryAudit=[...(Array.isArray(db.dateRecoveryAudit)?db.dateRecoveryAudit:[]),
+    ...choices.map(x=>({saleId:x.saleId,anterior:x.expectedDate,nova:x.date,
+      arquivo:historicAudit.source,fonte:x.from,usuarioId:currentUser?.id||"",
+      registradoEm:instant}))].slice(-500);
+  return db;
+}
+async function applyHistoricallyVerifiedSaleDates() {
+  if (!currentUser || !["administrador","gerente"].includes(norm(currentUser.perfil||"")))
+    return showToast("Sem autorização para alterar datas.", "fa-triangle-exclamation");
+  const choices=historicAudit.suggestions.flatMap((r,i)=>{
+    const value=$(`auditCandidate_${i}`)?.value;
+    if(value==="" || value===undefined) return [];
+    const d=r.sources[Number(value)];
+    return d?[{saleId:r.saleId,expectedDate:r.currentDate,date:d.date,from:d.from}]:[];
+  });
+  if(!choices.length) return showToast("Selecione uma data comprovada no histórico.", "fa-triangle-exclamation");
+  if (!firebaseReady) return showToast("Firebase desconectado. Nenhuma correção aplicada.", "fa-triangle-exclamation");
+  if (!confirm(`Serão corrigidas ${choices.length} venda(s) e seus leads vinculados.
+Confira as datas com contratos/pedidos originais.
+Uma cópia de auditoria das datas atuais será baixada ANTES da gravação.
+Deseja continuar?`)) return;
+  try {
+    // Ler novamente do servidor antes de exportar a cópia de segurança.
+    // Impede usar uma visualização antiga da base como único registro de reversão.
+    const latest=await dateAuditReadRemote();
+    const latestDb=dateAuditExtract(latest);
+    for(const choice of choices) {
+      const sale=(latestDb?.sales||[]).find(s=>String(s.id)===choice.saleId);
+      if(!sale || validCommercialDate(sale.dataVenda)!==choice.expectedDate)
+        throw new Error("A base mudou durante a conferência. Abra novamente a auditoria.");
+    }
+    historicAudit.remote=latest;
+    exportCurrentSalesDateAudit();
+    const instant=new Date().toISOString();
+    if(firebaseMode==="firestore" && firestore) {
+      const ref=firestore.collection(FIRESTORE_COLLECTION).doc(activeFirestoreDoc());
+      await firestore.runTransaction(async transaction=>{
+        const snap=await transaction.get(ref);
+        if(!snap.exists) throw new Error("Base remota inexistente.");
+        const db=dateAuditExtract(snap.data());
+        if(!db) throw new Error("Base remota inválida.");
+        const corrected=dateAuditApplyRaw(db,choices,instant);
+        transaction.update(ref,{sales:corrected.sales,leads:corrected.leads,
+          dateRecoveryAudit:corrected.dateRecoveryAudit});
+      });
+    } else if(firebaseMode==="database" && realtimeRef) {
+      let reason="";
+      const result=await realtimeRef.transaction(raw=>{
+        if(!raw) return;
+        try {
+          const db=dateAuditExtract(raw);
+          if(!db) throw new Error("Base remota inválida.");
+          return dateAuditApplyRaw(db,choices,instant);
+        } catch(e) {reason=e.message;return;}
+      },undefined,false);
+      if(!result.committed) throw new Error(reason||"Correção não confirmada no banco.");
+    } else throw new Error("Firebase não conectado.");
+    closeModal();
+    showToast(`Datas históricas corrigidas: ${choices.length} venda(s). Consulte os relatórios.`, "fa-circle-check");
+    // Snapshot/listener aplica os dados; não sobrescrever o banco com estado local defasado.
+  } catch(e) {
+    console.error("Recuperação histórica:",e);
+    showToast(`Nenhuma correção concluída: ${e.message||String(e)}`, "fa-triangle-exclamation");
+  }
 }
 
 // =============== EVENTOS ===============
