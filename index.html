@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rensoftware CRM Comercial — V24</title>
+  <title>Rensoftware CRM Comercial — V26</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -452,6 +452,8 @@
             </div>
             <div class="toolbar">
               <select id="saleRangePreset" class="select" onchange="applySalesPreset()" title="Período de vendas" style="max-width:190px">
+                <option value="all" selected>Todas as vendas (histórico)</option>
+                <option value="audit">Somente vendas sob revisão</option>
                 <option value="today">Hoje</option>
                 <option value="yesterday">Ontem</option>
                 <option value="week">Semana atual</option>
@@ -470,7 +472,7 @@
               <button class="btn btn-outline" onclick="openHistoricalSalesAudit()"><i class="fa-solid fa-clock-rotate-left"></i> Recuperar datas históricas</button>
               <button class="btn btn-outline" onclick="exportSalesPeriod()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
-            <div class="table-wrap"><table><thead><tr id="salesTableHeader"><th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
+            <div class="table-wrap"><table><thead><tr id="salesTableHeader"><th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Recebimento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th></tr></thead><tbody id="salesTable"></tbody></table></div>
           </div>
         </section>
 
@@ -742,7 +744,7 @@ const PIPELINE = [
 function $(id) { return document.getElementById(id); }
 function uid(prefix = "id") { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`; }
 function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
-function monthKey(date = new Date()) { if (typeof date === "string" && /^\d{4}-\d{2}/.test(date)) return date.slice(0,7); const d = new Date(date); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
+function monthKey(date = new Date()) { if (typeof date === "string" && /^\d{4}-\d{2}/.test(date)) return date.slice(0,7); const d = new Date(date); if (Number.isNaN(d.getTime())) return ""; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 function money(value) { return `R$ ${(Number(value) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function number(value) {
   const raw = String(value ?? "").trim().replace(/\s/g, "").replace(/[R$]/g, "");
@@ -1231,6 +1233,7 @@ function normalizeState(raw) {
     const stage = l.status === "Fechado" ? "Fechamento" : (l.status === "Perdido" ? "Perdido" : (l.pipeline || "Captação"));
     const campaignId = l.campaignId || l.campanhaId || campaignByName(l.campanha || l.campaign || "");
     return {
+      ...l, // V26: preservar formas de pagamento e histórico de recebimentos ao carregar Firebase
       id: String(l.id || uid("l")),
       empresa: l.empresa || "Empresa",
       contato: l.contato || "",
@@ -1613,8 +1616,8 @@ function saleLead(sale) {
 function saleLifecycleRow(sale) {
   const lead = saleLead(sale);
   const created = lead?.createdAt ? String(lead.createdAt).slice(0, 10) : (sale.createdAt ? String(sale.createdAt).slice(0, 10) : "");
-  const closed = sale.dataVenda || lead?.fechadoEm || "";
-  return { lead, created, closed, cycle: daysBetween(created, closed) };
+  const closed = effectiveSaleDate(sale);
+  return { lead, created, closed, cycle: closed ? daysBetween(created, closed) : "Data em conferência" };
 }
 function saleFromLead(lead, existing = {}) {
   return {
@@ -1722,10 +1725,10 @@ function fillEmailProductFilter() {
 }
 function populateMonthFilters() {
   const current = monthKey();
-  const salesMonths = (state.sales || []).map(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`));
+  const salesMonths = (state.sales || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
   const closedLeadMonths = (state.leads || [])
     .filter(l => String(l.status || "") === "Fechado")
-    .map(l => monthKey(`${closingDateForLead(l)}T00:00:00`));
+    .map(l => closingDateForLead(l)).filter(Boolean).map(s => s.slice(0,7));
   const values = new Set([current, ...(state.goals || []).map(g => g.periodo), ...salesMonths, ...closedLeadMonths]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
 
@@ -4281,6 +4284,10 @@ function saveLead(id = "") {
   }
   const saved = findById(state.leads, data.id);
   if (saved?.status === "Fechado") {
+    // Preserva datas, parcelas e valores quando muda só o meio de pagamento.
+    const vinculo = activeSaleForLead(saved);
+    if (vinculo && paymentMethodType(oldLead || {}) !== paymentMethodType(data))
+      vinculo.meioPagamento = paymentMethodType(data);
     // Edição explícita da data de fechamento prevalece também no pedido/venda vinculada.
     const correctedDate = validCommercialDate($("fDataFechamento")?.value);
     if (correctedDate) {
@@ -4486,7 +4493,7 @@ function renderSales() {
   if ($("salesTableHeader")) {
     $("salesTableHeader").innerHTML = revendas
       ? `<th>Revenda / Parceiro</th><th>Origem</th><th>Programa</th><th>Responsável</th><th>Data captação</th><th>Ciclo</th><th>Resultado</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`
-      : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
+      : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Recebimento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
   }
   $("salesClosedCount").textContent = revendas ? sales.length : sales.length;
   $("salesClosedImplantacao").textContent = revendas ? String(sales.length) : money(total.implantacao);
@@ -4590,6 +4597,36 @@ function addMonthsISO(baseDate, months) {
   const d = new Date(base.getFullYear(), base.getMonth() + Number(months || 0), base.getDate());
   return isoDate(d);
 }
+// V25: Identificação estável dos 26 pedidos afetados na auditoria de 09/11/2026.
+// IDs não são datas de fechamento. Este marcador NÃO modifica o Firebase.
+const CRM_0611_AUDITED_SALE_IDS = new Set([
+  "s_mtdbzq15_z2j65h",
+  "s_mtukg7fw_6skhib",
+  "s_mtukk3xn_owutve",
+  "s_mtwyz4s8_ko50d2",
+  "s_mtwz2487_4x8xwm",
+  "s_mtxcee89_t49u7u",
+  "s_mu2lstbe_axt670",
+  "s_mu4ducj4_qlx8ob",
+  "s_mu72ekpg_ghvskh",
+  "s_mu72fw5e_gv56fd",
+  "s_mue4up2e_nxxufp",
+  "s_mue7h1qm_31ltbw",
+  "s_mue7jd0e_yv8ost",
+  "s_mue7qax0_2v8vj9",
+  "s_mufydgoc_6yyilq",
+  "s_mula1mvd_uuaueh",
+  "s_muog466x_734944",
+  "s_mvh51r6i_2rhpqv",
+  "s_mvh51sfc_wnf5vf",
+  "s_mvtgjvm3_162nz4",
+  "s_mvuxto2b_mrdjbm",
+  "s_mvvg9ulx_gglp4i",
+  "s_mw27xcpg_1howtg",
+  "s_mw2824pk_gfj65e",
+  "s_mw2827ww_gluxiq",
+  "s_mw5cdizo_sd9q5e"
+]);
 // V23: proteção analítica para o lote reconstruído em 06/11, confirmado na auditoria.
 // A data efetiva permanece gravada no Firebase e só volta a integrar metas e
 // resultados quando for corrigida/comprovada e registrada no histórico.
@@ -4602,7 +4639,11 @@ function saleNeedsHistoricalDateReview(sale) {
                   created.startsWith("2026-11-06T19:02:43.") ||
                   created.startsWith("2026-11-06T19:02:44.") ||
                   created.startsWith("2026-11-06T19:02:45.");
-  return rebuilt && (!Array.isArray(sale.dateHistory) || sale.dateHistory.length === 0);
+  // A lista de IDs impede regressão caso o campo createdAt seja reescrito.
+  // Uma correção expressa, com trilha de auditoria, libera a venda do bloqueio.
+  const identified = CRM_0611_AUDITED_SALE_IDS.has(String(sale.id || ""));
+  return (identified || rebuilt) &&
+    (!Array.isArray(sale.dateHistory) || sale.dateHistory.length === 0);
 }
 function pendingHistoricalSalesList() {
   return (state?.sales || []).filter(saleNeedsHistoricalDateReview);
@@ -4633,6 +4674,7 @@ function openPendingHistoricalSalesAudit() {
     <div class="note warning"><strong>${pending.length} venda(s) pendentes de data real.</strong>
       Essas vendas continuam salvas no Firebase, mas não entram nas metas,
       relatórios de venda ou faturamento por mês enquanto a data de fechamento não for comprovada.
+      <strong>Se o fechamento foi realmente em 06/11, use Conferir data para confirmá-lo expressamente.</strong>
       A criação do lead ou do ID não é a data da venda. Não exclua nem importe o JSON de auditoria.</div>
     <div class="table-wrap" style="max-height:55vh;overflow:auto"><table><thead><tr>
       <th>Cliente</th><th>Data salva</th><th>Pista técnica do ID</th><th>Cadastro do lead</th><th>Ação</th>
@@ -4694,8 +4736,28 @@ function effectiveLeadDate(lead) {
   // Etapa "Fechamento" ainda aberta NÃO significa venda concluída.
   return validCommercialDate(lead.createdAt);
 }
+// V26: condição (à vista/parcelado) não se confunde com o meio (crédito/débito/Pix).
 function paymentPlanType(obj) {
-  return obj?.pagamentoTipo || obj?.formaPagamento || "avista";
+  const raw = String(obj?.pagamentoTipo || obj?.condicaoPagamento || obj?.formaPagamento || "avista").toLowerCase();
+  return raw === "parcelado" ? "parcelado" : "avista";
+}
+function paymentMethodType(obj) {
+  const raw = String(obj?.meioPagamento || obj?.modalidadePagamento || obj?.formaRecebimento ||
+    (paymentPlanType(obj) === "avista" || paymentPlanType(obj) === "parcelado" ? obj?.formaPagamento : "") || "").toLowerCase().trim();
+  const normed = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[ _-]+/g, " ");
+  if (/credito/.test(normed)) return "cartao_credito";
+  if (/debito/.test(normed)) return "cartao_debito";
+  if (/pix/.test(normed)) return "pix";
+  if (/dinheiro|especie/.test(normed)) return "dinheiro";
+  if (/transfer/.test(normed)) return "transferencia";
+  if (/boleto/.test(normed)) return "boleto";
+  if (/outro/.test(normed)) return "outros";
+  return "nao_informado";
+}
+function paymentMethodLabel(obj) {
+  return ({nao_informado:"Não informado",pix:"Pix",dinheiro:"Dinheiro",
+    cartao_credito:"Cartão de crédito",cartao_debito:"Cartão de débito",
+    transferencia:"Transferência",boleto:"Boleto",outros:"Outros"})[paymentMethodType(obj)] || "Não informado";
 }
 function normalizePaymentItem(item, fallback = {}) {
   return {
@@ -4715,8 +4777,9 @@ function buildScheduleFromObject(obj = {}) {
   }
 
   if (tipo !== "parcelado") {
-    const data = String(obj.dataVenda || obj.fechadoEm || obj.previsaoFechamento || todayISO()).slice(0, 10);
-    return [normalizePaymentItem({ descricao: "À vista", valor: total, vencimento: data, pago: true, dataPagamento: data })];
+    const data = validCommercialDate(obj.dataVenda) || validCommercialDate(obj.fechadoEm) || "";
+    // Sem comprovante ou confirmação expressa não inferir pagamento, especialmente cartão.
+    return [{ descricao: "À vista", valor: total, vencimento: data, pago: false, dataPagamento: "" }];
   }
 
   const entrada = Math.max(0, Number(obj.entradaValor) || 0);
@@ -4755,11 +4818,27 @@ function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
         Quando a venda for parcelada, a comissão do consultor e do gestor entra somente no mês da parcela marcada como paga.
       </div>
     </div>
-    <div class="form-group"><label>Forma de pagamento da implantação</label>
+    <div class="form-group"><label>Meio de recebimento</label>
+      <select id="${prefix}MeioPagamento" class="select">
+        ${[["nao_informado","Não informado"],["pix","Pix"],["dinheiro","Dinheiro"],
+          ["cartao_credito","Cartão de crédito"],["cartao_debito","Cartão de débito"],
+          ["transferencia","Transferência"],["boleto","Boleto"],["outros","Outros"]]
+          .map(([value,label])=>`<option value="${value}"${paymentMethodType(obj)===value ? " selected" : ""}>${label}</option>`).join("")}
+      </select>
+      <small class="help">O cartão identifica o meio de pagamento; as parcelas indicam os vencimentos. Comissão só após recebimento confirmado.</small>
+    </div>
+    <div class="form-group"><label>Condição de pagamento da implantação</label>
       <select id="${prefix}PagamentoTipo" class="select" onchange="togglePaymentFields('${prefix}')">
         <option value="avista"${tipo !== "parcelado" ? " selected" : ""}>À vista</option>
         <option value="parcelado"${tipo === "parcelado" ? " selected" : ""}>Parcelado</option>
       </select>
+    </div>
+    <div class="form-group payment-${prefix}-avista" style="${tipo === "parcelado" ? "display:none" : ""}">
+      <label>Recebimento confirmado?</label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="${prefix}VistaPago"${obj.paymentSchedule?.[0]?.pago === true ? " checked" : ""}> Sim, valor recebido</label>
+    </div>
+    <div class="form-group payment-${prefix}-avista" style="${tipo === "parcelado" ? "display:none" : ""}"><label>Data real do recebimento</label>
+      <input id="${prefix}VistaDataPagamento" class="field" type="date" value="${escapeHTML(obj.paymentSchedule?.[0]?.pago ? validCommercialDate(obj.paymentSchedule?.[0]?.dataPagamento) : "")}">
     </div>
     <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Valor de entrada</label><input id="${prefix}EntradaValor" class="field" type="number" step="0.01" value="${entrada}"></div>
     <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Data da entrada</label><input id="${prefix}EntradaData" class="field" type="date" value="${entradaData}"></div>
@@ -4773,6 +4852,7 @@ function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
 function togglePaymentFields(prefix) {
   const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
   document.querySelectorAll(`.payment-${prefix}`).forEach(el => el.style.display = tipo === "parcelado" ? "" : "none");
+  document.querySelectorAll(`.payment-${prefix}-avista`).forEach(el => el.style.display = tipo === "parcelado" ? "none" : "");
   const wrap = $(`${prefix}ScheduleWrap`);
   if (wrap) wrap.style.display = tipo === "parcelado" ? "" : "none";
   renderPaymentSchedule(prefix);
@@ -4791,7 +4871,9 @@ function buildScheduleFromForm(prefix) {
   const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
   const baseDate = currentFormBaseDate(prefix);
   if (tipo !== "parcelado") {
-    return [normalizePaymentItem({ descricao: "À vista", valor: total, vencimento: baseDate, pago: true, dataPagamento: baseDate })];
+    const pago = Boolean($(`${prefix}VistaPago`)?.checked);
+    const dataPagamento = pago ? validCommercialDate($(`${prefix}VistaDataPagamento`)?.value) : "";
+    return [{descricao:"À vista",valor:total,vencimento:baseDate,pago:pago && Boolean(dataPagamento),dataPagamento}];
   }
   const entrada = Math.max(0, number($(`${prefix}EntradaValor`)?.value || 0));
   const qtd = Math.max(0, parseInt($(`${prefix}ParcelasQtd`)?.value || "0", 10) || 0);
@@ -4855,6 +4937,7 @@ function collectPaymentSchedule(prefix) {
 function applyPaymentPlanFromForm(data, prefix) {
   const revendas = isRevendasWorkspace();
   data.pagamentoTipo = revendas ? "avista" : ($(`${prefix}PagamentoTipo`)?.value || "avista");
+  data.meioPagamento = revendas ? "nao_informado" : ($(`${prefix}MeioPagamento`)?.value || "nao_informado");
   data.entradaValor = revendas ? 0 : number($(`${prefix}EntradaValor`)?.value || 0);
   data.entradaData = revendas ? "" : ($(`${prefix}EntradaData`)?.value || "");
   data.parcelasQtd = revendas ? 0 : (parseInt($(`${prefix}ParcelasQtd`)?.value || "0", 10) || 0);
@@ -4867,6 +4950,7 @@ function transferPaymentPlan(from, to = {}) {
   return {
     ...to,
     pagamentoTipo: from?.pagamentoTipo || to.pagamentoTipo || "avista",
+    meioPagamento: paymentMethodType(to?.meioPagamento && paymentMethodType(to) !== "nao_informado" ? to : from),
     entradaValor: Number(from?.entradaValor ?? to.entradaValor ?? 0) || 0,
     entradaData: from?.entradaData || to.entradaData || "",
     parcelasQtd: Number(from?.parcelasQtd ?? to.parcelasQtd ?? 0) || 0,
@@ -4881,10 +4965,9 @@ function transferPaymentPlan(from, to = {}) {
 // Recria venda a partir do lead fechado preservando parcelas já marcadas como pagas.
 function saleFromLead(lead, existing = {}) {
   // Priorizar a data real corrigida na venda; não usar "hoje" em migrações.
-  const dataVenda = (existing.manualEdit || existing.editadoManualmente || existing.dataVendaCorrigida)
-    ? validCommercialDate(existing.dataVenda)
-    : (validCommercialDate(existing.dataVenda) ||
-       validCommercialDate(lead.fechadoEm) ||
+  const dataVenda = Object.prototype.hasOwnProperty.call(existing, "dataVenda")
+    ? validCommercialDate(existing.dataVenda) // Inclusive vazio: não inventar data pelo lead
+    : (validCommercialDate(lead.fechadoEm) ||
        validCommercialDate(lead.dataFechamento) ||
        validCommercialDate(lead.dataVenda) || "");
   const sale = {
@@ -5111,6 +5194,9 @@ function fillSaleFromLead() {
     validCommercialDate(lead.dataFechamento) ||
     (lead.status === "Fechado" ? "" : todayISO());
   if ($("sPagamentoTipo")) $("sPagamentoTipo").value = paymentPlanType(lead);
+  if ($("sMeioPagamento")) $("sMeioPagamento").value = paymentMethodType(lead);
+  if ($("sVistaPago")) $("sVistaPago").checked = Boolean(lead.paymentSchedule?.[0]?.pago);
+  if ($("sVistaDataPagamento")) $("sVistaDataPagamento").value = lead.paymentSchedule?.[0]?.pago ? (validCommercialDate(lead.paymentSchedule?.[0]?.dataPagamento)||"") : "";
   if ($("sEntradaValor")) $("sEntradaValor").value = Number(lead.entradaValor || 0);
   if ($("sEntradaData")) $("sEntradaData").value = lead.entradaData || $("sData").value;
   if ($("sParcelasQtd")) $("sParcelasQtd").value = Number(lead.parcelasQtd || 0);
@@ -5743,7 +5829,7 @@ function productivityRows(period = monthKey()) {
 // =============== AJUSTES V15: RELATÓRIOS MENSAIS E EDIÇÃO/EXCLUSÃO DE VENDAS FECHADAS ===============
 function monthOptionsValues() {
   const current = monthKey();
-  const salesMonths = (state.sales || []).map(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`));
+  const salesMonths = (state.sales || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
   const leadMonths = (state.leads || []).map(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`));
   const goalMonths = (state.goals || []).map(g => g.periodo);
   return [...new Set([current, ...goalMonths, ...salesMonths, ...leadMonths].filter(Boolean))].sort().reverse();
@@ -5945,12 +6031,17 @@ function syncClosedLeadsIntoSales(data = state, silent = true) {
 function saveSale(id = "") {
   const cliente = $("sCliente").value.trim();
   if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
-  const dataEfetiva = $("sData")?.value || "";
-  if (!validCommercialDate(dataEfetiva))
-    return showToast("Informe a data real do fechamento antes de salvar a venda.", "fa-triangle-exclamation");
   const revendas = isRevendasWorkspace();
   const lead = findById(state.leads, $("sLead").value);
   const oldSale = id ? findById(state.sales, id) : null;
+  const oldPending = Boolean(oldSale && saleNeedsHistoricalDateReview(oldSale));
+  const typedDate = $("sData")?.value || "";
+  // Editar o meio de pagamento não confirma 06/11 nem altera a data de fechamento.
+  const dataEfetiva = typedDate || (oldPending ? validCommercialDate(oldSale.dataVenda) : "");
+  if (!validCommercialDate(dataEfetiva))
+    return showToast("Informe a data real do fechamento antes de salvar a venda.", "fa-triangle-exclamation");
+  const sameUnverified = oldPending && dataEfetiva === validCommercialDate(oldSale.dataVenda);
+  if (sameUnverified && typedDate && !confirm("A data de 06/11 permanece sob auditoria. Para confirmá-la como verdadeira, use Conferir datas de vendas. Deseja salvar somente as demais alterações?")) return;
   const data = {
     id: id || uid("s"),
     leadId: $("sLead").value,
@@ -5964,8 +6055,8 @@ function saveSale(id = "") {
     status: $("sStatus").value,
     observacao: $("sObs").value.trim(),
     origem: $("sOrigem").value.trim(),
-    manualEdit: true,
-    editadoManualmente: true,
+    manualEdit: sameUnverified ? false : true,
+    editadoManualmente: sameUnverified ? false : true,
     updatedAt: new Date().toISOString()
   };
 
@@ -5994,9 +6085,11 @@ function saveSale(id = "") {
     lead.status = "Fechado";
     lead.pipeline = "Fechamento";
     lead.probabilidade = 100;
-    lead.fechadoEm = data.dataVenda;
-    lead.dataFechamento = data.dataVenda;
-    lead.dataVenda = data.dataVenda;
+    if (!sameUnverified) {
+      lead.fechadoEm = data.dataVenda;
+      lead.dataFechamento = data.dataVenda;
+      lead.dataVenda = data.dataVenda;
+    }
     lead.updatedAt = new Date().toISOString();
     delete lead.saleDeletedAt;
     delete lead.vendaExcluida;
@@ -6039,7 +6132,7 @@ function renderSales() {
   if ($("salesTableHeader")) {
     $("salesTableHeader").innerHTML = revendas
       ? `<th>Revenda / Parceiro</th><th>Origem</th><th>Programa</th><th>Responsável</th><th>Data captação</th><th>Ciclo</th><th>Resultado</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`
-      : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
+      : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Recebimento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
   }
 
   $("salesClosedCount").textContent = String(sales.length);
@@ -6174,7 +6267,15 @@ function localISODate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 function applySalesPreset() {
-  const preset = $("saleRangePreset")?.value || "today";
+  const preset = $("saleRangePreset")?.value || "all";
+  if (preset === "all" || preset === "audit") {
+    if ($("saleDateStart")) $("saleDateStart").disabled = true;
+    if ($("saleDateEnd")) $("saleDateEnd").disabled = true;
+    renderSales();
+    return;
+  }
+  if ($("saleDateStart")) $("saleDateStart").disabled = false;
+  if ($("saleDateEnd")) $("saleDateEnd").disabled = false;
   const now = new Date();
   const begin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(begin);
@@ -6197,6 +6298,8 @@ function applySalesPreset() {
 }
 function salesCustomPeriodChanged() {
   if ($("saleRangePreset")) $("saleRangePreset").value = "custom";
+  if ($("saleDateStart")) $("saleDateStart").disabled = false;
+  if ($("saleDateEnd")) $("saleDateEnd").disabled = false;
   renderSales();
 }
 function salesDateRange() {
@@ -6219,15 +6322,23 @@ function fillSalesSellerFilter() {
   if (!available.some(u => u.id === selected)) el.value = "";
 }
 function salesForSelectedPeriod() {
+  const mode = $("saleRangePreset")?.value || "all";
   const {start, end, valid} = salesDateRange();
-  if (!valid) return [];
+  if (mode !== "all" && mode !== "audit" && !valid) return [];
   const seller = $("saleSellerFilter")?.value || "";
   return (state.sales || [])
     .filter(s => {
+      if (seller && s.vendedorId !== seller) return false;
+      if (mode === "all") return true; // Cadastro íntegro, mesmo sem data.
+      if (mode === "audit") return saleNeedsHistoricalDateReview(s);
       const when = trustedSaleDate(s);
-      return !!when && when >= start && when <= end && (!seller || s.vendedorId === seller);
+      return Boolean(when && when >= start && when <= end);
     })
-    .sort((a,b) => String(effectiveSaleDate(b)).localeCompare(String(effectiveSaleDate(a))));
+    .sort((a,b) => {
+      const aPending = saleNeedsHistoricalDateReview(a) ? 1 : 0;
+      const bPending = saleNeedsHistoricalDateReview(b) ? 1 : 0;
+      return aPending-bPending || String(effectiveSaleDate(b)||b.dataVenda||"").localeCompare(String(effectiveSaleDate(a)||a.dataVenda||""));
+    });
 }
 
 // Substitui o filtro exclusivamente mensal: os cards, pedidos e Excel compartilham o MESMO intervalo.
@@ -6236,19 +6347,22 @@ function renderSales() {
   fillSalesSellerFilter();
   const {start, end, valid} = salesDateRange();
   const sales = salesForSelectedPeriod();
-  const closed = sales.filter(s => s.status !== "Cancelada");
+  const closed = sales.filter(s => !["Cancelada","Cancelado"].includes(s.status) && Boolean(effectiveSaleDate(s)));
+  const countAudit = sales.filter(saleNeedsHistoricalDateReview).length;
   const total = sumSales(closed);
   const revendas = isRevendasWorkspace();
   if ($("salesPeriodCaption")) {
+    const mode = $("saleRangePreset")?.value || "all";
     const pending = pendingHistoricalSalesList().length;
-    $("salesPeriodCaption").innerHTML = valid
-      ? `Resultado de ${formatDate(start)} a ${formatDate(end)}` +
-        (pending ? ` · <strong>${pending} venda(s) sob auditoria histórica</strong> (fora do resultado até conferência). <button class="btn btn-outline btn-sm" onclick="openPendingHistoricalSalesAudit()">Ver relação</button>` : "")
-      : "A data inicial deve ser anterior ou igual à final.";
+    const scope = mode === "all" ? "Todo o histórico cadastrado" : mode === "audit" ? "Somente registros sob revisão" :
+      (valid ? `Fechamentos de ${formatDate(start)} a ${formatDate(end)}` : "Corrija o intervalo selecionado");
+    $("salesPeriodCaption").innerHTML = `${scope} · <strong>${sales.length} pedido(s) exibidos</strong> · ${closed.length} com data válida fora da auditoria` +
+      (countAudit ? ` · <strong>${countAudit} com data sob revisão</strong> (visíveis, não contabilizadas)` : "") +
+      (pending && mode !== "audit" ? ` · <button class="btn btn-outline btn-sm" onclick="document.getElementById('saleRangePreset').value='audit';applySalesPreset()">Ver ${pending} sob revisão</button>` : "");
   }
   if ($("salesTableHeader")) $("salesTableHeader").innerHTML = revendas
     ? `<th>Revenda / Parceiro</th><th>Origem</th><th>Programa</th><th>Responsável</th><th>Data captação</th><th>Ciclo</th><th>Resultado</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`
-    : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
+    : `<th>Pedido / Cliente</th><th>Origem</th><th>Produto</th><th>Vendedor</th><th>Fechamento</th><th>Recebimento</th><th>Ciclo</th><th>Implantação</th><th>Mensalidade</th><th>Status</th><th>Ações</th>`;
   $("salesClosedCount").textContent = String(closed.length);
   $("salesClosedImplantacao").textContent = revendas ? String(closed.length) : money(total.implantacao);
   $("salesClosedMrr").textContent = revendas ? "—" : money(total.mensalidade);
@@ -6261,15 +6375,17 @@ function renderSales() {
       <td><strong>${escapeHTML(s.cliente || lead?.empresa || "Cliente não informado")}</strong><br><small>${lead ? `Lead: ${escapeHTML(lead.empresa)}` : "Venda manual"}${s.manualEdit ? " · editada manualmente" : ""}</small></td>
       <td>${escapeHTML(origem)}<br><small>${escapeHTML(campaignName(s.campaignId || lead?.campaignId))}</small></td>
       <td>${escapeHTML(productName(s.produtoId))}</td><td>${escapeHTML(userName(s.vendedorId))}</td>
-      <td>${formatDate(effectiveSaleDate(s))}</td><td>${escapeHTML(life.cycle)}</td>
+      <td>${saleNeedsHistoricalDateReview(s) ? `<strong style="color:#b45309">06/11/2026 (sob revisão)</strong><br><small>Data de fechamento não comprovada</small>` : (effectiveSaleDate(s) ? formatDate(effectiveSaleDate(s)) : "<small>Sem data comprovada</small>")}</td>
+      <td>${revendas ? "—" : escapeHTML(paymentMethodLabel(s))}<br><small>${revendas ? "" : (paymentPlanType(s)==="parcelado" ? "Parcelado" : "À vista")}</small></td>
+      <td>${escapeHTML(life.cycle)}</td>
       <td>${revendas ? "Captado" : money(s.implantacao)}</td><td>${revendas ? "—" : money(s.mensalidade)}</td>
-      <td>${statusTag(s.status)}</td>
+      <td>${saleNeedsHistoricalDateReview(s) ? `<span style="color:#b45309;font-weight:bold">Data sob auditoria</span><br>` : ""}${statusTag(s.status)}</td>
       <td>
         ${lead ? `<button class="btn btn-muted btn-sm" onclick="openLeadModal('${lead.id}')" title="Ver lead"><i class="fa-solid fa-user"></i></button>` : ""}
         <button class="btn btn-outline btn-sm" onclick="openSaleModal('${s.id}')" title="Editar venda"><i class="fa-solid fa-pen"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')" title="Excluir venda"><i class="fa-solid fa-trash"></i></button>
       </td></tr>`;
-  }).join("") || `<tr><td class="empty" colspan="10">${valid ? "Nenhuma venda no período selecionado." : "Corrija o intervalo de datas."}</td></tr>`;
+  }).join("") || `<tr><td class="empty" colspan="11">${valid ? "Nenhuma venda encontrada para esse filtro. Selecione Todas as vendas (histórico) para consultar os demais pedidos." : "Corrija o intervalo de datas."}</td></tr>`;
 }
 
 function exportSalesPeriod() {
@@ -6282,7 +6398,9 @@ function exportSalesPeriod() {
       PeriodoInicio:start, PeriodoFim:end,
       Cliente:s.cliente, Lead:info.lead?.empresa || "", Produto:productName(s.produtoId),
       Vendedor:userName(s.vendedorId), Campanha:campaignName(s.campaignId || info.lead?.campaignId),
-      Origem:s.origem || info.lead?.origem || "", DataFechamento:effectiveSaleDate(s),
+      Origem:s.origem || info.lead?.origem || "", DataFechamentoConfirmada:effectiveSaleDate(s),
+      DataGravada:s.dataVenda || "", SituacaoData:saleNeedsHistoricalDateReview(s)?"Sob auditoria histórica":(effectiveSaleDate(s)?"Confirmada no cadastro":"Sem data"),
+      MeioPagamento:paymentMethodLabel(s), CondicaoPagamento:paymentPlanType(s),
       Ciclo:info.cycle, Implantacao:s.implantacao, Mensalidade:s.mensalidade, Status:s.status
     };
   });
@@ -6594,7 +6712,13 @@ function saveSaleDateCorrection(id) {
   if (nova && !validCommercialDate(nova))
     return showToast("Informe uma data válida.", "fa-triangle-exclamation");
   const antiga = validCommercialDate(sale.dataVenda);
-  if (nova === antiga) return showToast("A data já está igual à registrada.");
+  const confirmingSameSuspectDate = nova === antiga && saleNeedsHistoricalDateReview(sale);
+  if (nova === antiga && !confirmingSameSuspectDate)
+    return showToast("A data já está igual à registrada.");
+  if (confirmingSameSuspectDate && !confirm(
+    `ATENÇÃO: ${sale.cliente || "Venda"} faz parte do lote recriado em 06/11.\n` +
+    `Você conferiu um documento original e CONFIRMA que a venda foi REALMENTE fechada em 06/11/2026?\n` +
+    `Essa confirmação será registrada no histórico da venda.`)) return;
   if (!confirm(`Confirmar data de fechamento da venda "${sale.cliente || ""}" de
 ${antiga || "(desconhecida)"} para ${nova || "(desconhecida)"}?
 Esta correção repercute nos relatórios e nas metas.`)) return;
