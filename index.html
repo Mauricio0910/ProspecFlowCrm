@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rensoftware CRM Comercial</title>
+  <title>Rensoftware CRM Comercial — V24</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -466,6 +466,7 @@
               <span id="salesPeriodCaption" class="help"></span>
               <button class="btn btn-muted" onclick="syncClosedLeadsIntoSales(state, false);renderAll()"><i class="fa-solid fa-arrows-rotate"></i> Sincronizar leads fechados</button>
               <button class="btn btn-outline" onclick="openSaleDatesReview()"><i class="fa-solid fa-calendar-check"></i> Conferir datas de vendas</button>
+              <button class="btn btn-outline" onclick="openPendingHistoricalSalesAudit()"><i class="fa-solid fa-triangle-exclamation"></i> Vendas sob revisão</button>
               <button class="btn btn-outline" onclick="openHistoricalSalesAudit()"><i class="fa-solid fa-clock-rotate-left"></i> Recuperar datas históricas</button>
               <button class="btn btn-outline" onclick="exportSalesPeriod()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
@@ -4589,8 +4590,60 @@ function addMonthsISO(baseDate, months) {
   const d = new Date(base.getFullYear(), base.getMonth() + Number(months || 0), base.getDate());
   return isoDate(d);
 }
+// V23: proteção analítica para o lote reconstruído em 06/11, confirmado na auditoria.
+// A data efetiva permanece gravada no Firebase e só volta a integrar metas e
+// resultados quando for corrigida/comprovada e registrada no histórico.
+// A regra NÃO usa a data de cadastro do lead como substituto da venda.
+function saleNeedsHistoricalDateReview(sale) {
+  if (!sale || validCommercialDate(sale.dataVenda) !== "2026-11-06") return false;
+  if (sale.manualEdit || sale.editadoManualmente || sale.dataVendaCorrigida) return false;
+  const created = String(sale.createdAt || "");
+  const rebuilt = created.startsWith("2026-11-06T19:02:42.") ||
+                  created.startsWith("2026-11-06T19:02:43.") ||
+                  created.startsWith("2026-11-06T19:02:44.") ||
+                  created.startsWith("2026-11-06T19:02:45.");
+  return rebuilt && (!Array.isArray(sale.dateHistory) || sale.dateHistory.length === 0);
+}
+function pendingHistoricalSalesList() {
+  return (state?.sales || []).filter(saleNeedsHistoricalDateReview);
+}
+// V24: tabela explícita das vendas historicamente comprometidas.
+// A data derivada do ID só serve como pista de localização de backup, nunca fechamento.
+function saleIdCreationHint(sale) {
+  const token = String(sale?.id || "").split("_")[1] || "";
+  if (!/^[0-9a-z]{8,}$/.test(token)) return "Indisponível";
+  const epoch = parseInt(token, 36);
+  if (!Number.isFinite(epoch) || epoch < Date.UTC(2020,0,1) || epoch > Date.now()+86400000) return "Indisponível";
+  return new Date(epoch).toISOString().slice(0,10);
+}
+function openPendingHistoricalSalesAudit() {
+  const pending = pendingHistoricalSalesList().slice().sort((a,b)=>
+    String(a.cliente || "").localeCompare(String(b.cliente || ""), "pt-BR"));
+  const summary = pending.map(sale=>{
+    const linked = (state.leads || []).find(l=>String(l.id)===String(sale.leadId||""));
+    return `<tr>
+      <td><strong>${escapeHTML(sale.cliente || "Cliente")}</strong></td>
+      <td>06/11/2026 <small>(não confirmada)</small></td>
+      <td>${escapeHTML(saleIdCreationHint(sale))}<small> (criação do ID, não venda)</small></td>
+      <td>${escapeHTML(validCommercialDate(linked?.createdAt)||"—")}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openSaleDateCorrection('${escapeHTML(sale.id)}')">Conferir data</button></td>
+    </tr>`;
+  }).join("");
+  openModal("Vendas com datas sob revisão — 06/11/2026", `
+    <div class="note warning"><strong>${pending.length} venda(s) pendentes de data real.</strong>
+      Essas vendas continuam salvas no Firebase, mas não entram nas metas,
+      relatórios de venda ou faturamento por mês enquanto a data de fechamento não for comprovada.
+      A criação do lead ou do ID não é a data da venda. Não exclua nem importe o JSON de auditoria.</div>
+    <div class="table-wrap" style="max-height:55vh;overflow:auto"><table><thead><tr>
+      <th>Cliente</th><th>Data salva</th><th>Pista técnica do ID</th><th>Cadastro do lead</th><th>Ação</th>
+    </tr></thead><tbody>${summary || '<tr><td colspan="5">Nenhuma venda pendente.</td></tr>'}</tbody></table></div>
+  `, `<button class="btn btn-outline" onclick="closeModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="openHistoricalSalesAudit()">Recuperar com backup histórico</button>`, true);
+}
 function effectiveSaleDate(sale) {
   if (!sale) return "";
+  // Data sob revisão: nunca contaminar novembro com um fechamento não comprovado.
+  if (saleNeedsHistoricalDateReview(sale)) return "";
   // Fonte primária: a data da venda gravada no pedido, jamais a atualização.
   const venda = validCommercialDate(sale.dataVenda);
   if (venda) return venda;
@@ -4622,6 +4675,8 @@ function activeSaleForLead(lead) {
 function closingDateForLead(lead) {
   const sale = activeSaleForLead(lead);
   if (sale) {
+    // Não retornar a mesma data falsa do lead se a venda vinculada está sob revisão.
+    if (saleNeedsHistoricalDateReview(sale)) return "";
     const date = validCommercialDate(sale.dataVenda);
     if (date) return date;
     if (sale.manualEdit || sale.editadoManualmente || sale.dataVendaCorrigida) return "";
@@ -5293,9 +5348,11 @@ function renderLeads() {
       };
       const missing = (state.leads || []).filter(l =>
         !leadLostForListing(l) && !leadListingReferenceDate(l)).length;
+      const pending = pendingHistoricalSalesList().length;
       $("leadsRangeInfo").textContent = `${rows.length} registro(s) entre ${formatDate(range.start)} e ${formatDate(range.end)}. ${labels[mode] || labels.todos}.` +
+        (pending ? ` ${pending} venda(s) do lote reconstruído em 06/11/2026 estão pendentes de comprovação e não foram contabilizadas por data de fechamento.` : "") +
         (missing ? ` ${missing} registro(s) sem data válida ficaram fora da contagem. Use Revisar datas.` : "") +
-        ` Se alguma data antiga foi gravada como atual em versões anteriores, corrija em Revisar datas.`;
+        ` Conferir datas antigas requer histórico de venda, não a data do cadastro.`;
     }
   }
 
@@ -5330,9 +5387,16 @@ function paidInstallmentEntries(period = monthKey(), sellerFilter = "") {
   const rows = [];
   (state.sales || []).filter(s => s.status !== "Cancelada").forEach(sale => {
     if (sellerFilter && sale.vendedorId !== sellerFilter) return;
+    const pending = saleNeedsHistoricalDateReview(sale);
+    // Lote comprometido: sem parcela comprovada, não fabricar "recebido" em 06/11.
+    if (pending && !Array.isArray(sale.paymentSchedule)) return;
+    const explicitPayments = pending ? new Set((sale.paymentSchedule||[])
+      .filter(x=>x && x.pago === true && validCommercialDate(x.dataPagamento))
+      .map(x=>String(x.dataPagamento).slice(0,10)+"|"+Number(x.valor||0))) : null;
     const schedule = buildScheduleFromObject(sale);
     schedule.forEach(item => {
       if (!item.pago) return;
+      if (pending && !explicitPayments.has(String(item.dataPagamento).slice(0,10)+"|"+Number(item.valor||0))) return;
       const payDate = String(item.dataPagamento || item.vencimento || effectiveSaleDate(sale)).slice(0, 10);
       if (monthKey(`${payDate}T00:00:00`) !== period) return;
       rows.push({ sale, item: { ...item, dataPagamento: payDate }, valor: Number(item.valor) || 0 });
@@ -6176,8 +6240,10 @@ function renderSales() {
   const total = sumSales(closed);
   const revendas = isRevendasWorkspace();
   if ($("salesPeriodCaption")) {
-    $("salesPeriodCaption").textContent = valid
-      ? `Resultado de ${formatDate(start)} a ${formatDate(end)}`
+    const pending = pendingHistoricalSalesList().length;
+    $("salesPeriodCaption").innerHTML = valid
+      ? `Resultado de ${formatDate(start)} a ${formatDate(end)}` +
+        (pending ? ` · <strong>${pending} venda(s) sob auditoria histórica</strong> (fora do resultado até conferência). <button class="btn btn-outline btn-sm" onclick="openPendingHistoricalSalesAudit()">Ver relação</button>` : "")
       : "A data inicial deve ser anterior ou igual à final.";
   }
   if ($("salesTableHeader")) $("salesTableHeader").innerHTML = revendas
@@ -6461,7 +6527,7 @@ function openSaleDatesReview() {
     const difere = Boolean(pedido && noLead && pedido !== noLead);
     if (!pedido) semData++;
     if (difere) diverge++;
-    const classe = !pedido ? "Sem data" : difere ? "Datas divergentes" : "Conferir";
+    const classe = saleNeedsHistoricalDateReview(sale) ? "Data incorreta suspeita: 06/11" : !pedido ? "Sem data" : difere ? "Datas divergentes" : "Conferir";
     return `<tr>
       <td><strong>${escapeHTML(sale.cliente || "Sem cliente")}</strong>
         <small>${escapeHTML(userName(sale.vendedorId))}</small></td>
@@ -6475,7 +6541,7 @@ function openSaleDatesReview() {
   }).join("");
   openModal("Conferir datas das vendas", `
     <div class="note" style="margin-bottom:14px">
-      <strong>${all.length} vendas • ${semData} sem data de fechamento •
+      <strong>${all.length} vendas • ${pendingHistoricalSalesList().length} datas suspeitas de 06/11 • ${semData} sem data de fechamento •
       ${diverge} com divergência entre venda e lead.</strong><br>
       A data da venda é a data efetiva de fechamento, não a data de cadastro,
       atualização, previsão ou pagamento da parcela. As datas antigas não serão
@@ -6618,7 +6684,8 @@ function auditHtmlSummary(db) {
   const months = Object.entries(auditMonthCounts(db)).sort((a,b)=>a[0].localeCompare(b[0]));
   return `<div class="note" style="margin-bottom:12px">
     <strong>${sales.length} vendas • ${undated} sem data • ${conflicts.length} com divergência •
-    ${suspicious.length} registradas em 06/11/2026</strong>
+    ${suspicious.length} registradas em 06/11/2026 •
+    ${sales.filter(saleNeedsHistoricalDateReview).length} em quarentena analítica</strong>
     <p style="margin-top:7px">Estes números são lidos diretamente do Firebase, sem gravar nada.
     A data 06/11 é apenas um sinal para conferir, não uma prova da data real de outra venda.</p>
   </div><div class="table-wrap"><table><thead><tr><th>Mês da venda salvo</th><th>Pedidos</th></tr></thead><tbody>
@@ -6794,6 +6861,16 @@ async function dateAuditLoadHistoricFile(input) {
     const historic=dateAuditExtract(source);
     const current=dateAuditExtract(historicAudit.remote);
     if(!historic || !current) throw new Error("JSON não contém sales/leads no formato do CRM.");
+    // Comparar capturas atuais contra si próprias não recupera o fechamento original.
+    // Capturas após o lote de 06/11 podem servir para auditoria, não como prova antiga.
+    const captured = String(source.capturadoEm || source.capturedAt || "");
+    if (captured && captured.slice(0,10) >= "2026-11-06") {
+      const box=$("dateAuditCandidateResults");
+      if (box) box.textContent="O arquivo selecionado foi capturado após o lote de 06/11/2026. Use backup ANTERIOR ao evento ou contratos/pedidos originais: não há prova de datas históricas neste arquivo.";
+      historicAudit.suggestions=[];
+      historicAudit.source=file.name;
+      return;
+    }
     historicAudit.suggestions=dateAuditHistoricalCandidates(historic,current);
     historicAudit.source=file.name;
     dateAuditRenderSuggestions(file.name);
