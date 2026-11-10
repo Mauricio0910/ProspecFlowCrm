@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rensoftware CRM Comercial — V26</title>
+  <title>Rensoftware CRM Comercial — V27</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1388,7 +1388,10 @@ async function connectFirebase(workspace = currentWorkspace) {
         await connectFirestore(workspace);
         return;
       } catch (error) {
-        console.warn("Firestore indisponível. Tentando Realtime Database.", error);
+        console.error("Firestore indisponível. Sincronização suspensa por segurança; não alternar para outro banco.", error);
+        firebaseReady=false;firebaseMode="local";
+        setSyncStatus(false,"SEM FIRESTORE: SOMENTE CONSULTA LOCAL");
+        return;
       }
     }
 
@@ -1428,7 +1431,7 @@ async function connectFirestore(workspace = currentWorkspace) {
   if (snapshot.exists) {
     applyRemoteState(snapshot.data(), workspace);
   } else {
-    await docRef.set({ ...state, workspace }, { merge: true });
+    throw new Error("Documento Firestore não encontrado: nenhuma base vazia será criada automaticamente.");
   }
 
   if (unsubscribeFirestore) unsubscribeFirestore();
@@ -4739,7 +4742,7 @@ function effectiveLeadDate(lead) {
 // V26: condição (à vista/parcelado) não se confunde com o meio (crédito/débito/Pix).
 function paymentPlanType(obj) {
   const raw = String(obj?.pagamentoTipo || obj?.condicaoPagamento || obj?.formaPagamento || "avista").toLowerCase();
-  return raw === "parcelado" ? "parcelado" : "avista";
+  return ["parcelado", "entrada", "parcelas"].includes(raw) ? "parcelado" : "avista";
 }
 function paymentMethodType(obj) {
   const raw = String(obj?.meioPagamento || obj?.modalidadePagamento || obj?.formaRecebimento ||
@@ -4759,45 +4762,36 @@ function paymentMethodLabel(obj) {
     cartao_credito:"Cartão de crédito",cartao_debito:"Cartão de débito",
     transferencia:"Transferência",boleto:"Boleto",outros:"Outros"})[paymentMethodType(obj)] || "Não informado";
 }
-function normalizePaymentItem(item, fallback = {}) {
+// V27 - um vencimento não é um pagamento. Preservar metadados da recuperação.
+function normalizePaymentItem(item = {}, fallback = {}) {
+  const due = validCommercialDate(item.vencimento || item.dataVencimento || fallback.vencimento) || "";
+  const day = validCommercialDate(item.dataPagamento || item.dataRecebimento || "");
   return {
-    descricao: item?.descricao || fallback.descricao || "Pagamento",
-    valor: Number(item?.valor ?? fallback.valor ?? 0) || 0,
-    vencimento: String(item?.vencimento || fallback.vencimento || todayISO()).slice(0, 10),
-    pago: Boolean(item?.pago ?? fallback.pago ?? false),
-    dataPagamento: String(item?.dataPagamento || fallback.dataPagamento || item?.vencimento || fallback.vencimento || todayISO()).slice(0, 10)
+    ...item,
+    descricao: item.descricao || item.tipo || fallback.descricao || "Pagamento",
+    valor: Number(item.valor ?? fallback.valor ?? 0) || 0,
+    vencimento: due,
+    pago: item.pago === true && Boolean(day),
+    dataPagamento: item.pago === true ? day : ""
   };
 }
 function buildScheduleFromObject(obj = {}) {
   const total = Number(obj.implantacao) || 0;
-  if (!total) return [];
+  if (Array.isArray(obj.paymentSchedule) && obj.paymentSchedule.length)
+    return obj.paymentSchedule.map((r, i) => normalizePaymentItem(r, { descricao: `Parcela ${i+1}` }));
+  if (total <= 0) return [];
   const tipo = paymentPlanType(obj);
-  if (Array.isArray(obj.paymentSchedule) && obj.paymentSchedule.length) {
-    return obj.paymentSchedule.map((item, idx) => normalizePaymentItem(item, { descricao: idx === 0 ? "Entrada" : `Parcela ${idx}` }));
-  }
-
-  if (tipo !== "parcelado") {
-    const data = validCommercialDate(obj.dataVenda) || validCommercialDate(obj.fechadoEm) || "";
-    // Sem comprovante ou confirmação expressa não inferir pagamento, especialmente cartão.
-    return [{ descricao: "À vista", valor: total, vencimento: data, pago: false, dataPagamento: "" }];
-  }
-
-  const entrada = Math.max(0, Number(obj.entradaValor) || 0);
-  const qtd = Math.max(0, parseInt(obj.parcelasQtd || 0, 10));
-  const firstDate = String(obj.primeiraParcela || obj.dataPrimeiraParcela || obj.dataVenda || obj.fechadoEm || todayISO()).slice(0, 10);
-  const entradaData = String(obj.entradaData || obj.dataVenda || obj.fechadoEm || todayISO()).slice(0, 10);
-  const parcelaValor = Number(obj.parcelasValor) || (qtd ? Math.max(total - entrada, 0) / qtd : 0);
+  const start = validCommercialDate(obj.dataVenda || obj.fechadoEm) || "";
+  if (tipo !== "parcelado") return [{ descricao: "À vista", valor: total, vencimento: start, pago: false, dataPagamento: "" }];
+  const entrada = Math.max(0, Number(obj.entradaValor || obj.entrada || 0));
+  const qtd = Math.max(0, Number(obj.parcelasQtd || obj.parcelas || 0));
+  const primeira = validCommercialDate(obj.primeiraParcela || obj.dataPrimeiraParcela) || "";
+  const parcelaValor = Number(obj.parcelasValor || 0) || (qtd ? Math.max(total-entrada,0)/qtd : 0);
   const rows = [];
-  if (entrada > 0) rows.push(normalizePaymentItem({ descricao: "Entrada", valor: entrada, vencimento: entradaData, pago: true, dataPagamento: entradaData }));
-  for (let i = 0; i < qtd; i++) {
-    rows.push(normalizePaymentItem({
-      descricao: `Parcela ${i + 1}/${qtd}`,
-      valor: parcelaValor,
-      vencimento: addMonthsISO(firstDate, i),
-      pago: false,
-      dataPagamento: addMonthsISO(firstDate, i)
-    }));
-  }
+  if (entrada > 0) rows.push({ descricao:"Entrada", valor:entrada,
+    vencimento:validCommercialDate(obj.entradaData) || start, pago:false, dataPagamento:"" });
+  for (let i=0;i<qtd;i++) rows.push({ descricao:`Parcela ${i+1}/${qtd}`,
+    valor:parcelaValor, vencimento:primeira ? addMonthsISO(primeira,i) : "", pago:false, dataPagamento:"" });
   return rows;
 }
 function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
@@ -4845,8 +4839,11 @@ function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
     <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Quantidade de parcelas</label><input id="${prefix}ParcelasQtd" class="field" type="number" min="0" value="${qtd}"></div>
     <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Valor de cada parcela</label><input id="${prefix}ParcelasValor" class="field" type="number" step="0.01" value="${parcelaValor ? parcelaValor.toFixed(2) : 0}"></div>
     <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>Primeiro vencimento</label><input id="${prefix}PrimeiraParcela" class="field" type="date" value="${primeira}"></div>
-    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>&nbsp;</label><button type="button" class="btn btn-muted" onclick="renderPaymentSchedule('${prefix}')"><i class="fa-solid fa-calculator"></i> Atualizar parcelas</button></div>
+    <div class="form-group payment-${prefix}" style="${tipo === "parcelado" ? "" : "display:none"}"><label>&nbsp;</label><button type="button" class="btn btn-muted" onclick="recalculatePaymentSchedule('${prefix}')"><i class="fa-solid fa-calculator"></i> Atualizar parcelas</button></div>
     <div class="form-group full" id="${prefix}ScheduleWrap" style="${tipo === "parcelado" ? "" : "display:none"}"></div>
+    ${prefix === "s" ? `<div class="form-group full"><div class="note"><strong>Primeira mensalidade (produtos Rensoftware):</strong> a comissão de uma mensalidade só entra quando o recebimento for informado e confirmado. Não é gerada na data da venda.</div></div>
+    <div class="form-group"><label><input id="sMensalidadePago" type="checkbox" ${obj.primeiraMensalidadeRecebida === true && validCommercialDate(obj.dataPrimeiraMensalidadeRecebida) ? "checked" : ""}> 1ª mensalidade recebida?</label></div>
+    <div class="form-group"><label>Data real da 1ª mensalidade recebida</label><input class="field" type="date" id="sMensalidadePagoEm" value="${obj.primeiraMensalidadeRecebida === true ? validCommercialDate(obj.dataPrimeiraMensalidadeRecebida) : ""}"></div>` : ""}
   `;
 }
 function togglePaymentFields(prefix) {
@@ -4881,58 +4878,87 @@ function buildScheduleFromForm(prefix) {
   const entradaData = $(`${prefix}EntradaData`)?.value || baseDate;
   const primeira = $(`${prefix}PrimeiraParcela`)?.value || addMonthsISO(baseDate, 1);
   const rows = [];
-  if (entrada > 0) rows.push(normalizePaymentItem({ descricao: "Entrada", valor: entrada, vencimento: entradaData, pago: true, dataPagamento: entradaData }));
+  if (entrada > 0) rows.push(normalizePaymentItem({ descricao: "Entrada", valor: entrada, vencimento: entradaData, pago: false, dataPagamento: "" }));
   for (let i = 0; i < qtd; i++) {
     rows.push(normalizePaymentItem({
       descricao: `Parcela ${i + 1}/${qtd}`,
       valor: parcelaValor,
       vencimento: addMonthsISO(primeira, i),
       pago: false,
-      dataPagamento: addMonthsISO(primeira, i)
+      dataPagamento: ""
     }));
   }
   return rows;
 }
+// V27: não reconstruir nem apagar parcelas já confirmadas ao abrir o formulário.
 function renderPaymentSchedule(prefix, existingSchedule = null) {
   const wrap = $(`${prefix}ScheduleWrap`);
   if (!wrap) return;
-  const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
-  if (tipo !== "parcelado") {
-    wrap.innerHTML = "";
-    return;
-  }
-  const rows = existingSchedule || buildScheduleFromForm(prefix);
-  wrap.innerHTML = `
-    <label>Cronograma de pagamento da implantação</label>
-    <div class="table-wrap" style="margin-top:6px">
-      <table>
-        <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago?</th><th>Data do pagamento</th></tr></thead>
-        <tbody>
-          ${rows.map((r, idx) => `
-            <tr>
-              <td>${escapeHTML(r.descricao)}</td>
-              <td><input id="${prefix}ParcVenc_${idx}" class="field" type="date" value="${r.vencimento}"></td>
-              <td><input id="${prefix}ParcValor_${idx}" class="field" type="number" step="0.01" value="${Number(r.valor || 0).toFixed(2)}"></td>
-              <td style="text-align:center"><input id="${prefix}ParcPago_${idx}" type="checkbox"${r.pago ? " checked" : ""}></td>
-              <td><input id="${prefix}ParcData_${idx}" class="field" type="date" value="${r.dataPagamento || r.vencimento}"></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
+  if (($(`${prefix}PagamentoTipo`)?.value || "avista") !== "parcelado") return;
+  if (existingSchedule === null && wrap.dataset.loaded === "yes") return;
+  const rows = (existingSchedule === null ? buildScheduleFromForm(prefix) : existingSchedule)
+    .map(r => normalizePaymentItem(r));
+  wrap._crmOriginalRows = rows.map(r=>({...r}));
+  wrap.dataset.loaded = "yes";
+  wrap.dataset.rowCount = String(rows.length);
+  wrap.innerHTML = `<label>Cronograma de pagamento da implantação</label>
+    <div class="note" style="margin:6px 0">Somente marque como pago após confirmar o recebimento e informar sua data REAL. O vencimento sozinho nunca libera comissão.</div>
+    <div class="table-wrap" style="margin-top:6px"><table><thead>
+      <tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago?</th><th>Data real do recebimento</th></tr>
+    </thead><tbody>${rows.map((r,i)=>`<tr>
+      <td>${escapeHTML(r.descricao)}</td>
+      <td><input id="${prefix}ParcVenc_${i}" class="field" type="date" value="${r.vencimento||""}"></td>
+      <td><input id="${prefix}ParcValor_${i}" class="field" type="number" min="0" step="0.01" value="${Number(r.valor||0).toFixed(2)}"></td>
+      <td><input id="${prefix}ParcPago_${i}" type="checkbox"${r.pago?" checked":""}></td>
+      <td><input id="${prefix}ParcData_${i}" class="field" type="date" value="${r.pago ? (r.dataPagamento||"") : ""}"></td>
+    </tr>`).join("")}</tbody></table></div>`;
+}
+function recalculatePaymentSchedule(prefix) {
+  const wrap = $(`${prefix}ScheduleWrap`);
+  const old = collectPaymentSchedule(prefix);
+  if (old.length && !confirm("Recalcular o cronograma substituirá as parcelas mostradas. Quer continuar?")) return;
+  if(wrap) { wrap.dataset.loaded = "no"; wrap._crmOriginalRows=[]; }
+  renderPaymentSchedule(prefix, buildScheduleFromForm(prefix));
 }
 function collectPaymentSchedule(prefix) {
   const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
   if (tipo !== "parcelado") return buildScheduleFromForm(prefix);
-  const generated = buildScheduleFromForm(prefix);
-  return generated.map((row, idx) => normalizePaymentItem({
-    descricao: row.descricao,
-    vencimento: $(`${prefix}ParcVenc_${idx}`)?.value || row.vencimento,
-    valor: number($(`${prefix}ParcValor_${idx}`)?.value || row.valor),
-    pago: Boolean($(`${prefix}ParcPago_${idx}`)?.checked),
-    dataPagamento: $(`${prefix}ParcData_${idx}`)?.value || row.dataPagamento || row.vencimento
-  }));
+  const wrap = $(`${prefix}ScheduleWrap`);
+  const count = wrap?.dataset.loaded === "yes" ? Number(wrap.dataset.rowCount||0) : 0;
+  if (!count) return buildScheduleFromForm(prefix);
+  return Array.from({length:count}, (_,i)=>{
+    const old = (wrap._crmOriginalRows||[])[i] || {};
+    const paid = Boolean($(`${prefix}ParcPago_${i}`)?.checked);
+    return normalizePaymentItem({
+      ...old,
+      vencimento:$(`${prefix}ParcVenc_${i}`)?.value || "",
+      valor:number($(`${prefix}ParcValor_${i}`)?.value || 0),
+      pago:paid,
+      dataPagamento:paid ? ($(`${prefix}ParcData_${i}`)?.value || "") : ""
+    });
+  });
+}
+function validatePaymentForm(prefix, old = {}) {
+  if (isRevendasWorkspace()) return true;
+  const rows = collectPaymentSchedule(prefix);
+  const invalid = rows.some(r => r.pago === true && !validCommercialDate(r.dataPagamento));
+  if (invalid) { showToast("Informe a data REAL de cada parcela marcada como recebida.", "fa-triangle-exclamation");return false; }
+  // Verificar diretamente os controles, pois a normalização zera datas de pagamentos inválidos.
+  const rawPaid = ($(`${prefix}PagamentoTipo`)?.value === "parcelado")
+    ? Array.from({length:Number($(`${prefix}ScheduleWrap`)?.dataset.rowCount||0)},(_,i)=>i)
+        .some(i=>Boolean($(`${prefix}ParcPago_${i}`)?.checked) && !validCommercialDate($(`${prefix}ParcData_${i}`)?.value))
+    : Boolean($(`${prefix}VistaPago`)?.checked) && !validCommercialDate($(`${prefix}VistaDataPagamento`)?.value);
+  if (rawPaid) {showToast("A data do recebimento confirmado é obrigatória.","fa-triangle-exclamation");return false;}
+  const oldRows = Array.isArray(old.paymentSchedule) ? old.paymentSchedule : [];
+  const newlyConfirmed = rows.filter((r,i)=>r.pago && (!oldRows[i]?.pago || oldRows[i]?.dataPagamento !== r.dataPagamento));
+  if (newlyConfirmed.length && !confirm(`Confirmar ${newlyConfirmed.length} recebimento(s) informado(s) com data real? Isso gerará comissão no respectivo mês.`)) return false;
+  if (prefix === "s" && $("sMensalidadePago")?.checked) {
+    const date = validCommercialDate($("sMensalidadePagoEm")?.value);
+    if (!date) {showToast("Informe a data real do recebimento da primeira mensalidade.", "fa-triangle-exclamation");return false;}
+    if (!(old.primeiraMensalidadeRecebida === true && old.dataPrimeiraMensalidadeRecebida === date) &&
+      !confirm("Confirmar recebimento da PRIMEIRA mensalidade nessa data para cálculo de comissão?")) return false;
+  }
+  return true;
 }
 function applyPaymentPlanFromForm(data, prefix) {
   const revendas = isRevendasWorkspace();
@@ -5051,6 +5077,8 @@ function openLeadModal(id = "") {
 }
 
 function saveLead(id = "") {
+  if(!firebaseReady || firebaseMode!=="firestore" || crmSyncBlocked || !crmServerBaseline)
+    return showToast("Salvamento indisponível: conecte o Firestore e resolva conflitos.","fa-triangle-exclamation");
   const empresa = $("fEmpresa").value.trim();
   if (!empresa) return showToast("Informe a empresa do lead.", "fa-triangle-exclamation");
   const revendas = isRevendasWorkspace();
@@ -5091,6 +5119,7 @@ function saveLead(id = "") {
       }
     }
   }
+  if (!revendas && !validatePaymentForm("f", oldLead || {})) return;
   if (!revendas) applyPaymentPlanFromForm(data, "f");
   if (data.status === "Fechado") {
     data.pipeline = "Fechamento";
@@ -5103,7 +5132,7 @@ function saveLead(id = "") {
     }
     if (Array.isArray(data.paymentSchedule)) {
       data.paymentSchedule = data.paymentSchedule.map(item => item.descricao === "À vista"
-        ? { ...item, vencimento: data.fechadoEm, dataPagamento: item.pago ? data.fechadoEm : item.dataPagamento }
+        ? { ...item, vencimento: data.fechadoEm, dataPagamento: item.pago ? item.dataPagamento : "" }
         : item
       );
     }
@@ -5469,81 +5498,51 @@ function renderLeads() {
   }).join("") || `<tr><td class="empty" colspan="9">Nenhum lead encontrado para o filtro atual.</td></tr>`;
 }
 
+// V27 - comissionamento exclusivamente por recebimento registrado e datado.
 function paidInstallmentEntries(period = monthKey(), sellerFilter = "") {
   const rows = [];
-  (state.sales || []).filter(s => s.status !== "Cancelada").forEach(sale => {
-    if (sellerFilter && sale.vendedorId !== sellerFilter) return;
-    const pending = saleNeedsHistoricalDateReview(sale);
-    // Lote comprometido: sem parcela comprovada, não fabricar "recebido" em 06/11.
-    if (pending && !Array.isArray(sale.paymentSchedule)) return;
-    const explicitPayments = pending ? new Set((sale.paymentSchedule||[])
-      .filter(x=>x && x.pago === true && validCommercialDate(x.dataPagamento))
-      .map(x=>String(x.dataPagamento).slice(0,10)+"|"+Number(x.valor||0))) : null;
-    const schedule = buildScheduleFromObject(sale);
-    schedule.forEach(item => {
-      if (!item.pago) return;
-      if (pending && !explicitPayments.has(String(item.dataPagamento).slice(0,10)+"|"+Number(item.valor||0))) return;
-      const payDate = String(item.dataPagamento || item.vencimento || effectiveSaleDate(sale)).slice(0, 10);
-      if (monthKey(`${payDate}T00:00:00`) !== period) return;
-      rows.push({ sale, item: { ...item, dataPagamento: payDate }, valor: Number(item.valor) || 0 });
+  (state.sales||[]).filter(s=> !["Cancelada","Cancelado"].includes(s.status)).forEach(sale=>{
+    if(sellerFilter && sale.vendedorId !== sellerFilter) return;
+    // Histórico reconstruído sozinho nunca confirma pagamento.
+    const explicit = Array.isArray(sale.paymentSchedule) ? sale.paymentSchedule : [];
+    explicit.forEach((raw,i)=>{
+      if(raw?.pago !== true || !validCommercialDate(raw.dataPagamento)) return;
+      const date=validCommercialDate(raw.dataPagamento);
+      if(date.slice(0,7)!==period) return;
+      const valor=Number(raw.valor)||0;
+      if(valor<=0)return;
+      rows.push({sale,item:{...raw,descricao:raw.descricao||`Parcela ${i+1}`,dataPagamento:date},valor});
     });
   });
   return rows;
 }
 function commissionDetailRows(period = monthKey(), sellerFilter = "") {
-  const installPayments = paidInstallmentEntries(period, sellerFilter)
-    .filter(entry => productGroup(entry.sale.produtoId) === "instalacao")
-    .map(entry => {
-      const sale = entry.sale;
-      const lead = saleLead(sale);
-      const indicators = hitIndicatorsForSeller(sale.vendedorId, period);
-      const rate = consultantCommissionRate(indicators.count);
-      return {
-        tipo: "Implantação recebida",
-        empresa: sale.cliente,
-        vendedorId: sale.vendedorId,
-        vendedor: userName(sale.vendedorId),
-        produto: productName(sale.produtoId),
-        plano: productName(sale.produtoId),
-        fonte: sale.origem || campaignName(sale.campaignId || lead?.campaignId) || lead?.origem || "—",
-        dataFechamento: effectiveSaleDate(sale),
-        dataPagamento: entry.item.dataPagamento,
-        parcela: entry.item.descricao,
-        implantacaoTotal: Number(sale.implantacao) || 0,
-        mensalidade: Number(sale.mensalidade) || 0,
-        baseComissao: entry.valor,
-        taxaConsultor: rate,
-        comissaoConsultor: entry.valor * rate,
-        comissaoGestor: entry.valor * 0.25
-      };
+  const entries = paidInstallmentEntries(period,sellerFilter)
+    .filter(entry=>productGroup(entry.sale.produtoId)==="instalacao")
+    .map(entry=>{
+      const sale=entry.sale, lead=saleLead(sale), indicators=hitIndicatorsForSeller(sale.vendedorId,period);
+      const rate=consultantCommissionRate(indicators.count);
+      return {saleId:sale.id,tipo:"Implantação recebida",empresa:sale.cliente,
+        vendedorId:sale.vendedorId,vendedor:userName(sale.vendedorId),produto:productName(sale.produtoId),
+        plano:productName(sale.produtoId),fonte:sale.origem||campaignName(sale.campaignId||lead?.campaignId)||lead?.origem||"—",
+        dataFechamento:effectiveSaleDate(sale),dataPagamento:entry.item.dataPagamento,parcela:entry.item.descricao,
+        implantacaoTotal:Number(sale.implantacao)||0,mensalidade:Number(sale.mensalidade)||0,
+        baseComissao:entry.valor,taxaConsultor:rate,comissaoConsultor:entry.valor*rate,comissaoGestor:entry.valor*0.25};
     });
-
-  const rensoft = salesInMonth(period)
-    .filter(s => (!sellerFilter || s.vendedorId === sellerFilter) && productGroup(s.produtoId) === "rensoftware")
-    .map(sale => {
-      const lead = saleLead(sale);
-      const mensalidade = Number(sale.mensalidade) || 0;
-      return {
-        tipo: "Produto Rensoftware",
-        empresa: sale.cliente,
-        vendedorId: sale.vendedorId,
-        vendedor: userName(sale.vendedorId),
-        produto: productName(sale.produtoId),
-        plano: productName(sale.produtoId),
-        fonte: sale.origem || campaignName(sale.campaignId || lead?.campaignId) || lead?.origem || "—",
-        dataFechamento: effectiveSaleDate(sale),
-        dataPagamento: effectiveSaleDate(sale),
-        parcela: "1ª mensalidade",
-        implantacaoTotal: Number(sale.implantacao) || 0,
-        mensalidade,
-        baseComissao: mensalidade,
-        taxaConsultor: 1,
-        comissaoConsultor: mensalidade,
-        comissaoGestor: 0
-      };
+  const mensalidades=(state.sales||[]).filter(s=>s.status!=="Cancelada" &&
+    s.status!=="Cancelado" && (!sellerFilter||s.vendedorId===sellerFilter) &&
+    productGroup(s.produtoId)==="rensoftware" && s.primeiraMensalidadeRecebida===true &&
+    validCommercialDate(s.dataPrimeiraMensalidadeRecebida).slice(0,7)===period)
+    .map(sale=>{
+      const lead=saleLead(sale), mensalidade=Number(sale.mensalidade)||0;
+      return {saleId:sale.id,tipo:"Produto Rensoftware",empresa:sale.cliente,vendedorId:sale.vendedorId,
+        vendedor:userName(sale.vendedorId),produto:productName(sale.produtoId),plano:productName(sale.produtoId),
+        fonte:sale.origem||campaignName(sale.campaignId||lead?.campaignId)||lead?.origem||"—",
+        dataFechamento:effectiveSaleDate(sale),dataPagamento:validCommercialDate(sale.dataPrimeiraMensalidadeRecebida),
+        parcela:"1ª mensalidade recebida",implantacaoTotal:Number(sale.implantacao)||0,mensalidade,
+        baseComissao:mensalidade,taxaConsultor:1,comissaoConsultor:mensalidade,comissaoGestor:0};
     });
-
-  return [...installPayments, ...rensoft].sort((a,b) => `${a.vendedor}${a.plano}${a.dataPagamento}`.localeCompare(`${b.vendedor}${b.plano}${b.dataPagamento}`));
+  return [...entries,...mensalidades].sort((a,b)=> `${a.vendedor}${a.plano}${a.dataPagamento}`.localeCompare(`${b.vendedor}${b.plano}${b.dataPagamento}`));
 }
 function commissionRows(period = monthKey(), sellerFilter = "") {
   const consultants = eligibleGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
@@ -5551,8 +5550,7 @@ function commissionRows(period = monthKey(), sellerFilter = "") {
   return consultants.map(u => {
     const rows = details.filter(r => r.vendedorId === u.id);
     const salesIds = new Set(rows.map(r => {
-      const sale = (state.sales || []).find(s => s.cliente === r.empresa && s.vendedorId === u.id && productName(s.produtoId) === r.produto);
-      return sale?.id || `${r.empresa}_${r.produto}_${r.dataFechamento}`;
+      return r.saleId || `${r.empresa}_${r.produto}_${r.dataFechamento}`;
     }));
     const installBase = rows.filter(r => r.tipo === "Implantação recebida").reduce((sum, r) => sum + r.baseComissao, 0);
     const rensoftCommission = rows.filter(r => r.tipo === "Produto Rensoftware").reduce((sum, r) => sum + r.comissaoConsultor, 0);
@@ -5592,7 +5590,7 @@ function ensureCommissionV12Ui() {
     const holder = document.createElement("div");
     holder.innerHTML = `
       <h3 style="font-size:14px;margin:18px 0 8px">Relatório analítico por pagamento</h3>
-      <div class="note" style="margin-bottom:10px">A comissão parcelada aparece no mês da parcela marcada como paga. Vendas à vista legadas continuam entrando integralmente no mês do fechamento.</div>
+      <div class="note" style="margin-bottom:10px">V27: comissões só entram no mês do pagamento expressamente confirmado, com data válida. Registros históricos e entradas em conferência não são presumidos pagos.</div>
       <div class="table-wrap"><table><thead><tr><th>Empresa</th><th>Vendedor</th><th>Plano</th><th>Fonte</th><th>Fechamento</th><th>Pagamento</th><th>Implantação</th><th>Mensalidade</th><th>Base comissão</th><th>Consultor</th><th>Gestor</th></tr></thead><tbody id="commissionDetailTable"></tbody></table></div>
     `;
     card.appendChild(holder);
@@ -5601,6 +5599,20 @@ function ensureCommissionV12Ui() {
 function renderCommissions() {
   if (!$("consultantCommissionTable")) return;
   ensureCommissionV12Ui();
+  const root = document.querySelector("#page-comissoes .card");
+  if (root && !$("commissionPendingInfo")) {
+    const holder = document.createElement("div");
+    holder.id = "commissionPendingInfo";
+    holder.className = "note warning";
+    holder.style.margin = "12px 0";
+    const head = root.querySelector(".card-header");
+    if (head) head.insertAdjacentElement("afterend", holder); else root.prepend(holder);
+  }
+  if ($("commissionPendingInfo")) {
+    const pending = (state.sales || []).reduce((n,s) => n + (Array.isArray(s.paymentSchedule) ? s.paymentSchedule.filter(p => p.pago !== true).length : 0),0);
+    const review = (state.sales || []).filter(s => s.financeiroSobConferencia).length;
+    $("commissionPendingInfo").textContent = `${pending} parcela(s) sem recebimento confirmado; ${review} contrato(s) com histórico em conferência. Comissões apenas sobre valores recebidos, com data real.`;
+  }
   const period = $("commissionMonthFilter")?.value || $("goalMonthFilter")?.value || monthKey();
   const sellerFilter = $("commissionSellerFilter")?.value || "";
   const rows = commissionRows(period, sellerFilter);
@@ -5609,7 +5621,7 @@ function renderCommissions() {
   const baseTotal = installDetails.reduce((sum, r) => sum + r.baseComissao, 0);
   const consultantsTotal = rows.reduce((sum, r) => sum + r.totalCommission, 0);
   const managersTotalEach = baseTotal * 0.25;
-  const salesCount = new Set(details.map(r => `${r.empresa}_${r.vendedor}_${r.plano}_${r.dataFechamento}`)).size;
+  const salesCount = new Set(details.map(r => r.saleId || `${r.empresa}_${r.vendedor}_${r.plano}_${r.dataFechamento}`)).size;
 
   $("commissionConsultantsTotal").textContent = money(consultantsTotal);
   $("commissionManagersTotal").textContent = money(managersTotalEach);
@@ -6029,6 +6041,8 @@ function syncClosedLeadsIntoSales(data = state, silent = true) {
     : "Nenhuma venda nova com data confirmada.");
 }
 function saveSale(id = "") {
+  if(!firebaseReady || firebaseMode!=="firestore" || crmSyncBlocked || !crmServerBaseline)
+    return showToast("Salvamento indisponível: conecte o Firestore e resolva conflitos.","fa-triangle-exclamation");
   const cliente = $("sCliente").value.trim();
   if (!cliente) return showToast("Informe o cliente.", "fa-triangle-exclamation");
   const revendas = isRevendasWorkspace();
@@ -6060,7 +6074,20 @@ function saveSale(id = "") {
     updatedAt: new Date().toISOString()
   };
 
-  if (!revendas) applyPaymentPlanFromForm(data, "s");
+  if (!revendas && !validatePaymentForm("s", oldSale || {})) return;
+  if (!revendas) {
+    applyPaymentPlanFromForm(data, "s");
+    data.primeiraMensalidadeRecebida = Boolean($("sMensalidadePago")?.checked && validCommercialDate($("sMensalidadePagoEm")?.value));
+    data.dataPrimeiraMensalidadeRecebida = data.primeiraMensalidadeRecebida ? validCommercialDate($("sMensalidadePagoEm")?.value) : "";
+    data.auditRecebimentos = Array.isArray(oldSale?.auditRecebimentos) ? [...oldSale.auditRecebimentos] : [];
+    const prev = oldSale?.paymentSchedule || [];
+    data.paymentSchedule.forEach((r,i)=>{
+      if(r.pago && (!prev[i]?.pago || prev[i]?.dataPagamento !== r.dataPagamento))
+        data.auditRecebimentos.push({tipo:"implantacao",valor:r.valor,parcela:r.descricao,recebidoEm:r.dataPagamento,registradoEm:new Date().toISOString(),usuario:currentUser?.id||""});
+    });
+    if(data.primeiraMensalidadeRecebida && (!oldSale?.primeiraMensalidadeRecebida || oldSale.dataPrimeiraMensalidadeRecebida !== data.dataPrimeiraMensalidadeRecebida))
+      data.auditRecebimentos.push({tipo:"primeira_mensalidade",valor:data.mensalidade,recebidoEm:data.dataPrimeiraMensalidadeRecebida,registradoEm:new Date().toISOString(),usuario:currentUser?.id||""});
+  }
   // Auditoria: registrar alterações de data feitas pela Gestão de Vendas.
   const anterior = oldSale ? validCommercialDate(oldSale.dataVenda) : "";
   if (oldSale && anterior !== data.dataVenda) {
@@ -6215,6 +6242,9 @@ function addLeadMovement(lead, nextStage, reason, at = new Date().toISOString())
 // Apenas leads ABERTOS que estão NESSA etapa há mais de 10 dias são enviados para Perdidos.
 // O cálculo não modifica oportunidades em Negociação, Fechamento ou leads fechados.
 function expireProspectLeads() {
+  // V27: suspensão temporária da conversão automática em Perdido para impedir gravações
+  // massivas não solicitadas enquanto a base financeira recuperada é homologada.
+  return 0;
   if (!state || !Array.isArray(state.leads)) return 0;
   const now = new Date().toISOString(), today = todayISO();
   let total = 0;
@@ -6376,7 +6406,7 @@ function renderSales() {
       <td>${escapeHTML(origem)}<br><small>${escapeHTML(campaignName(s.campaignId || lead?.campaignId))}</small></td>
       <td>${escapeHTML(productName(s.produtoId))}</td><td>${escapeHTML(userName(s.vendedorId))}</td>
       <td>${saleNeedsHistoricalDateReview(s) ? `<strong style="color:#b45309">06/11/2026 (sob revisão)</strong><br><small>Data de fechamento não comprovada</small>` : (effectiveSaleDate(s) ? formatDate(effectiveSaleDate(s)) : "<small>Sem data comprovada</small>")}</td>
-      <td>${revendas ? "—" : escapeHTML(paymentMethodLabel(s))}<br><small>${revendas ? "" : (paymentPlanType(s)==="parcelado" ? "Parcelado" : "À vista")}</small></td>
+      <td>${revendas ? "—" : escapeHTML(paymentMethodLabel(s))}<br><small>${revendas ? "" : (paymentPlanType(s)==="parcelado" ? "Parcelado" : "À vista")}</small>${!revendas && Array.isArray(s.paymentSchedule) && s.paymentSchedule.length ? `<br><small>${s.paymentSchedule.filter(p=>p.pago===true && validCommercialDate(p.dataPagamento)).length}/${s.paymentSchedule.length} recebimento(s) confirmados</small>` : ""}${s.financeiroSobConferencia ? '<br><small style="color:#b45309">Histórico em conferência</small>' : ''}</td>
       <td>${escapeHTML(life.cycle)}</td>
       <td>${revendas ? "Captado" : money(s.implantacao)}</td><td>${revendas ? "—" : money(s.mensalidade)}</td>
       <td>${saleNeedsHistoricalDateReview(s) ? `<span style="color:#b45309;font-weight:bold">Data sob auditoria</span><br>` : ""}${statusTag(s.status)}</td>
@@ -7104,6 +7134,162 @@ Deseja continuar?`)) return;
     showToast(`Nenhuma correção concluída: ${e.message||String(e)}`, "fa-triangle-exclamation");
   }
 }
+
+
+// ============= V27: SINCRONIZAÇÃO TRANSACIONAL (sem sobrescrever listas inteiras defasadas) =============
+let crmServerBaseline = null;
+let crmPendingLocal = false;
+let crmSyncRunning = false;
+let crmSyncBlocked = false;
+let crmQueuedRemote = null;
+function crmCopy(o) {return o===undefined ? undefined : JSON.parse(JSON.stringify(o));}
+function crmCanon(o) {
+  if(Array.isArray(o))return o.map(crmCanon);
+  if(o&&typeof o==="object")return Object.fromEntries(Object.keys(o).sort().map(k=>[k,crmCanon(o[k])]));
+  return o;
+}
+function crmSame(a,b) {return JSON.stringify(crmCanon(a)) === JSON.stringify(crmCanon(b));}
+function crmIndex(array) {const m=new Map();for(const v of (Array.isArray(array)?array:[])) if(v&&v.id!=null)m.set(String(v.id),v);return m;}
+function crmChanges(baseline, draft) {
+  const out=[];
+  const excluded = new Set(["updatedAt","workspace"]);
+  for (const key of new Set([...Object.keys(baseline||{}), ...Object.keys(draft||{})])) {
+    if(excluded.has(key))continue;
+    const before=baseline?.[key],after=draft?.[key];
+    if(crmSame(before,after))continue;
+    if(Array.isArray(before)&&Array.isArray(after)&&
+       [...before,...after].every(x=>x&&typeof x==="object"&&x.id!=null)) {
+      const a=crmIndex(before),b=crmIndex(after);
+      for(const id of new Set([...a.keys(),...b.keys()])) {
+        const orig=a.get(id), now=b.get(id);
+        if(crmSame(orig,now))continue;
+        if(!orig)out.push({key,id,mode:"create",now});
+        else if(!now)out.push({key,id,mode:"delete",orig});
+        else {
+          const fields={};
+          for(const f of new Set([...Object.keys(orig),...Object.keys(now)]))
+            if(!crmSame(orig[f],now[f]))fields[f]={before:orig[f],after:now[f],remove:!Object.hasOwn(now,f)};
+          if(Object.keys(fields).length)out.push({key,id,mode:"modify",fields});
+        }
+      }
+    } else out.push({key,mode:"whole",orig:before,now:after});
+  }
+  return out;
+}
+function crmMergeRemote(remote,changes) {
+  const result={};
+  const grouped=new Map();
+  for(const c of changes) {if(!grouped.has(c.key))grouped.set(c.key,[]);grouped.get(c.key).push(c);}
+  for(const [key,ops] of grouped) {
+    if(ops[0].mode==="whole") {
+      const c=ops[0];
+      if(!crmSame(remote[key],c.orig)&&!crmSame(remote[key],c.now))throw new Error(`Outro usuário alterou ${key}; recarregue antes de salvar.`);
+      result[key]=c.now;
+      continue;
+    }
+    const rows=Array.isArray(remote[key]) ? crmCopy(remote[key]) : [];
+    const map=crmIndex(rows);
+    for(const c of ops) {
+      const current=map.get(c.id);
+      if(c.mode==="create") {
+        if(current && !crmSame(current,c.now))throw new Error(`Cadastro ${c.id} já existe no servidor.`);
+        if(!current) {rows.push(crmCopy(c.now));map.set(c.id,c.now);}
+      } else if(c.mode==="delete") {
+        if(current&&!crmSame(current,c.orig))throw new Error(`Cadastro ${c.id} foi atualizado por outro usuário; exclusão bloqueada.`);
+        const idx=rows.findIndex(v=>String(v.id)===c.id);
+        if(idx>=0)rows.splice(idx,1);
+        map.delete(c.id);
+      } else {
+        if(!current)throw new Error(`Cadastro ${c.id} foi excluído em outra sessão; não recriado.`);
+        for(const [f,edit] of Object.entries(c.fields)) {
+          if(!crmSame(current[f],edit.before)&&!crmSame(current[f],edit.after))
+            throw new Error(`Conflito em ${c.id}.${f}: alteração de outro usuário preservada.`);
+          if(edit.remove)delete current[f]; else current[f]=crmCopy(edit.after);
+        }
+      }
+    }
+    result[key]=rows;
+  }
+  return result;
+}
+function applyRemoteState(remoteData,workspace=currentWorkspace) {
+  if(workspace!==currentWorkspace)return;
+  if(crmSyncRunning||crmPendingLocal) {crmQueuedRemote=remoteData;return;}
+  applyingRemoteSnapshot=true;
+  try {
+    state=normalizeState({...remoteData,workspace});
+    state.workspace=workspace;
+    crmServerBaseline=crmCopy(state);
+    crmQueuedRemote=null;
+    localStorage.setItem(activeStorageKey(workspace),JSON.stringify(state));
+    populateMonthFilters();updateWorkspaceUI();
+    if(currentUser) {
+      currentUser=state.users.find(u=>u.id===currentUser.id)||state.users.find(u=>norm(u.login)===norm(currentUser.login))||currentUser;
+      renderAll();
+    }
+    pendingAutomaticLossSync=false;
+  }finally{applyingRemoteSnapshot=false;}
+}
+async function crmFlushChanges() {
+  if(crmSyncRunning||crmSyncBlocked||!crmPendingLocal||!state)return;
+  if(firebaseMode!=="firestore"||!firebaseReady||!firestore||!crmServerBaseline){
+    setSyncStatus(false,"ALTERAÇÕES LOCAIS NÃO SINCRONIZADAS");
+    showToast("Firebase não está conectado; mudanças NÃO foram salvas na nuvem.","fa-triangle-exclamation");
+    return;
+  }
+  crmSyncRunning=true;
+  crmPendingLocal=false;
+  const base=crmCopy(crmServerBaseline),draft=crmCopy(state),workspace=currentWorkspace;
+  const delta=crmChanges(base,draft);
+  try {
+    if(delta.length) {
+      const ref=firestore.collection(FIRESTORE_COLLECTION).doc(activeFirestoreDoc(workspace));
+      await firestore.runTransaction(async tx=>{
+        const snap=await tx.get(ref);
+        if(!snap.exists)throw new Error("Documento Firestore ausente: gravação cancelada.");
+        const remote=snap.data();
+        if(String(remote.workspace||workspace)!==workspace)throw new Error("Workspace diferente: gravação cancelada.");
+        const updates=crmMergeRemote(remote,delta);
+        if(Object.keys(updates).length)tx.update(ref,{...updates,updatedAt:new Date().toISOString()});
+      });
+      const latest=await ref.get({source:"server"});
+      if(!latest.exists)throw new Error("Falha na releitura do Firestore.");
+      // Baseline pós transação, para não reenviar campos antigos na próxima edição.
+      crmServerBaseline=crmCopy(normalizeState({...latest.data(),workspace}));
+      crmQueuedRemote=latest.data();
+      setSyncStatus(true,`Firestore salvo com proteção: ${workspaceLabel(workspace)}`);
+    }
+  }catch(error){
+    console.error("V27: sincronização bloqueada para proteger dados",error);
+    crmSyncBlocked=true;
+    crmPendingLocal=true;
+    try {localStorage.setItem(activeStorageKey()+"_V27_RASCUNHO_NAO_SINCRONIZADO",JSON.stringify({capturadoEm:new Date().toISOString(),state}));} catch(_e) {}
+    setSyncStatus(false,"CONFLITO: NÃO SALVO NA NUVEM");
+    showToast(`Gravação bloqueada para preservar o Firebase: ${error.message||error}`,"fa-triangle-exclamation");
+  }finally{
+    crmSyncRunning=false;
+    if(!crmPendingLocal&&!crmSyncBlocked&&crmQueuedRemote&&workspace===currentWorkspace)
+      applyRemoteState(crmQueuedRemote,workspace);
+    if(crmPendingLocal&&!crmSyncBlocked) {clearTimeout(saveTimer);saveTimer=setTimeout(crmFlushChanges,250);}
+  }
+}
+function persist(){
+  if(!state||applyingRemoteSnapshot)return;
+  state.updatedAt=new Date().toISOString();
+  state.workspace=currentWorkspace;
+  localStorage.setItem(activeStorageKey(),JSON.stringify(state));
+  crmPendingLocal=true;
+  if(crmSyncBlocked) {
+    setSyncStatus(false,"CONFLITO: RECARREGUE ANTES DE NOVAS ALTERAÇÕES");
+    return;
+  }
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(crmFlushChanges,450);
+}
+window.addEventListener("beforeunload",e=>{
+  if(crmPendingLocal||crmSyncRunning){e.preventDefault();e.returnValue="Há alterações ainda não confirmadas no Firebase.";}
+});
+// Leitura sempre do Firebase ao entrar; nunca enviar o cache antigo sobre a base atual.
 
 // =============== EVENTOS ===============
 document.addEventListener("keydown", event => {
