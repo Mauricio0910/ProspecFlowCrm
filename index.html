@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rensoftware CRM Comercial — V30 | Acesso individual e produtividade</title>
+  <title>Rensoftware CRM Comercial — V31 | Comissionamento corrigido</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -292,7 +292,7 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
         <button class="nav-item" onclick="doLogout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="nav-label">Sair</span></button>
 
         <div class="sidebar-footer">
-          <strong>Versão:</strong> V30 — Acesso individual e metas<br>
+          <strong>Versão:</strong> V31 — Comissões de implantação e cartão<br>
           <strong>Ambiente:</strong> <span id="sidebarWorkspace">CRM Comercial</span><br>
           <strong>Firebase:</strong> <span id="sidebarSync">modo local</span><br>
           As alterações são salvas automaticamente em bases separadas.
@@ -600,8 +600,8 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Cálculo de Comissionamento <small style="color:#64748b;font-size:11px">V30</small></div>
-                <div class="card-subtitle">Competência = mês do recebimento confirmado. Consultor: 20%, 25% ou 30%, conforme os indicadores; gestor: 25% sobre implantação recebida.</div>
+                <div class="card-title">Cálculo de Comissionamento <small style="color:#64748b;font-size:11px">V31</small></div>
+                <div class="card-subtitle">Comissão somente sobre implantação. Dois indicadores de metas (implantação e mensalidade): 0 = 20%, 1 = 25%, 2 = 30%. Boleto: conforme parcelas efetivamente recebidas. Cartão aprovado: implantação integral, mesmo parcelada. Gestor: 25% da base comissionável.</div>
               </div>
               <button class="btn btn-outline" onclick="exportCommissions()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
             </div>
@@ -4199,10 +4199,9 @@ function renderCommissions() {
   $("commissionSalesCount").textContent = String(allSales.length);
 
   $("consultantCommissionTable").innerHTML = rows.map(r => {
-    const indicatorText = [
-      r.indicators.hitImplantacao ? "Implantação" : "",
-      r.indicators.hitMensalidade ? "Mensalidade" : ""
-    ].filter(Boolean).join(" + ") || "Nenhum";
+    const indicatorText = (r.details && r.details.length)
+      ? [...new Set(r.details.map(d => d.indicadoresTexto || "Nenhum"))].join(" / ")
+      : "—";
     const rule = productGroupTextForCommission(r);
     return `<tr>
       <td><strong>${escapeHTML(r.user.nome)}</strong><br><small>${escapeHTML(r.user.perfil)}</small></td>
@@ -4211,7 +4210,7 @@ function renderCommissions() {
       <td>${money(r.mrrTotal)}</td>
       <td>${escapeHTML(indicatorText)}</td>
       <td><span class="commission-rate">${Math.round(r.rate * 100)}%</span><br><small>${rule}</small></td>
-      <td><strong>${money(r.totalCommission)}</strong><br><small>Instalação: ${money(r.installCommission)} · Produtos: ${money(r.rensoftCommission)}</small></td>
+      <td><strong>${money(r.totalCommission)}</strong><br><small>Somente implantação: ${money(r.installCommission)}</small></td>
     </tr>`;
   }).join("") || `<tr><td class="empty" colspan="7">Nenhum consultor com venda no período.</td></tr>`;
 
@@ -4916,17 +4915,23 @@ function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
     <div class="form-group full">
       <div class="note" style="margin-top:4px">
         <strong>Parcelamento da implantação e comissão</strong><br>
-        Quando a venda for parcelada, a comissão do consultor e do gestor entra somente no mês da parcela marcada como paga.
+        Boleto parcelado: comissão proporcional a cada boleto recebido. Cartão parcelado e aprovado: comissão sobre a implantação inteira na data da aprovação.
       </div>
     </div>
     <div class="form-group"><label>Meio de recebimento</label>
-      <select id="${prefix}MeioPagamento" class="select">
+      <select id="${prefix}MeioPagamento" class="select" onchange="togglePaymentFields('${prefix}')">
         ${[["nao_informado","Não informado"],["pix","Pix"],["dinheiro","Dinheiro"],
           ["cartao_credito","Cartão de crédito"],["cartao_debito","Cartão de débito"],
           ["transferencia","Transferência"],["boleto","Boleto"],["outros","Outros"]]
           .map(([value,label])=>`<option value="${value}"${paymentMethodType(obj)===value ? " selected" : ""}>${label}</option>`).join("")}
       </select>
-      <small class="help">O cartão identifica o meio de pagamento; as parcelas indicam os vencimentos. Comissão só após recebimento confirmado.</small>
+      <small class="help">BOLETO: comissão proporcional aos boletos efetivamente pagos. CARTÃO: comissão sobre o valor total da implantação após transação aprovada, mesmo parcelada.</small>
+    </div>
+    <div class="form-group full" id="${prefix}CartaoConfirmacao" style="${["cartao_credito","cartao_debito"].includes(paymentMethodType(obj))?"":"display:none"}">
+      <div class="note"><strong>Confirmação de transação no cartão</strong> (crédito ou débito). O número de parcelas do cliente não divide a comissão. Confirme apenas quando a transação estiver aprovada.</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="${prefix}CartaoAprovado" ${obj.pagamentoCartaoConfirmado===true && validCommercialDate(obj.dataConfirmacaoCartao)?"checked":""}> Transação aprovada pela operadora?</label>
+      <label>Data real da aprovação/recebimento no cartão</label><input type="date" class="field" id="${prefix}CartaoAprovadoEm" value="${obj.pagamentoCartaoConfirmado===true?validCommercialDate(obj.dataConfirmacaoCartao):""}">
+      <small class="help">Uma aprovação = uma comissão integral sobre a implantação; não confirme parcelas individualmente do cartão para gerar comissões extras.</small>
     </div>
     <div class="form-group"><label>Condição de pagamento da implantação</label>
       <select id="${prefix}PagamentoTipo" class="select" onchange="togglePaymentFields('${prefix}')">
@@ -4955,6 +4960,10 @@ function paymentFieldsHTML(prefix, obj = {}, revendas = false) {
 }
 function togglePaymentFields(prefix) {
   const tipo = $(`${prefix}PagamentoTipo`)?.value || "avista";
+  const meio = $(`${prefix}MeioPagamento`)?.value || "nao_informado";
+  const cartao = ["cartao_credito","cartao_debito"].includes(meio);
+  const confirmaCartao = $(`${prefix}CartaoConfirmacao`);
+  if (confirmaCartao) confirmaCartao.style.display = cartao ? "" : "none";
   document.querySelectorAll(`.payment-${prefix}`).forEach(el => el.style.display = tipo === "parcelado" ? "" : "none");
   document.querySelectorAll(`.payment-${prefix}-avista`).forEach(el => el.style.display = tipo === "parcelado" ? "none" : "");
   const wrap = $(`${prefix}ScheduleWrap`);
@@ -5009,7 +5018,7 @@ function renderPaymentSchedule(prefix, existingSchedule = null) {
   wrap.dataset.loaded = "yes";
   wrap.dataset.rowCount = String(rows.length);
   wrap.innerHTML = `<label>Cronograma de pagamento da implantação</label>
-    <div class="note" style="margin:6px 0">Somente marque como pago após confirmar o recebimento e informar sua data REAL. O vencimento sozinho nunca libera comissão.</div>
+    <div class="note" style="margin:6px 0">Boleto: marque a parcela como paga somente após o recebimento real. Cartão: utilize a confirmação da operadora acima; não marque as parcelas como boletos pagos.</div>
     <div class="table-wrap" style="margin-top:6px"><table><thead>
       <tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Pago?</th><th>Data real do recebimento</th></tr>
     </thead><tbody>${rows.map((r,i)=>`<tr>
@@ -5047,6 +5056,15 @@ function collectPaymentSchedule(prefix) {
 }
 function validatePaymentForm(prefix, old = {}) {
   if (isRevendasWorkspace()) return true;
+  const meio = $(`${prefix}MeioPagamento`)?.value || "nao_informado";
+  const cartao = ["cartao_credito","cartao_debito"].includes(meio);
+  const autorizado = cartao && Boolean($(`${prefix}CartaoAprovado`)?.checked);
+  const aprovadoEm = validCommercialDate($(`${prefix}CartaoAprovadoEm`)?.value);
+  if (autorizado && !aprovadoEm) {
+    showToast("Cartão: informe a data REAL da transação aprovada.","fa-triangle-exclamation"); return false;
+  }
+  if (autorizado && (old.pagamentoCartaoConfirmado !== true || validCommercialDate(old.dataConfirmacaoCartao) !== aprovadoEm || paymentMethodType(old) !== meio) &&
+      !confirm("Confirmar a aprovação do cartão nesta data? A comissão da implantação será INTEGRAL, mesmo que o cliente tenha parcelado.")) return false;
   const rows = collectPaymentSchedule(prefix);
   const invalid = rows.some(r => r.pago === true && !validCommercialDate(r.dataPagamento));
   if (invalid) { showToast("Informe a data REAL de cada parcela marcada como recebida.", "fa-triangle-exclamation");return false; }
@@ -5077,6 +5095,10 @@ function applyPaymentPlanFromForm(data, prefix) {
   data.parcelasValor = revendas ? 0 : number($(`${prefix}ParcelasValor`)?.value || 0);
   data.primeiraParcela = revendas ? "" : ($(`${prefix}PrimeiraParcela`)?.value || "");
   data.paymentSchedule = revendas ? [] : collectPaymentSchedule(prefix);
+  const meio = data.meioPagamento;
+  const autorizacao = ["cartao_credito","cartao_debito"].includes(meio) && Boolean($(`${prefix}CartaoAprovado`)?.checked);
+  data.pagamentoCartaoConfirmado = !revendas && autorizacao && Boolean(validCommercialDate($(`${prefix}CartaoAprovadoEm`)?.value));
+  data.dataConfirmacaoCartao = data.pagamentoCartaoConfirmado ? validCommercialDate($(`${prefix}CartaoAprovadoEm`)?.value) : "";
   return data;
 }
 function transferPaymentPlan(from, to = {}) {
@@ -5089,6 +5111,8 @@ function transferPaymentPlan(from, to = {}) {
     parcelasQtd: Number(from?.parcelasQtd ?? to.parcelasQtd ?? 0) || 0,
     parcelasValor: Number(from?.parcelasValor ?? to.parcelasValor ?? 0) || 0,
     primeiraParcela: from?.primeiraParcela || to.primeiraParcela || "",
+    pagamentoCartaoConfirmado: from?.pagamentoCartaoConfirmado === true && Boolean(validCommercialDate(from?.dataConfirmacaoCartao)),
+    dataConfirmacaoCartao: from?.pagamentoCartaoConfirmado === true ? validCommercialDate(from?.dataConfirmacaoCartao) : "",
     paymentSchedule: Array.isArray(to.paymentSchedule) && to.paymentSchedule.length
       ? to.paymentSchedule
       : (Array.isArray(from?.paymentSchedule) ? from.paymentSchedule.map(item => ({ ...item })) : [])
@@ -5331,6 +5355,8 @@ function fillSaleFromLead() {
     (lead.status === "Fechado" ? "" : todayISO());
   if ($("sPagamentoTipo")) $("sPagamentoTipo").value = paymentPlanType(lead);
   if ($("sMeioPagamento")) $("sMeioPagamento").value = paymentMethodType(lead);
+  if ($("sCartaoAprovado")) $("sCartaoAprovado").checked = lead.pagamentoCartaoConfirmado === true && Boolean(validCommercialDate(lead.dataConfirmacaoCartao));
+  if ($("sCartaoAprovadoEm")) $("sCartaoAprovadoEm").value = lead.pagamentoCartaoConfirmado === true ? validCommercialDate(lead.dataConfirmacaoCartao) : "";
   if ($("sVistaPago")) $("sVistaPago").checked = Boolean(lead.paymentSchedule?.[0]?.pago);
   if ($("sVistaDataPagamento")) $("sVistaDataPagamento").value = lead.paymentSchedule?.[0]?.pago ? (validCommercialDate(lead.paymentSchedule?.[0]?.dataPagamento)||"") : "";
   if ($("sEntradaValor")) $("sEntradaValor").value = Number(lead.entradaValor || 0);
@@ -5618,8 +5644,32 @@ function crmCommissionLedger(period = monthKey(), sellerFilter = "") {
   for(const sale of (sessionSales()||[])) {
     if(["cancelada","cancelado"].includes(norm(sale.status||"")))continue;
     if(sellerFilter && sale.vendedorId!==sellerFilter)continue;
-    if(productGroup(sale.produtoId)!=="instalacao")continue;
+    // Comissão é sobre TODA implantação (valor positivo), independentemente do produto.
+    const implantacao=Number(sale.implantacao)||0;
+    if (!(implantacao>0)) continue;
+    const meio=paymentMethodType(sale);
+    const cartao=["cartao_credito","cartao_debito"].includes(meio);
     const schedule=Array.isArray(sale.paymentSchedule) ? sale.paymentSchedule : [];
+    if(cartao) {
+      // A transação aprovada liquida a base comissionável inteira, ainda que o
+      // portador pague o cartão em várias parcelas. Uma comissão por contrato.
+      const confirmacao= sale.pagamentoCartaoConfirmado===true
+        ? validCommercialDate(sale.dataConfirmacaoCartao)
+        : "";
+      // Compatibilidade com vendas antigas: pagamento explicitamente confirmado
+      // na parcela, com data real, é evidência de transação aprovada no cartão.
+      const antigo=schedule.find(p=>p?.pago===true && validCommercialDate(p.dataPagamento||p.dataRecebimento));
+      const dataAntiga=antigo?validCommercialDate(antigo.dataPagamento||antigo.dataRecebimento):"";
+      const data=confirmacao||dataAntiga;
+      if(data) add(confirmed,sale,{id:`cartao:${sale.id}`,valor:implantacao,pago:true,dataPagamento:data},
+        implantacao,data,"Cartão aprovado - implantação integral","Cartão (implantação integral)");
+      else {
+        const ref=validCommercialDate(sale.dataVenda)||validCommercialDate(sale.createdAt);
+        add(due,sale,{id:`cartao-pendente:${sale.id}`,valor:implantacao,pago:false},
+          implantacao,ref,"Cartão ainda sem confirmação","Aguardando aprovação do cartão");
+      }
+      continue;
+    }
     if(schedule.length) {
       // O cronograma explícito é a fonte principal. `recebimentos` legados do
       // mesmo contrato podem ter sido reconstruídos em lote e não são somados.
@@ -5661,33 +5711,27 @@ function paidInstallmentEntries(period = monthKey(), sellerFilter = "") {
 }
 function commissionDetailRows(period = monthKey(), sellerFilter = "") {
   const entries=paidInstallmentEntries(period,sellerFilter).map(entry=>{
-    const sale=entry.sale, lead=saleLead(sale), rate=consultantCommissionRate(hitIndicatorsForSeller(sale.vendedorId,period).count);
+    const sale=entry.sale, lead=saleLead(sale);
+    // A taxa fica vinculada à competência das metas da venda; boletos recebidos
+    // depois preservam o nível (20/25/30) apurado para aquele fechamento.
+    const competenciaMetas = effectiveSaleDate(sale)?.slice(0,7) || period;
+    const indicadoresVenda=hitIndicatorsForSeller(sale.vendedorId,competenciaMetas);
+    const rate=consultantCommissionRate(indicadoresVenda.count);
+    const indicadoresTexto=[indicadoresVenda.hitImplantacao?"Implantação":"", indicadoresVenda.hitMensalidade?"Mensalidade":""].filter(Boolean).join(" + ") || "Nenhum";
     return {saleId:sale.id,tipo:"Implantação recebida",empresa:sale.cliente,
       vendedorId:sale.vendedorId,vendedor:userName(sale.vendedorId),produto:productName(sale.produtoId),
       plano:productName(sale.produtoId),fonte:sale.origem||campaignName(sale.campaignId||lead?.campaignId)||lead?.origem||"—",
       dataFechamento:effectiveSaleDate(sale),dataPagamento:entry.data,parcela:entry.descricao,
       implantacaoTotal:Number(sale.implantacao)||0,mensalidade:Number(sale.mensalidade)||0,
       baseComissao:entry.valor,taxaConsultor:rate,comissaoConsultor:entry.valor*rate,comissaoGestor:entry.valor*0.25,
-      fonteLancamento:entry.fonte, situacao:"Confirmado"};
+      fonteLancamento:entry.fonte, competenciaMetas, indicadoresTexto, situacao:"Confirmado"};
   });
-  const mensalidades=(sessionSales()||[]).filter(s=>!["cancelada","cancelado"].includes(norm(s.status||"")) &&
-    (!sellerFilter||s.vendedorId===sellerFilter) && productGroup(s.produtoId)==="rensoftware" &&
-    s.primeiraMensalidadeRecebida===true && validCommercialDate(s.dataPrimeiraMensalidadeRecebida).slice(0,7)===period)
-    .map(sale=>{
-      const lead=saleLead(sale),mensalidade=Number(sale.mensalidade)||0;
-      return {saleId:sale.id,tipo:"Produto Rensoftware",empresa:sale.cliente,vendedorId:sale.vendedorId,
-        vendedor:userName(sale.vendedorId),produto:productName(sale.produtoId),plano:productName(sale.produtoId),
-        fonte:sale.origem||campaignName(sale.campaignId||lead?.campaignId)||lead?.origem||"—",
-        dataFechamento:effectiveSaleDate(sale),dataPagamento:validCommercialDate(sale.dataPrimeiraMensalidadeRecebida),
-        parcela:"1ª mensalidade recebida",implantacaoTotal:Number(sale.implantacao)||0,mensalidade,
-        baseComissao:mensalidade,taxaConsultor:1,comissaoConsultor:mensalidade,comissaoGestor:0,
-        fonteLancamento:"Primeira mensalidade confirmada",situacao:"Confirmado"};
-    }).filter(r=>r.baseComissao>0);
-  return [...entries,...mensalidades].sort((a,b)=>`${a.dataPagamento}${a.vendedor}${a.plano}`.localeCompare(`${b.dataPagamento}${b.vendedor}${b.plano}`));
+  // Mensalidade é INDICADOR de meta, nunca base de comissão.
+  return entries.sort((a,b)=>`${a.dataPagamento}${a.vendedor}${a.plano}`.localeCompare(`${b.dataPagamento}${b.vendedor}${b.plano}`));
 }
 function commissionHistoryReviewRows(period=monthKey(),sellerFilter="") {
   return crmCommissionLedger(period,sellerFilter).review.map(entry=>{
-    const s=entry.sale,rate=consultantCommissionRate(hitIndicatorsForSeller(s.vendedorId,period).count);
+    const s=entry.sale,rate=consultantCommissionRate(hitIndicatorsForSeller(s.vendedorId,effectiveSaleDate(s)?.slice(0,7)||period).count);
     return {saleId:s.id,empresa:s.cliente,vendedor:userName(s.vendedorId),vendedorId:s.vendedorId,
       plano:productName(s.produtoId),parcela:entry.descricao,dataReferencia:entry.data,valor:entry.valor,
       taxa:rate,comissaoSimulada:entry.valor*rate,gestorSimulado:entry.valor*0.25};
@@ -5702,8 +5746,8 @@ function commissionRows(period = monthKey(), sellerFilter = "") {
       return r.saleId || `${r.empresa}_${r.produto}_${r.dataFechamento}`;
     }));
     const installBase = rows.filter(r => r.tipo === "Implantação recebida").reduce((sum, r) => sum + r.baseComissao, 0);
-    const rensoftCommission = rows.filter(r => r.tipo === "Produto Rensoftware").reduce((sum, r) => sum + r.comissaoConsultor, 0);
-    const installCommission = rows.filter(r => r.tipo === "Implantação recebida").reduce((sum, r) => sum + r.comissaoConsultor, 0);
+    const rensoftCommission = 0; // Mensalidade é indicador, nunca comissão de implantação.
+    const installCommission = rows.reduce((sum, r) => sum + r.comissaoConsultor, 0);
     const mrrTotal = salesInMonth(period).filter(s => s.vendedorId === u.id).reduce((sum, s) => sum + (Number(s.mensalidade) || 0), 0);
     const indicators = hitIndicatorsForSeller(u.id, period);
     const rate = consultantCommissionRate(indicators.count);
@@ -5714,6 +5758,7 @@ function commissionRows(period = monthKey(), sellerFilter = "") {
       mrrTotal,
       indicators,
       rate,
+      rateLabel: [...new Set(rows.map(r=>`${Math.round(r.taxaConsultor*100)}%`))].join(" / ") || `${Math.round(rate*100)}%`,
       installCommission,
       rensoftCommission,
       totalCommission: installCommission + rensoftCommission,
@@ -5767,7 +5812,7 @@ function renderCommissions() {
     const pending = (sessionSales() || []).reduce((n,s) => n + (Array.isArray(s.paymentSchedule) ? s.paymentSchedule.filter(p => p.pago !== true).length : 0),0);
     const review = (sessionSales() || []).filter(s => s.financeiroSobConferencia).length;
     const pendingLegacy = commissionHistoryReviewRows($("commissionMonthFilter")?.value || monthKey(), $("commissionSellerFilter")?.value || "");
-    $("commissionPendingInfo").textContent = `Comissões CONFIRMADAS por data real do recebimento. ${pending} parcela(s) de cronogramas pendentes; ${review} contrato(s) em conferência; ${pendingLegacy.length} recebimento(s) do histórico antigo precisam de validação no período selecionado.`;
+    $("commissionPendingInfo").textContent = `Implantação: boleto conforme recebimentos; cartão integral na aprovação. Mensalidades contam apenas como indicador de metas. ${pending} parcela(s) de cronogramas pendentes; ${review} contrato(s) em conferência; ${pendingLegacy.length} recebimento(s) do histórico antigo precisam de validação no período selecionado.`;
   }
   const period = $("commissionMonthFilter")?.value || $("goalMonthFilter")?.value || monthKey();
   const sellerFilter = $("commissionSellerFilter")?.value || "";
@@ -5785,18 +5830,17 @@ function renderCommissions() {
   $("commissionSalesCount").textContent = String(salesCount);
 
   $("consultantCommissionTable").innerHTML = rows.map(r => {
-    const indicatorText = [
-      r.indicators.hitImplantacao ? "Implantação" : "",
-      r.indicators.hitMensalidade ? "Mensalidade" : ""
-    ].filter(Boolean).join(" + ") || "Nenhum";
+    const indicatorText = (r.details && r.details.length)
+      ? [...new Set(r.details.map(d => d.indicadoresTexto || "Nenhum"))].join(" / ")
+      : "—";
     return `<tr>
       <td><strong>${escapeHTML(r.user.nome)}</strong><br><small>${escapeHTML(r.user.perfil)}</small></td>
       <td>${r.sales.length}</td>
-      <td>${money(r.installBase)}<br><small>somente parcelas pagas no mês</small></td>
+      <td>${money(r.installBase)}<br><small>boletos pagos ou cartão aprovado no mês</small></td>
       <td>${money(r.mrrTotal)}</td>
-      <td>${escapeHTML(indicatorText)}</td>
-      <td><span class="commission-rate">${Math.round(r.rate * 100)}%</span><br><small>${productGroupTextForCommission(r)}</small></td>
-      <td><strong>${money(r.totalCommission)}</strong><br><small>Instalação: ${money(r.installCommission)} · Produtos: ${money(r.rensoftCommission)}</small></td>
+      <td>${escapeHTML(indicatorText)}<br><small>Metas por mês de fechamento</small></td>
+      <td><span class="commission-rate">${r.rateLabel}</span><br><small>Implantação recebida / cartão aprovado</small></td>
+      <td><strong>${money(r.totalCommission)}</strong><br><small>Somente implantação: ${money(r.installCommission)}</small></td>
     </tr>`;
   }).join("") || `<tr><td class="empty" colspan="7">Nenhum consultor com comissão no período.</td></tr>`;
 
@@ -5820,7 +5864,7 @@ function renderCommissions() {
       <td>${money(r.implantacaoTotal)}</td>
       <td>${money(r.mensalidade)}</td>
       <td>${money(r.baseComissao)}</td>
-      <td>${r.taxaConsultor === 1 ? "1ª mensalidade" : Math.round(r.taxaConsultor * 100) + "%"}<br><strong>${money(r.comissaoConsultor)}</strong></td>
+      <td>${Math.round(r.taxaConsultor * 100)}%<br><strong>${money(r.comissaoConsultor)}</strong><br><small>Meta: ${r.competenciaMetas || "—"}</small></td>
       <td>${r.comissaoGestor ? `25%<br><strong>${money(r.comissaoGestor)}</strong>` : "—"}</td>
     </tr>`).join("") || `<tr><td class="empty" colspan="11">Nenhum recebimento com pagamento explicitamente confirmado no período. Veja os registros antigos e os vencimentos nas tabelas abaixo.</td></tr>`;
   }
@@ -6026,6 +6070,7 @@ function monthOptionsValues() {
       validCommercialDate(r?.dataPagamento || r?.dataRecebimento || r?.recebidoEm || ""),
       validCommercialDate(r?.data || r?.vencimento || "")
     ]) : []),
+    validCommercialDate(s.dataConfirmacaoCartao),
     validCommercialDate(s.dataPrimeiraMensalidadeRecebida)
   ].filter(Boolean).map(d=>d.slice(0,7)));
   return [...new Set([current, ...goalMonths, ...salesMonths, ...leadMonths, ...receiptMonths].filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort().reverse();
@@ -6265,6 +6310,8 @@ function saveSale(id = "") {
     data.dataPrimeiraMensalidadeRecebida = data.primeiraMensalidadeRecebida ? validCommercialDate($("sMensalidadePagoEm")?.value) : "";
     data.auditRecebimentos = Array.isArray(oldSale?.auditRecebimentos) ? [...oldSale.auditRecebimentos] : [];
     const prev = oldSale?.paymentSchedule || [];
+    if (data.pagamentoCartaoConfirmado && (!oldSale?.pagamentoCartaoConfirmado || oldSale.dataConfirmacaoCartao !== data.dataConfirmacaoCartao))
+      data.auditRecebimentos.push({tipo:"cartao_implantacao_integral",valor:data.implantacao,recebidoEm:data.dataConfirmacaoCartao,registradoEm:new Date().toISOString(),usuario:currentUser?.id||"",meio:data.meioPagamento});
     data.paymentSchedule.forEach((r,i)=>{
       if(r.pago && (!prev[i]?.pago || prev[i]?.dataPagamento !== r.dataPagamento))
         data.auditRecebimentos.push({tipo:"implantacao",valor:r.valor,parcela:r.descricao,recebidoEm:r.dataPagamento,registradoEm:new Date().toISOString(),usuario:currentUser?.id||""});
