@@ -273,6 +273,7 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
         </div>
 
         <div class="nav-section">Operação</div>
+        <button class="nav-item" data-page="marketmap" onclick="goToPage('marketmap')"><i class="fa-solid fa-map-location-dot"></i><span class="nav-label">Prospecção no Mapa</span></button>
         <button class="nav-item active" data-page="dashboard" onclick="goToPage('dashboard')"><i class="fa-solid fa-gauge-high"></i><span class="nav-label">Dashboard</span></button>
         <button class="nav-item" data-page="leads" onclick="goToPage('leads')"><i class="fa-solid fa-users-line"></i><span class="nav-label">Leads</span></button>
         <button class="nav-item" data-page="pipeline" onclick="goToPage('pipeline')"><i class="fa-solid fa-diagram-project"></i><span class="nav-label">Pipeline</span></button>
@@ -292,7 +293,7 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
         <button class="nav-item" onclick="doLogout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="nav-label">Sair</span></button>
 
         <div class="sidebar-footer">
-          <strong>Versão:</strong> V31 — Comissões de implantação e cartão<br>
+          <strong>Versão:</strong> V32 — CRM + MarketMap<br>
           <strong>Ambiente:</strong> <span id="sidebarWorkspace">CRM Comercial</span><br>
           <strong>Firebase:</strong> <span id="sidebarSync">modo local</span><br>
           As alterações são salvas automaticamente em bases separadas.
@@ -321,6 +322,17 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
             </div>
           </div>
         </div>
+
+        <section id="page-marketmap" class="page" aria-label="MarketMap — Prospecção em Campo">
+          <div class="card" style="margin-bottom:12px;padding:15px 18px">
+            <div class="card-title"><i class="fa-solid fa-map-location-dot"></i> MarketMap — Prospecção em Campo</div>
+            <div class="card-subtitle" style="margin-top:5px">Mapa de empresas, visitas por GPS, concorrentes, inteligência, Market Share, Instagram, relatórios 360 e forecast em um único espaço. MarketMap e CRM continuam usando seus bancos Firebase independentes.</div>
+            <div id="marketmapConnectionNote" class="help" role="status" style="margin-top:9px">Selecione uma empresa no MarketMap, salve a visita e escolha “Salvar e criar lead no CRM”. O lead será aberto para conferência antes de salvar no Firestore do CRM.</div>
+          </div>
+          <div style="background:#0b0d13;border:1px solid #d1e2ea;border-radius:16px;overflow:hidden;min-height:500px">
+            <iframe id="crmMarketMapFrame" title="MarketMap completo integrado ao CRM" src="about:blank" data-src="marketmap/index.html" allow="geolocation; clipboard-read; clipboard-write" style="width:100%;height:max(650px,calc(100dvh - 220px));border:0;display:block" referrerpolicy="same-origin"></iframe>
+          </div>
+        </section>
 
         <section id="page-dashboard" class="page active">
 
@@ -5237,6 +5249,18 @@ function saveLead(id = "") {
     motivoPerda: $("fMotivoPerda").value.trim(),
     remarketingStatus: $("fRemarketingStatus").value,
     contatosObs: $("fContatosObs")?.value.trim() || "",
+    ...(!id && window.crmMarketMapDraft ? {marketmapRef: {
+      projeto: "marketmap-8fa2c",
+      empresaId: window.crmMarketMapDraft.companyId,
+      placeId: window.crmMarketMapDraft.placeId,
+      endereco: window.crmMarketMapDraft.address,
+      latitude: window.crmMarketMapDraft.lat,
+      longitude: window.crmMarketMapDraft.lng,
+      visitadoEm: window.crmMarketMapDraft.visitedAt,
+      checkpointId: window.crmMarketMapDraft.checkpointId,
+      origem: "MarketMap",
+      vendedorCRM: currentUser?.id || ""
+    }} : {}),
     updatedAt: new Date().toISOString()
   };
   const cadastro = $("fDataCadastro")?.value || "";
@@ -7685,6 +7709,156 @@ function v30GuardOwned(name,kind){const original=globalThis[name];if(typeof orig
 // Bloqueia relatórios de equipe/exports globais chamados manualmente fora da interface.
 ["exportAllReports","exportAllReportsV15","exportTable"].forEach(v30GuardOwner);
 // As tabelas de usuário permanecem no Firestore legadas: restrição de interface não configura sigilo real.
+
+// ================= V32: MARKETMAP INTEGRADO — SEM MIGRAÇÃO DE DADOS =================
+window.crmMarketMapDraft = null;
+let crmMarketMapModalOpening = false;
+const v32PreviousGoToPage = goToPage;
+goToPage = function(page, ...args) {
+  if(page === "marketmap") {
+    if(!currentUser) return showToast("Entre no CRM antes de abrir o MarketMap.","fa-triangle-exclamation");
+    if(isRevendasWorkspace()) return showToast("MarketMap está disponível no CRM Comercial.","fa-triangle-exclamation");
+  }
+  const result = v32PreviousGoToPage(page, ...args);
+  if(page === "marketmap") {
+    const frame = document.getElementById("crmMarketMapFrame");
+    if(frame && frame.getAttribute("src") === "about:blank") {
+      frame.setAttribute("src", frame.dataset.src || "marketmap/index.html");
+    }
+    // Se o iframe já existir, conserva o mapa e os filtros sem reinicializar.
+  }
+  return result;
+};
+const v32PreviousDoLogin = doLogin;
+doLogin = async function(...args) {
+  await v32PreviousDoLogin(...args);
+  if(currentUser && !ownerAccess() && !isRevendasWorkspace()) {
+    goToPage("marketmap"); // Consultor inicia a jornada pela prospecção.
+  }
+};
+const v32PreviousLogout = doLogout;
+doLogout = function(...args) {
+  window.crmMarketMapDraft = null;
+  const frame = document.getElementById("crmMarketMapFrame");
+  if(frame) frame.setAttribute("src", "about:blank");
+  return v32PreviousLogout(...args);
+};
+const v32PreviousOpenLeadModal = openLeadModal;
+openLeadModal = function(id = "", ...args) {
+  if(!crmMarketMapModalOpening) window.crmMarketMapDraft = null;
+  return v32PreviousOpenLeadModal(id, ...args);
+};
+const v32PreviousCloseModal = closeModal;
+closeModal = function(...args) {
+  window.crmMarketMapDraft = null;
+  return v32PreviousCloseModal(...args);
+};
+function crmMarketMapSanitize(value, max=400) {
+  return String(value == null ? "" : value).trim().slice(0, max);
+}
+function crmMarketMapValidCoordinate(value, maximum) {
+  const n = Number(value);
+  return value !== null && value !== "" && value !== undefined && Number.isFinite(n) && Math.abs(n) <= maximum ? n : null;
+}
+function crmMarketMapNormalizeText(s) {
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g," ");
+}
+function crmMarketMapReceiveLead(raw) {
+  if(!currentUser || !state || isRevendasWorkspace()) return;
+  if(!firebaseReady || firebaseMode !== "firestore" || crmSyncBlocked || !crmServerBaseline) {
+    return showToast("CRM sem gravação confirmada no Firestore. Preserve a empresa no MarketMap e tente novamente depois.","fa-triangle-exclamation");
+  }
+  if(!raw || typeof raw !== "object" || Array.isArray(raw)) return;
+  const data = {
+    companyId: crmMarketMapSanitize(raw.companyId, 130),
+    placeId: crmMarketMapSanitize(raw.placeId, 130),
+    name: crmMarketMapSanitize(raw.name, 180),
+    address: crmMarketMapSanitize(raw.address, 300),
+    contactName: crmMarketMapSanitize(raw.contactName, 160),
+    phone: crmMarketMapSanitize(raw.phone, 60),
+    segment: crmMarketMapSanitize(raw.segment, 100),
+    system: crmMarketMapSanitize(raw.system, 130),
+    competitorName: crmMarketMapSanitize(raw.competitorName, 130),
+    counter: crmMarketMapSanitize(raw.counter, 130),
+    instagramHandle: crmMarketMapSanitize(raw.instagramHandle, 110),
+    potential: crmMarketMapSanitize(raw.potential, 160),
+    nextAction: crmMarketMapSanitize(raw.nextAction, 200),
+    nextActionDate: crmMarketMapSanitize(raw.nextActionDate, 20),
+    notes: crmMarketMapSanitize(raw.notes, 1500),
+    capturedBy: crmMarketMapSanitize(raw.capturedBy, 160),
+    checkpointId: crmMarketMapSanitize(raw.checkpointId, 120),
+    visitedAt: crmMarketMapSanitize(raw.visitedAt, 40),
+    lat: crmMarketMapValidCoordinate(raw.lat, 90),
+    lng: crmMarketMapValidCoordinate(raw.lng, 180)
+  };
+  if(!data.name) return showToast("O MarketMap não informou a empresa.","fa-triangle-exclamation");
+  // A busca por duplicidade fica restrita às oportunidades visíveis à sessão atual.
+  const matching = sessionLeads().find(lead => {
+    const ref = lead.marketmapRef || {};
+    if(data.companyId && ref.empresaId && String(ref.empresaId) === data.companyId) return true;
+    if(data.placeId && ref.placeId && String(ref.placeId) === data.placeId) return true;
+    const sameName = crmMarketMapNormalizeText(lead.empresa) === crmMarketMapNormalizeText(data.name);
+    const samePhone = data.phone && crmMarketMapNormalizeText(lead.telefone) === crmMarketMapNormalizeText(data.phone);
+    return sameName && Boolean(samePhone);
+  });
+  if(matching) {
+    goToPage("leads");
+    showToast("Esta empresa já tem um lead cadastrado na sua carteira. Abrindo o existente.","fa-circle-info");
+    openLeadModal(matching.id);
+    return;
+  }
+  window.crmMarketMapDraft = data;
+  goToPage("leads");
+  crmMarketMapModalOpening = true;
+  try { openLeadModal(""); }
+  finally { crmMarketMapModalOpening = false; }
+  const assign = (id, value) => {const el=$(id); if(el && value) el.value = value;};
+  assign("fEmpresa", data.name);
+  assign("fContato", data.contactName);
+  assign("fTelefone", data.phone);
+  assign("fSegmento", data.segment);
+  assign("fOrigem", "MarketMap");
+  // Prospecção inicial não é venda: evita valores sugeridos automaticamente pelo primeiro produto.
+  assign("fImplantacao", "0");
+  assign("fMensalidade", "0");
+  const addressParts = data.address.split(",").map(s=>s.trim());
+  const ufMatch = data.address.match(/(?:\b|[-, ])(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)(?:\b|$)/i);
+  if(ufMatch) assign("fUf", ufMatch[1].toUpperCase());
+  // Não inventar cidade. Somente preencher se o MarketMap a informou separadamente.
+  if(raw.city) assign("fCidade", crmMarketMapSanitize(raw.city, 90));
+  if(!ownerAccess() && $("fVendedor")) {$("fVendedor").value=currentUser.id; $("fVendedor").disabled=true;}
+  const mapURL = data.lat !== null && data.lng !== null ? "https://www.google.com/maps?q="+data.lat+","+data.lng : "";
+  const details = [
+    "Prospecção iniciada no MarketMap",
+    data.address && "Endereço: "+data.address,
+    mapURL && "Localização: "+mapURL,
+    data.system && "Sistema atual: "+data.system,
+    data.competitorName && "Concorrente: "+data.competitorName,
+    data.counter && "Contador: "+data.counter,
+    data.instagramHandle && "Instagram: @"+data.instagramHandle,
+    data.potential && "Potencial: "+data.potential,
+    data.nextAction && "Próxima ação: "+data.nextAction,
+    data.nextActionDate && "Data da próxima ação: "+data.nextActionDate,
+    data.checkpointId && "Checkpoint MarketMap: "+data.checkpointId,
+    data.notes && "Visita: "+data.notes
+  ].filter(Boolean).join("\n");
+  if($("fContatosObs")) $("fContatosObs").value = details.slice(0, 2900);
+  const note = document.createElement("div");
+  note.className = "note";
+  note.style.marginBottom = "12px";
+  note.textContent = "Empresa importada do MarketMap. Revise os dados e clique em Salvar. A venda, o valor e o status não são criados automaticamente.";
+  const form = document.getElementById("modalBody");
+  if(form) form.insertBefore(note, form.firstChild);
+  showToast("Empresa recebida do mapa. Revise o lead e clique em Salvar; aguarde Firestore salvo.","fa-map-location-dot");
+}
+window.addEventListener("message", function(event) {
+  const frame = document.getElementById("crmMarketMapFrame");
+  if(event.origin !== window.location.origin || !frame || event.source !== frame.contentWindow) return;
+  if(!event.data || event.data.type !== "rensocrm:lead-from-marketmap" || event.data.version !== 1) return;
+  try {if(JSON.stringify(event.data).length > 12000) return;} catch(_){return;}
+  crmMarketMapReceiveLead(event.data.company);
+});
+// ================= FIM V32 =================
 
 initData().catch(error => {
   console.error(error);
