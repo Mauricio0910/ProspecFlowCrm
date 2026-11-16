@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'marketmap/**'
       - '.github/workflows/publicar-crm.yml'
   workflow_dispatch:
 
@@ -32,8 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           test -s index.html || { echo "ERRO: index.html ausente ou vazio"; exit 1; }
-          mkdir -p publicacao
+          test -s marketmap/index.html || { echo "ERRO: MarketMap ausente ou vazio"; exit 1; }
+          mkdir -p publicacao/marketmap
           cp index.html publicacao/index.html
+          cp -a marketmap/. publicacao/marketmap/
+          test -s publicacao/marketmap/index.html || { echo "ERRO: MarketMap nao copiado"; exit 1; }
           touch publicacao/.nojekyll
           echo "Site pronto para envio."
 
