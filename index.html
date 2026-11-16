@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rensoftware CRM Comercial — V29 | Comissões por recebimento</title>
+  <title>Rensoftware CRM Comercial — V30 | Acesso individual e produtividade</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -228,6 +228,14 @@
   #page-comercial .stats-grid, #page-pipeline .three-col { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 
+
+/* V30 — escopo visual e permissões de interface. A proteção real requer regras Firestore separadas. */
+body.v30-individual .v30-owner-only {display:none!important}
+body.v30-individual #page-comissoes #commissionSellerFilter {display:none!important}
+body.v30-individual #page-comissoes #commissionManagersTotal {display:none!important}
+body.v30-individual #dashCommissionManagerCard {display:none!important}
+body.v30-individual #managerCommissionTable {display:none!important}
+body.v30-individual #page-metas .card:first-child > .card-header > button {display:none!important}
 </style>
 </head>
 
@@ -284,7 +292,7 @@
         <button class="nav-item" onclick="doLogout()"><i class="fa-solid fa-arrow-right-from-bracket"></i><span class="nav-label">Sair</span></button>
 
         <div class="sidebar-footer">
-          <strong>Versão:</strong> V28 — Sincronização corrigida<br>
+          <strong>Versão:</strong> V30 — Acesso individual e metas<br>
           <strong>Ambiente:</strong> <span id="sidebarWorkspace">CRM Comercial</span><br>
           <strong>Firebase:</strong> <span id="sidebarSync">modo local</span><br>
           As alterações são salvas automaticamente em bases separadas.
@@ -292,7 +300,8 @@
       </aside>
 
       <main id="main" class="main">
-        <div class="topbar">
+        <div id="v30SecurityNotice" class="note warning" style="display:none;margin:10px 0">A restrição individual desta versão é feita na interface. O Firestore ainda utiliza um documento compartilhado: para impedir acesso por consultas diretas é necessária a migração para documentos por usuário com Firebase Authentication e regras de segurança.</div>
+<div class="topbar">
           <div>
             <div id="pageTitle" class="page-title">Dashboard</div>
             <div class="card-subtitle">Visão comercial consolidada</div>
@@ -332,6 +341,11 @@
             <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-repeat"></i></div><div id="statMensalidade" class="stat-value">R$ 0</div><div class="stat-label">MRR mensalidade</div></div>
           </div>
 
+          <div id="dashboardV30Metrics" class="grid stats-grid" style="margin-bottom:16px">
+            <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-percent"></i></div><div id="dashCommissionMine" class="stat-value">R$ 0</div><div class="stat-label">Comissões confirmadas no período</div></div>
+            <div id="dashCommissionManagerCard" class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div><div id="dashCommissionManager" class="stat-value">R$ 0</div><div class="stat-label">Comissão do gestor</div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-address-book"></i></div><div id="dashProspectsMonth" class="stat-value">0 / —</div><div id="dashProspectsDetail" class="stat-label">Prospects cadastrados / meta mensal</div></div>
+          </div>
           <div class="grid two-col">
             <div class="card">
               <div class="card-header">
@@ -569,6 +583,10 @@
             </div>
             <div class="table-wrap"><table><thead><tr id="productivityTableHeader"><th>Vendedor</th><th>Leads mês</th><th>Perdidos</th><th>Vendas</th><th>Conversão</th><th>Implantação</th><th>Mensalidade</th><th>Meta</th><th>Atingimento</th><th>Falta atingir</th></tr></thead><tbody id="productivityTable"></tbody></table></div>
           </div>
+          <div class="card" id="v30ProspectCard" style="margin-top:14px">
+            <div class="card-header"><div><div class="card-title">Meta mensal de prospects e produtividade</div><div class="card-subtitle">Novos leads cadastrados no mês por vendedor · realizado x meta estabelecida</div></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Vendedor</th><th>Prospects do mês</th><th>Meta mensal</th><th>Atingimento</th><th>Faltam</th></tr></thead><tbody id="v30ProspectTable"></tbody></table></div>
+          </div>
         </section>
 
         <section id="page-comissoes" class="comercial-subpanel">
@@ -582,7 +600,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Cálculo de Comissionamento <small style="color:#64748b;font-size:11px">V29</small></div>
+                <div class="card-title">Cálculo de Comissionamento <small style="color:#64748b;font-size:11px">V30</small></div>
                 <div class="card-subtitle">Competência = mês do recebimento confirmado. Consultor: 20%, 25% ou 30%, conforme os indicadores; gestor: 25% sobre implantação recebida.</div>
               </div>
               <button class="btn btn-outline" onclick="exportCommissions()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
@@ -742,6 +760,77 @@ const PIPELINE = [
   { nome: "Fechamento", prob: 90 },
   { nome: "Perdido", prob: 0 }
 ];
+
+
+// V30: escopo de apresentação e operações; não substitui segurança das regras Firestore.
+// Proprietário único do ambiente comercial: conta principal u_admin (perfil Administrador).
+function ownerAccess(){return Boolean(currentUser && String(currentUser.id)==="u_admin" && norm(currentUser.perfil)==="administrador");}
+function sellerOwns(item){return ownerAccess() || Boolean(currentUser && item && String(item.vendedorId||"")===String(currentUser.id));}
+function sessionSales(){return !currentUser||ownerAccess() ? (state?.sales||[]) : (state?.sales||[]).filter(s=>sellerOwns(s));}
+function sessionLeads(){return !currentUser||ownerAccess() ? (state?.leads||[]) : (state?.leads||[]).filter(l=>sellerOwns(l));}
+function sessionGoals(){return !currentUser||ownerAccess() ? (state?.goals||[]) : (state?.goals||[]).filter(g=>g.vendedorId===currentUser.id);}
+function sessionGoalSellers(){return !currentUser||ownerAccess() ? eligibleGoalSellers() : eligibleGoalSellers().filter(u=>u.id===currentUser.id);}
+function v30Deny(){showToast("Acesso restrito aos seus próprios registros ou à administração.","fa-lock");return false;}
+function v30RestrictUI(){
+  if(!currentUser)return;
+  const owner=ownerAccess();
+  if($("v30SecurityNotice"))$("v30SecurityNotice").style.display=owner?"":"none";
+  document.body.classList.toggle("v30-individual",!owner);
+  ["usuarios","produtos","relatorios","remarketing"].forEach(page=>{
+    document.querySelectorAll(`[data-page="${page}"]`).forEach(el=>el.style.display=owner?"":"none");
+  });
+  document.querySelectorAll('#page-metas .card:first-child > .card-header > button').forEach(el=>el.style.display=owner?"":"none");
+  const managerCard=$("commissionManagersTotal")?.closest(".stat-card");
+  if(managerCard)managerCard.style.display=owner?"":"none";
+  const managerTable=$("managerCommissionTable")?.closest(".table-wrap");
+  if(managerTable){managerTable.style.display=owner?"":"none";if(managerTable.previousElementSibling)managerTable.previousElementSibling.style.display=owner?"":"none";}
+  if($("commissionSellerFilter")){const sel=$("commissionSellerFilter");if(!owner)sel.value=currentUser.id;sel.style.display=owner?"":"none";}
+  // A configuração das metas é exclusiva da conta principal.
+  const goalHeader=document.querySelector("#goalsTableHeader");
+  if(goalHeader){const cells=goalHeader.querySelectorAll("th");if(cells.length && !owner)cells[cells.length-1].textContent="Definida pela gestão";}
+  const subtitle=document.querySelector(".topbar .card-subtitle");
+  if(subtitle)subtitle.textContent=owner?"Visão consolidada da equipe":"Seus resultados, metas e comissões";
+}
+function prospectGoalForSeller(sellerId,period){
+  const gs=(state?.goals||[]).filter(g=>g.periodo===period);
+  const explicit=gs.filter(g=>g.tipo==="Individual"&&g.vendedorId===sellerId&&g.origem!=="Distribuída");
+  const direct=explicit.reduce((n,g)=>n+Math.max(0,Number(g.prospectsMensais)||0),0);
+  if(direct>0)return direct;
+  const global=gs.filter(g=>g.tipo==="Global").reduce((n,g)=>n+Math.max(0,Number(g.prospectsMensais)||0),0);
+  return global>0 ? global/Math.max(1,eligibleGoalSellers().length) : 0;
+}
+function monthlyProspectsOf(sellerId,period){
+  return (state?.leads||[]).filter(l=>l.vendedorId===sellerId&&String(l.createdAt||l.dataCadastro||"").slice(0,7)===period).length;
+}
+function renderProspectProgress(){
+  const period=$("goalMonthFilter")?.value||monthKey(),target=$("v30ProspectTable");
+  if(!target)return;
+  const sellersList=sessionGoalSellers();
+  target.innerHTML=sellersList.map(u=>{
+    const done=monthlyProspectsOf(u.id,period),goal=prospectGoalForSeller(u.id,period);
+    const pct=goal>0?Math.round(done/goal*100):0;
+    return `<tr><td><strong>${escapeHTML(u.nome)}</strong></td><td>${done}</td><td>${goal>0?Math.round(goal):"A definir"}</td><td>${goal>0?progressBar(pct):"—"}</td><td>${goal>0?Math.max(0,Math.ceil(goal)-done):"—"}</td></tr>`;
+  }).join("")||`<tr><td colspan="5" class="empty">Nenhum vendedor habilitado.</td></tr>`;
+}
+function renderV30DashboardKpis(){
+  if(!currentUser||!$("dashCommissionMine"))return;
+  const range=selectedAnalysisRange("dashboard","month"),months=range.valid?monthsInRange(range):[];
+  const sellerFilter=ownerAccess()?"":currentUser.id;
+  const total=months.reduce((sum,m)=>sum+commissionRows(m,sellerFilter).reduce((n,r)=>n+r.totalCommission,0),0);
+  $("dashCommissionMine").textContent=money(total);
+  const managerCard=$("dashCommissionManagerCard");
+  if(managerCard)managerCard.style.display=ownerAccess()?"":"none";
+  if(ownerAccess()&&$("dashCommissionManager")){
+    const base=months.reduce((sum,m)=>sum+commissionDetailRows(m).filter(r=>r.tipo==="Implantação recebida").reduce((n,r)=>n+r.baseComissao,0),0);
+    $("dashCommissionManager").textContent=money(base*0.25);
+  }
+  const period=monthKey();
+  const participants=sessionGoalSellers();
+  const done=participants.reduce((n,u)=>n+monthlyProspectsOf(u.id,period),0);
+  const goal=participants.reduce((n,u)=>n+prospectGoalForSeller(u.id,period),0);
+  $("dashProspectsMonth").textContent=`${done} / ${goal>0?Math.round(goal):"—"}`;
+  $("dashProspectsDetail").textContent=goal>0?`Prospects do mês · ${Math.round(100*done/goal)}% da meta`:`Prospects do mês · meta não definida`;
+}
 
 function $(id) { return document.getElementById(id); }
 function uid(prefix = "id") { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`; }
@@ -1311,6 +1400,7 @@ function normalizeState(raw) {
     periodo: g.periodo || monthKey(),
     implantacao: Number(g.implantacao ?? g.adesao ?? 0),
     mensalidade: Number(g.mensalidade ?? 0),
+    prospectsMensais: Number(g.prospectsMensais ?? 0),
     grupo: g.grupo || "todos",
     origem: g.origem || "",
     globalGoalId: g.globalGoalId || ""
@@ -1559,7 +1649,7 @@ function sellers() {
 }
 function canViewAllProductivity() {
   const profile = norm(currentUser?.perfil || "");
-  return ["administrador", "gerente", "sdr"].includes(profile);
+  return ownerAccess();
 }
 function productivitySellers() {
   // Produtividade e metas consideram somente o time comercial vendedor.
@@ -1574,7 +1664,7 @@ function visibleGoalsForCurrentUser(period = monthKey()) {
     .filter(g => g.periodo === period)
     .filter(g => g.tipo === "Global" || !g.vendedorId || sellerIds.has(g.vendedorId));
   if (canViewAllProductivity()) return goals;
-  return goals.filter(g => g.tipo === "Global" || g.vendedorId === currentUser?.id);
+  return goals.filter(g => g.vendedorId === currentUser?.id);
 }
 function productName(id) {
   if (!id || id === "todos") return "Todos";
@@ -1625,7 +1715,7 @@ function daysBetween(start, end) {
   return `${Math.max(0, Math.round((b - a) / 86400000))} dias`;
 }
 function saleLead(sale) {
-  return sale?.leadId ? state.leads.find(l => l.id === sale.leadId) : null;
+  return sale?.leadId ? sessionLeads().find(l => l.id === sale.leadId) : null;
 }
 function saleLifecycleRow(sale) {
   const lead = saleLead(sale);
@@ -1687,6 +1777,7 @@ function distributeGlobalGoals(data = state) {
     if (!sellersList.length) return;
     const shareImplantacao = (Number(globalGoal.implantacao) || 0) / sellersList.length;
     const shareMensalidade = (Number(globalGoal.mensalidade) || 0) / sellersList.length;
+    const shareProspects = (Number(globalGoal.prospectsMensais) || 0) / sellersList.length;
 
     sellersList.forEach(seller => {
       data.goals.push({
@@ -1698,6 +1789,7 @@ function distributeGlobalGoals(data = state) {
         periodo: globalGoal.periodo,
         implantacao: shareImplantacao,
         mensalidade: shareMensalidade,
+        prospectsMensais: shareProspects,
         origem: "Distribuída",
         globalGoalId: globalGoal.id
       });
@@ -1708,11 +1800,11 @@ function distributeGlobalGoals(data = state) {
   data.goals = data.goals.filter(g => !(g.origem === "Distribuída" && !sellerIds.has(g.vendedorId)));
 }
 function lostLeads() {
-  return state.leads.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
+  return sessionLeads().filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
 }
 
 function leadOptionsForSale(selected = "") {
-  const closedOrOpen = state.leads.slice().sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const closedOrOpen = sessionLeads().slice().sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   return `<option value="">Venda manual / sem lead</option>` + closedOrOpen.map(l => `<option value="${l.id}"${selected === l.id ? " selected" : ""}>${escapeHTML(l.empresa)} · ${escapeHTML(productName(l.produtoId))} · ${escapeHTML(userName(l.vendedorId))}</option>`).join("");
 }
 function fillSaleFromLead() {
@@ -1739,11 +1831,11 @@ function fillEmailProductFilter() {
 }
 function populateMonthFilters() {
   const current = monthKey();
-  const salesMonths = (state.sales || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
-  const closedLeadMonths = (state.leads || [])
+  const salesMonths = (sessionSales() || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
+  const closedLeadMonths = (sessionLeads() || [])
     .filter(l => String(l.status || "") === "Fechado")
     .map(l => closingDateForLead(l)).filter(Boolean).map(s => s.slice(0,7));
-  const values = new Set([current, ...(state.goals || []).map(g => g.periodo), ...salesMonths, ...closedLeadMonths]);
+  const values = new Set([current, ...(sessionGoals() || []).map(g => g.periodo), ...salesMonths, ...closedLeadMonths]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
 
   const applyOptions = (id, defaultValue = current) => {
@@ -1856,7 +1948,7 @@ function goToPage(page) {
 
 // =============== CÁLCULOS ===============
 function salesInMonth(period = monthKey()) {
-  return state.sales.filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period && s.status !== "Cancelada");
+  return sessionSales().filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period && s.status !== "Cancelada");
 }
 function salesForGoal(goal) {
   return salesInMonth(goal.periodo).filter(s => {
@@ -1925,7 +2017,7 @@ function progressBar(pct) {
   return `<div class="progress"><div style="width:${safe}%"></div></div><small>${pct || 0}%</small>`;
 }
 function openLeads() {
-  return state.leads.filter(l => l.status !== "Fechado" && l.status !== "Perdido");
+  return sessionLeads().filter(l => l.status !== "Fechado" && l.status !== "Perdido");
 }
 function forecastValue(lead) {
   // Forecast de implantação sempre usa o valor integral informado no lead.
@@ -2046,7 +2138,7 @@ function previousWeekSales() {
   const start = addDays(startOfWeek(new Date()), -7);
   const end = addDays(start, 6);
   const range = { start: isoDate(start), end: isoDate(end) };
-  return state.sales.filter(s => s.status !== "Cancelada" && inDateRange(s.dataVenda, range));
+  return sessionSales().filter(s => s.status !== "Cancelada" && inDateRange(s.dataVenda, range));
 }
 function forecastSellerRows(filteredLeads) {
   const currentWeekLeads = currentWeekForecastLeads();
@@ -2085,10 +2177,10 @@ function populateProductCategoryFilter() {
 // =============== RENDER ===============
 function renderAll() {
   if (!currentUser) return;
-  const expired = expireProspectLeads();
+  const expired = ownerAccess() ? expireProspectLeads() : false;
   if (expired && !applyingRemoteSnapshot) persist();
-  syncClosedLeadsIntoSales(state, true);
-  distributeGlobalGoals(state);
+  if (ownerAccess()) syncClosedLeadsIntoSales(state, true);
+  if (ownerAccess()) distributeGlobalGoals(state);
   populateMonthFilters();
   populateForecastFilters();
   populateProductCategoryFilter();
@@ -2098,24 +2190,24 @@ function renderAll() {
   renderSales();
   renderForecast();
   renderGoals();
-  renderRemarketing();
+  if(ownerAccess())renderRemarketing();
   renderLostLeads();
-  renderProducts();
-  renderUsers();
-  renderReports();
+  if(ownerAccess())renderProducts();
+  if(ownerAccess())renderUsers();
+  if(ownerAccess())renderReports();
 }
 
 function renderDashboard() {
-  const sales = state.sales.filter(s => s.status !== "Cancelada");
+  const sales = sessionSales().filter(s => s.status !== "Cancelada");
   const totalImplantacao = sales.reduce((s, v) => s + Number(v.implantacao || 0), 0);
   const totalMensalidade = sales.reduce((s, v) => s + Number(v.mensalidade || 0), 0);
-  $("statLeads").textContent = state.leads.length;
+  $("statLeads").textContent = sessionLeads().length;
   $("statVendas").textContent = sales.length;
   $("statImplantacao").textContent = money(totalImplantacao);
   $("statMensalidade").textContent = money(totalMensalidade);
 
   const period = monthKey();
-  const globalGoal = state.goals.find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
+  const globalGoal = sessionGoals().find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
   const done = sumSales(salesInMonth(period));
 
   // Gráfico global considera implantação como métrica principal.
@@ -2134,7 +2226,7 @@ function renderDashboard() {
 function renderLeads() {
   const q = norm($("leadSearch")?.value || "");
   const stage = $("leadStageFilter")?.value || "";
-  let rows = [...state.leads].sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  let rows = [...sessionLeads()].sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   if (q) {
     rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento, campaignName(l.campaignId)].some(v => norm(v).includes(q)));
   }
@@ -2184,7 +2276,7 @@ function renderPipeline() {
     $("pipelineRangeHint").textContent = range.valid
       ? `Período ${formatDate(range.start)} a ${formatDate(range.end)}. Apenas ações realmente registradas; históricos sem data não são tratados como de hoje.`
       : "Data inicial posterior à final. Corrija o intervalo.";
-  const open = (state.leads || []).filter(l => l.status !== "Fechado" && l.status !== "Perdido" && l.pipeline !== "Perdido");
+  const open = (sessionLeads() || []).filter(l => l.status !== "Fechado" && l.status !== "Perdido" && l.pipeline !== "Perdido");
   // Datas importadas de updatedAt podem ser artificiais (normalização/sincronização).
   // Portanto, o filtro diário NÃO usa updatedAt isoladamente.
   const realActivityDay = (l) =>
@@ -2192,9 +2284,9 @@ function renderPipeline() {
     (l.activityHistory || []).some(e => inPeriod(e.at));
   const touchedDay = (l) =>
     inPeriod(l.createdAt) || realActivityDay(l);
-  const newCount = (state.leads || []).filter(l => inPeriod(l.createdAt)).length;
-  const changedCount = (state.leads || []).filter(realActivityDay).length;
-  const lostCount = (state.leads || []).filter(l => (l.status === "Perdido" || l.pipeline === "Perdido") && inPeriod(l.lostAt)).length;
+  const newCount = (sessionLeads() || []).filter(l => inPeriod(l.createdAt)).length;
+  const changedCount = (sessionLeads() || []).filter(realActivityDay).length;
+  const lostCount = (sessionLeads() || []).filter(l => (l.status === "Perdido" || l.pipeline === "Perdido") && inPeriod(l.lostAt)).length;
   if ($("pipelineDailyNew")) $("pipelineDailyNew").textContent = String(newCount);
   if ($("pipelineDailyMoved")) $("pipelineDailyMoved").textContent = String(changedCount);
   if ($("pipelineDailyLost")) $("pipelineDailyLost").textContent = String(lostCount);
@@ -2274,7 +2366,7 @@ function renderProducts() {
 
 function renderSales() {
   const period = $("saleMonthFilter")?.value || monthKey();
-  const rows = state.sales
+  const rows = sessionSales()
     .filter(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`) === period)
     .sort((a,b) => String(b.dataVenda).localeCompare(String(a.dataVenda)));
 
@@ -2400,7 +2492,7 @@ function renderGoals() {
 function productivityRows(period = monthKey()) {
   const rows = productivitySellers().map(u => {
     const monthSales = salesInMonth(period).filter(s => s.vendedorId === u.id);
-    const leadsMes = state.leads.filter(l => l.vendedorId === u.id && monthKey(l.createdAt || todayISO()) === period);
+    const leadsMes = sessionLeads().filter(l => l.vendedorId === u.id && monthKey(l.createdAt || todayISO()) === period);
     const perdidosMes = leadsMes.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
     const done = sumSales(monthSales);
     const goal = totalGoalForSeller(u.id, period);
@@ -2543,9 +2635,9 @@ function renderUsers() {
 }
 
 function renderReports() {
-  const sales = state.sales.filter(s => s.status !== "Cancelada");
+  const sales = sessionSales().filter(s => s.status !== "Cancelada");
   const total = sumSales(sales);
-  const conversion = state.leads.length ? Math.round((sales.length / state.leads.length) * 100) : 0;
+  const conversion = sessionLeads().length ? Math.round((sales.length / sessionLeads().length) * 100) : 0;
   const ticket = sales.length ? (total.implantacao + total.mensalidade) / sales.length : 0;
   $("reportTotalImplantacao").textContent = money(total.implantacao);
   $("reportTotalMensalidade").textContent = money(total.mensalidade);
@@ -2827,6 +2919,7 @@ function openGoalModal(id = "") {
       <div class="form-group"><label>Produto</label><select id="gProduto" class="select">${productOptions(goal.produtoId || "todos", true)}</select></div>
       <div class="form-group"><label>Meta implantação</label><input id="gImplantacao" class="field" type="number" step="0.01" value="${goal.implantacao || 0}"></div>
       <div class="form-group"><label>Meta mensalidade</label><input id="gMensalidade" class="field" type="number" step="0.01" value="${goal.mensalidade || 0}"></div>
+      <div class="form-group"><label>Meta mensal de prospects</label><input id="gProspects" class="field" type="number" min="0" step="1" value="${Math.max(0, Number(goal.prospectsMensais)||0)}"></div>
     </div>
     <div class="note" style="margin-top:14px">Use <strong>Global</strong> para meta da empresa, <strong>Individual</strong> para vendedor e escolha um produto específico para meta por produto.</div>
   `, `
@@ -2855,6 +2948,7 @@ function saveGoal(id = "") {
     periodo: $("gPeriodo").value || monthKey(),
     implantacao: number($("gImplantacao").value),
     mensalidade: number($("gMensalidade").value),
+    prospectsMensais: Math.max(0,Math.round(number($("gProspects")?.value || 0))),
     origem: "",
     globalGoalId: ""
   };
@@ -3583,7 +3677,7 @@ function exportTable(type) {
       Probabilidade: l.probabilidade, ForecastImplantacao: forecastValue(l) }));
     name = "leads_periodo";
   } else if (type === "sales") {
-    rows = state.sales.map(s => {
+    rows = sessionSales().map(s => {
       const life = saleLifecycleRow(s);
       return { Cliente: s.cliente, Lead: life.lead?.empresa || "", Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Campanha: campaignName(s.campaignId || life.lead?.campaignId), Origem: s.origem || life.lead?.origem || "", Prospeccao: life.created, Fechamento: s.dataVenda, Ciclo: life.cycle, Implantacao: s.implantacao, Mensalidade: s.mensalidade, Status: s.status };
     });
@@ -3605,7 +3699,7 @@ function exportTable(type) {
     }));
     name = "forecast";
   } else if (type === "goals") {
-    rows = state.goals.map(g => ({ Tipo: g.tipo, Origem: g.origem || "Manual", Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, MetaImplantacao: g.implantacao, MetaMensalidade: g.mensalidade }));
+    rows = sessionGoals().map(g => ({ Tipo: g.tipo, Origem: g.origem || "Manual", Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, MetaImplantacao: g.implantacao, MetaMensalidade: g.mensalidade }));
     name = "metas";
   } else if (type === "campaigns") {
     rows = state.campaigns.map(c => {
@@ -3623,12 +3717,12 @@ function exportAllReports() {
   if (!window.XLSX) return showToast("Biblioteca XLSX não carregou.", "fa-triangle-exclamation");
   const wb = XLSX.utils.book_new();
   const sheets = {
-    Vendas: state.sales.map(s => {
+    Vendas: sessionSales().map(s => {
       const life = saleLifecycleRow(s);
       return { Cliente: s.cliente, Lead: life.lead?.empresa || "", Produto: productName(s.produtoId), Vendedor: userName(s.vendedorId), Campanha: campaignName(s.campaignId || life.lead?.campaignId), Implantacao: s.implantacao, Mensalidade: s.mensalidade, Data: s.dataVenda, Ciclo: life.cycle, Status: s.status };
     }),
-    Leads: state.leads.map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Campanha: campaignName(l.campaignId), Etapa: l.pipeline, Status: l.status, Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastValue(l) })),
-    Metas: state.goals.map(g => ({ Tipo: g.tipo, Origem: g.origem || "Manual", Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Implantacao: g.implantacao, Mensalidade: g.mensalidade })),
+    Leads: sessionLeads().map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Campanha: campaignName(l.campaignId), Etapa: l.pipeline, Status: l.status, Implantacao: l.implantacao, Mensalidade: l.mensalidade, ForecastImplantacao: forecastValue(l) })),
+    Metas: sessionGoals().map(g => ({ Tipo: g.tipo, Origem: g.origem || "Manual", Vendedor: g.tipo === "Global" ? "Todos" : userName(g.vendedorId), Produto: productName(g.produtoId), Periodo: g.periodo, Implantacao: g.implantacao, Mensalidade: g.mensalidade })),
     Campanhas: state.campaigns.map(c => ({ Campanha: c.nome, Produto: productName(c.produtoId), Canal: c.canal, Status: c.status, Inicio: c.dataInicio, Fim: c.dataFim, Orcamento: c.orcamento })),
     Remarketing: lostLeads().map(l => ({ Empresa: l.empresa, Produto: productName(l.produtoId), Vendedor: userName(l.vendedorId), Campanha: campaignName(l.campaignId), Motivo: l.motivoPerda, Status: l.remarketingStatus })),
     Usuarios: state.users.map(u => ({ Nome: u.nome, Login: u.login, Perfil: u.perfil, Equipe: u.equipe, Ativo: u.ativo !== false }))
@@ -3755,7 +3849,7 @@ function monthlySalesByGroup(period, group = goalSubView) {
   return salesInMonth(period).filter(s => saleMatchesGroup(s, group));
 }
 function monthlyLeadsByGroup(period, group = goalSubView) {
-  return (state.leads || []).filter(l => monthKey(l.createdAt || todayISO()) === period && leadMatchesGroup(l, group));
+  return (sessionLeads() || []).filter(l => monthKey(l.createdAt || todayISO()) === period && leadMatchesGroup(l, group));
 }
 function goalSummary(period = monthKey(), group = goalSubView) {
   const sellersCount = Math.max(productivitySellers().length || eligibleGoalSellers().length, 1);
@@ -3789,7 +3883,7 @@ function goalSummary(period = monthKey(), group = goalSubView) {
 }
 
 function populateMonthFilters() {
-  const values = new Set([monthKey(), ...(state.goals || []).map(g => g.periodo), ...(state.sales || []).map(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`))]);
+  const values = new Set([monthKey(), ...(sessionGoals() || []).map(g => g.periodo), ...(sessionSales() || []).map(s => monthKey(`${s.dataVenda || todayISO()}T00:00:00`))]);
   const opts = [...values].filter(Boolean).sort().reverse().map(m => `<option value="${m}">${m}</option>`).join("");
   ["goalMonthFilter", "saleMonthFilter", "commissionMonthFilter", "forecastMonthFilter"].forEach(id => {
     if ($(id)) {
@@ -3946,8 +4040,8 @@ function renderGoals() {
         <td>${Math.round(done.implantacao || 0)}</td>
         <td>${progressBar(pct)}</td>
         <td>${Math.round(falta.implantacao || 0)}</td>
-        <td>${g.origem === "Distribuída" ? `<span class="tag tag-info">da meta global</span>` : `<button class="btn btn-outline btn-sm" onclick="openGoalModal('${g.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>`}</td>
+        <td>${g.origem === "Distribuída" ? `<span class="tag tag-info">da meta global</span>` : (ownerAccess() ? `<button class="btn btn-outline btn-sm" onclick="openGoalModal('${g.id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>` : `<span class="tag tag-info">Definida pela gestão</span>`)}</td>
       </tr>`;
     }
 
@@ -3961,8 +4055,8 @@ function renderGoals() {
       <td>${money(done.implantacao)}<br><small>MRR: ${money(done.mensalidade)}</small></td>
       <td>${progressBar(pct)}<small>sobre implantação</small></td>
       <td>${money(falta.implantacao)}<br><small>MRR: ${money(falta.mensalidade)}</small></td>
-      <td>${g.origem === "Distribuída" ? `<span class="tag tag-info">da meta global</span>` : `<button class="btn btn-outline btn-sm" onclick="openGoalModal('${g.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>`}</td>
+      <td>${g.origem === "Distribuída" ? `<span class="tag tag-info">da meta global</span>` : (ownerAccess() ? `<button class="btn btn-outline btn-sm" onclick="openGoalModal('${g.id}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteGoal('${g.id}')"><i class="fa-solid fa-trash"></i></button>` : `<span class="tag tag-info">Definida pela gestão</span>`)}</td>
     </tr>`;
   }).join("") || `<tr><td class="empty" colspan="${revendas ? 8 : 10}">Nenhuma meta cadastrada para o período.</td></tr>`;
 
@@ -3979,7 +4073,7 @@ function productivityRows(period = monthKey()) {
   const group = revendas ? "revendas" : goalSubView;
   const rows = productivitySellers().map(u => {
     const monthSales = salesInMonth(period).filter(s => s.vendedorId === u.id && saleMatchesGroup(s, group));
-    const leadsMes = (state.leads || []).filter(l => l.vendedorId === u.id && monthKey(l.createdAt || todayISO()) === period && leadMatchesGroup(l, group));
+    const leadsMes = (sessionLeads() || []).filter(l => l.vendedorId === u.id && monthKey(l.createdAt || todayISO()) === period && leadMatchesGroup(l, group));
     const perdidosMes = leadsMes.filter(l => l.status === "Perdido" || l.pipeline === "Perdido");
     const done = sumGoalSales(monthSales);
     const goal = sellerGoalForProductivity(u.id, period, group);
@@ -4061,10 +4155,10 @@ function consultantCommissionRate(indicatorCount) {
 }
 function commissionManagers() {
   const managers = (state.users || []).filter(u => u.ativo !== false && ["gerente", "administrador"].includes(norm(u.perfil)));
-  return managers.length ? managers : [];
+  return ownerAccess() && managers.length ? managers : [];
 }
 function commissionRows(period = monthKey(), sellerFilter = "") {
-  const consultants = eligibleGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
+  const consultants = sessionGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
   return consultants.map(u => {
     const sales = salesInMonth(period).filter(s => s.vendedorId === u.id);
     const installSales = sales.filter(s => productGroup(s.produtoId) === "instalacao");
@@ -4162,7 +4256,7 @@ function renderLeads() {
       ? `<th>Empresa candidata</th><th>Contato e observações</th><th>Programa</th><th>Responsável</th><th>Captação</th><th>Observações de contato</th><th>Etapa</th><th>Status</th><th>Ações</th>`
       : `<th>Empresa</th><th>Contato</th><th>Produto</th><th>Vendedor</th><th>Implantação</th><th>Mensalidade</th><th>Etapa</th><th>Forecast</th><th>Ações</th>`;
   }
-  let rows = [...state.leads].sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  let rows = [...sessionLeads()].sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   if (q) rows = rows.filter(l => [l.empresa, l.contato, l.email, productName(l.produtoId), userName(l.vendedorId), l.segmento, campaignName(l.campaignId), l.contatosObs].some(v => norm(v).includes(q)));
   if (stage) rows = rows.filter(l => l.pipeline === stage);
   $("leadsTable").innerHTML = rows.map(l => `
@@ -4413,6 +4507,7 @@ function openGoalModal(id = "") {
       <div class="form-group"><label>Produto</label><select id="gProduto" class="select">${productOptions(goal.produtoId || "todos", true)}</select></div>`}
       <div class="form-group"><label>${revendas ? "Meta de novos revendedores" : "Meta implantação"}</label><input id="gImplantacao" class="field" type="number" step="${revendas ? "1" : "0.01"}" value="${goal.implantacao || 0}"></div>
       ${revendas ? `<input id="gMensalidade" type="hidden" value="0">` : `<div class="form-group"><label>Meta mensalidade</label><input id="gMensalidade" class="field" type="number" step="0.01" value="${goal.mensalidade || 0}"></div>`}
+      ${revendas ? '' : `<div class="form-group"><label>Meta mensal de prospects (novos leads)</label><input id="gProspects" class="field" type="number" min="0" step="1" value="${Math.max(0,Number(goal.prospectsMensais)||0)}"></div>`}
     </div>
     <div class="note" style="margin-top:14px">${revendas ? "No portal Revendas, a meta é medida somente pela quantidade de novos revendedores captados." : "Use o grupo para separar pedidos de instalação SCE/Easyren dos Produtos Rensoftware."}</div>
   `, `
@@ -4438,6 +4533,7 @@ function saveGoal(id = "") {
     periodo: $("gPeriodo").value || monthKey(),
     implantacao: number($("gImplantacao").value),
     mensalidade: revendas ? 0 : number($("gMensalidade")?.value || 0),
+    prospectsMensais: revendas ? 0 : Math.max(0,Math.round(number($("gProspects")?.value || 0))),
     origem: "",
     globalGoalId: ""
   };
@@ -4533,10 +4629,10 @@ function renderSales() {
 
 function renderAll() {
   if (!currentUser) return;
-  const expired = expireProspectLeads();
+  const expired = ownerAccess() ? expireProspectLeads() : false;
   if (expired && !applyingRemoteSnapshot) persist();
-  syncClosedLeadsIntoSales(state, true);
-  distributeGlobalGoals(state);
+  if (ownerAccess()) syncClosedLeadsIntoSales(state, true);
+  if (ownerAccess()) distributeGlobalGoals(state);
   populateMonthFilters();
   populateForecastFilters();
   populateProductCategoryFilter();
@@ -4547,11 +4643,11 @@ function renderAll() {
   renderForecast();
   renderGoals();
   renderCommissions();
-  renderRemarketing();
+  if(ownerAccess())renderRemarketing();
   renderLostLeads();
-  renderProducts();
-  renderUsers();
-  renderReports();
+  if(ownerAccess())renderProducts();
+  if(ownerAccess())renderUsers();
+  if(ownerAccess())renderReports();
 }
 
 function goToPage(page) {
@@ -5029,16 +5125,16 @@ function saleFromLead(lead, existing = {}) {
 }
 
 function salesInMonth(period = monthKey()) {
-  return (state.sales || []).filter(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`) === period && s.status !== "Cancelada");
+  return (sessionSales() || []).filter(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`) === period && s.status !== "Cancelada");
 }
 function monthlyLeadsByGroup(period, group = goalSubView) {
-  return (state.leads || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period && leadMatchesGroup(l, group));
+  return (sessionLeads() || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period && leadMatchesGroup(l, group));
 }
 function previousWeekSales() {
   const start = addDays(startOfWeek(new Date()), -7);
   const end = addDays(start, 6);
   const range = { start: isoDate(start), end: isoDate(end) };
-  return (state.sales || []).filter(s => s.status !== "Cancelada" && inDateRange(effectiveSaleDate(s), range));
+  return (sessionSales() || []).filter(s => s.status !== "Cancelada" && inDateRange(effectiveSaleDate(s), range));
 }
 
 // Modal de leads com data de fechamento e condição de pagamento.
@@ -5431,7 +5527,7 @@ function filteredLeadsForPage() {
   const q = norm($("leadSearch")?.value || "");
   const stage = $("leadStageFilter")?.value || "";
   const mode = $("leadStatusView")?.value || "todos";
-  return (state.leads || [])
+  return (sessionLeads() || [])
     .filter(lead => {
       if (leadLostForListing(lead)) return false; // Aba exclusiva Leads Perdidos
       const closed = Boolean(leadClosedForListing(lead));
@@ -5472,7 +5568,7 @@ function renderLeads() {
         abertos: "Leads em aberto pela DATA ORIGINAL DE CADASTRO",
         todos: "Fechados pela data da venda + abertos pela data de cadastro"
       };
-      const missing = (state.leads || []).filter(l =>
+      const missing = (sessionLeads() || []).filter(l =>
         !leadLostForListing(l) && !leadListingReferenceDate(l)).length;
       const pending = pendingHistoricalSalesList().length;
       $("leadsRangeInfo").textContent = `${rows.length} registro(s) entre ${formatDate(range.start)} e ${formatDate(range.end)}. ${labels[mode] || labels.todos}.` +
@@ -5519,7 +5615,7 @@ function crmCommissionLedger(period = monthKey(), sellerFilter = "") {
     if(!date || date.slice(0,7)!==month || !(valor>0))return;
     bucket.push({sale,item:row,valor,data:date,fonte:source,descricao:label});
   };
-  for(const sale of (state.sales||[])) {
+  for(const sale of (sessionSales()||[])) {
     if(["cancelada","cancelado"].includes(norm(sale.status||"")))continue;
     if(sellerFilter && sale.vendedorId!==sellerFilter)continue;
     if(productGroup(sale.produtoId)!=="instalacao")continue;
@@ -5574,7 +5670,7 @@ function commissionDetailRows(period = monthKey(), sellerFilter = "") {
       baseComissao:entry.valor,taxaConsultor:rate,comissaoConsultor:entry.valor*rate,comissaoGestor:entry.valor*0.25,
       fonteLancamento:entry.fonte, situacao:"Confirmado"};
   });
-  const mensalidades=(state.sales||[]).filter(s=>!["cancelada","cancelado"].includes(norm(s.status||"")) &&
+  const mensalidades=(sessionSales()||[]).filter(s=>!["cancelada","cancelado"].includes(norm(s.status||"")) &&
     (!sellerFilter||s.vendedorId===sellerFilter) && productGroup(s.produtoId)==="rensoftware" &&
     s.primeiraMensalidadeRecebida===true && validCommercialDate(s.dataPrimeiraMensalidadeRecebida).slice(0,7)===period)
     .map(sale=>{
@@ -5598,7 +5694,7 @@ function commissionHistoryReviewRows(period=monthKey(),sellerFilter="") {
   });
 }
 function commissionRows(period = monthKey(), sellerFilter = "") {
-  const consultants = eligibleGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
+  const consultants = sessionGoalSellers().filter(u => !sellerFilter || u.id === sellerFilter);
   const details = commissionDetailRows(period, sellerFilter);
   return consultants.map(u => {
     const rows = details.filter(r => r.vendedorId === u.id);
@@ -5668,8 +5764,8 @@ function renderCommissions() {
     if (head) head.insertAdjacentElement("afterend", holder); else root.prepend(holder);
   }
   if ($("commissionPendingInfo")) {
-    const pending = (state.sales || []).reduce((n,s) => n + (Array.isArray(s.paymentSchedule) ? s.paymentSchedule.filter(p => p.pago !== true).length : 0),0);
-    const review = (state.sales || []).filter(s => s.financeiroSobConferencia).length;
+    const pending = (sessionSales() || []).reduce((n,s) => n + (Array.isArray(s.paymentSchedule) ? s.paymentSchedule.filter(p => p.pago !== true).length : 0),0);
+    const review = (sessionSales() || []).filter(s => s.financeiroSobConferencia).length;
     const pendingLegacy = commissionHistoryReviewRows($("commissionMonthFilter")?.value || monthKey(), $("commissionSellerFilter")?.value || "");
     $("commissionPendingInfo").textContent = `Comissões CONFIRMADAS por data real do recebimento. ${pending} parcela(s) de cronogramas pendentes; ${review} contrato(s) em conferência; ${pendingLegacy.length} recebimento(s) do histórico antigo precisam de validação no período selecionado.`;
   }
@@ -5843,7 +5939,7 @@ function renderDashboard() {
   const sales = salesInMonth(period);
   const totalImplantacao = sales.reduce((s, v) => s + Number(v.implantacao || 0), 0);
   const totalMensalidade = sales.reduce((s, v) => s + Number(v.mensalidade || 0), 0);
-  const monthLeads = (state.leads || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period);
+  const monthLeads = (sessionLeads() || []).filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period);
   if ($("statLeads")) $("statLeads").textContent = monthLeads.length;
   if ($("statVendas")) $("statVendas").textContent = sales.length;
   if ($("statImplantacao")) $("statImplantacao").textContent = money(totalImplantacao);
@@ -5853,7 +5949,7 @@ function renderDashboard() {
     if (labels[idx]) el.textContent = labels[idx];
   });
 
-  const globalGoal = (state.goals || []).find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
+  const globalGoal = (sessionGoals() || []).find(g => g.periodo === period && g.tipo === "Global") || { implantacao: 0, mensalidade: 0 };
   const done = sumSales(sales);
   const realized = Number(done.implantacao) || 0;
   const target = Number(globalGoal.implantacao || 0);
@@ -5918,10 +6014,10 @@ function productivityRows(period = monthKey()) {
 // =============== AJUSTES V15: RELATÓRIOS MENSAIS E EDIÇÃO/EXCLUSÃO DE VENDAS FECHADAS ===============
 function monthOptionsValues() {
   const current = monthKey();
-  const salesMonths = (state.sales || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
-  const leadMonths = (state.leads || []).map(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`));
-  const goalMonths = (state.goals || []).map(g => g.periodo);
-  const receiptMonths = (state.sales || []).flatMap(s => [
+  const salesMonths = (sessionSales() || []).map(s => effectiveSaleDate(s)).filter(Boolean).map(s => s.slice(0,7));
+  const leadMonths = (sessionLeads() || []).map(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`));
+  const goalMonths = (sessionGoals() || []).map(g => g.periodo);
+  const receiptMonths = (sessionSales() || []).flatMap(s => [
     ...(Array.isArray(s.paymentSchedule) ? s.paymentSchedule.flatMap(p => [
       validCommercialDate(p?.dataPagamento || p?.dataRecebimento || ""),
       validCommercialDate(p?.vencimento || "")
@@ -6003,13 +6099,13 @@ function reportPeriod() {
 }
 
 function salesForReportMonth(period = reportPeriod()) {
-  return (state.sales || [])
+  return (sessionSales() || [])
     .filter(s => s.status !== "Cancelada")
     .filter(s => monthKey(`${effectiveSaleDate(s)}T00:00:00`) === period);
 }
 
 function leadsForReportMonth(period = reportPeriod()) {
-  return (state.leads || [])
+  return (sessionLeads() || [])
     .filter(l => monthKey(`${effectiveLeadDate(l)}T00:00:00`) === period);
 }
 
@@ -6080,7 +6176,7 @@ function exportAllReports() {
       Mensalidade: l.mensalidade,
       ForecastImplantacao: forecastValue(l)
     })),
-    Metas: (state.goals || []).filter(g => g.periodo === period).map(g => ({
+    Metas: (sessionGoals() || []).filter(g => g.periodo === period).map(g => ({
       Periodo: period,
       Tipo: g.tipo,
       Origem: g.origem || "Manual",
@@ -6367,7 +6463,7 @@ function renderLostLeads() {
   if (!body || !state) return;
   const day = $("lostDayFilter")?.value || "";
   const q = norm($("lostLeadSearch")?.value || "");
-  const rows = (state.leads || [])
+  const rows = (sessionLeads() || [])
     .filter(l => l.status === "Perdido" || l.pipeline === "Perdido")
     .filter(l => !day || String(l.lostAt || "").slice(0,10) === day)
     .filter(l => !q || [l.empresa,l.contato,l.motivoPerda,userName(l.vendedorId),productName(l.produtoId)].some(x => norm(x).includes(q)))
@@ -6438,7 +6534,7 @@ function fillSalesSellerFilter() {
   if (!el) return;
   const selected = el.value || "";
   const users = (state.users || []).filter(u => u.ativo !== false);
-  const ids = new Set((state.sales || []).map(s => s.vendedorId));
+  const ids = new Set((sessionSales() || []).map(s => s.vendedorId));
   const available = users.filter(u => ids.has(u.id) || ["Vendedor","Consultor","Gerente","SDR"].includes(u.perfil));
   el.innerHTML = '<option value="">Todos os vendedores</option>' + available.map(u =>
     `<option value="${escapeHTML(u.id)}"${selected === u.id ? " selected" : ""}>${escapeHTML(u.nome)}</option>`
@@ -6450,7 +6546,7 @@ function salesForSelectedPeriod() {
   const {start, end, valid} = salesDateRange();
   if (mode !== "all" && mode !== "audit" && !valid) return [];
   const seller = $("saleSellerFilter")?.value || "";
-  return (state.sales || [])
+  return (sessionSales() || [])
     .filter(s => {
       if (seller && s.vendedorId !== seller) return false;
       if (mode === "all") return true; // Cadastro íntegro, mesmo sem data.
@@ -6568,7 +6664,7 @@ function trustedSaleDate(sale) {
   return effectiveSaleDate(sale);
 }
 function analysisSales(range, seller = "") {
-  return range.valid ? (state.sales || []).filter(s =>
+  return range.valid ? (sessionSales() || []).filter(s =>
     s.status !== "Cancelada" && s.status !== "Cancelado" &&
     dateInside(trustedSaleDate(s),range) && (!seller || s.vendedorId === seller)) : [];
 }
@@ -6600,7 +6696,7 @@ function sellerTargetAllProducts(sellerId, period) {
 }
 function teamTargetInRange(range) {
   return monthsInRange(range).reduce((sum,month) => {
-    for (const u of eligibleGoalSellers()) {
+    for (const u of sessionGoalSellers()) {
       const g = sellerTargetAllProducts(u.id,month);
       sum.implantacao += g.implantacao;
       sum.mensalidade += g.mensalidade;
@@ -6612,7 +6708,7 @@ function renderDashboard() {
   if (!state || !$("statLeads")) return;
   const range = selectedAnalysisRange("dashboard","month");
   const sales = analysisSales(range);
-  const leads = range.valid ? (state.leads||[]).filter(l=>dateInside(l.createdAt,range)) : [];
+  const leads = range.valid ? (sessionLeads()||[]).filter(l=>dateInside(l.createdAt,range)) : [];
   const totals = sumGoalSales(sales);
   const target = teamTargetInRange(range);
   const revendas = isRevendasWorkspace();
@@ -6651,7 +6747,7 @@ function renderDashboard() {
   const bySeller = productivitySellers().map(u => {
     const ss = sales.filter(s=>s.vendedorId===u.id);
     const ls = leads.filter(l=>l.vendedorId===u.id);
-    const lost = (state.leads||[]).filter(l=>l.vendedorId===u.id && (l.status==="Perdido"||l.pipeline==="Perdido") && dateInside(l.lostAt,range));
+    const lost = (sessionLeads()||[]).filter(l=>l.vendedorId===u.id && (l.status==="Perdido"||l.pipeline==="Perdido") && dateInside(l.lostAt,range));
     const done = sumGoalSales(ss);
     const goal = monthsInRange(range).reduce((a,m)=>{
       const g = sellerTargetAllProducts(u.id,m);
@@ -6699,7 +6795,7 @@ function renderReports() {
   ensureReportsV15Ui();
   const range = selectedAnalysisRange("report","month");
   const sales = analysisSales(range);
-  const leads = range.valid ? (state.leads||[]).filter(l=>dateInside(l.createdAt,range)) : [];
+  const leads = range.valid ? (sessionLeads()||[]).filter(l=>dateInside(l.createdAt,range)) : [];
   const convertedCohort = leads.filter(l=>l.status==="Fechado" && dateInside(l.fechadoEm,range)).length;
   const sums = sumGoalSales(sales);
   const conversion = leads.length ? Math.round(100*convertedCohort/leads.length) : 0;
@@ -6727,9 +6823,9 @@ function exportAllReports() {
   const range=selectedAnalysisRange("report","month");
   if (!range.valid) return showToast("Corrija as datas do relatório.", "fa-triangle-exclamation");
   const sales=analysisSales(range);
-  const leads=(state.leads||[]).filter(l=>dateInside(l.createdAt,range));
+  const leads=(sessionLeads()||[]).filter(l=>dateInside(l.createdAt,range));
   const months=monthsInRange(range);
-  const lost=(state.leads||[]).filter(l => (l.status==="Perdido"||l.pipeline==="Perdido") && dateInside(l.lostAt,range));
+  const lost=(sessionLeads()||[]).filter(l => (l.status==="Perdido"||l.pipeline==="Perdido") && dateInside(l.lostAt,range));
   const sheets={
     Vendas:sales.map(s=>({
       Inicio:range.start,Fim:range.end,Empresa:s.cliente,Produto:productName(s.produtoId),
@@ -6741,7 +6837,7 @@ function exportAllReports() {
       Produto:productName(l.produtoId),Vendedor:userName(l.vendedorId),Origem:l.origem||"",
       Etapa:l.pipeline,Status:l.status,DataFechamento:l.fechadoEm||"",MotivoPerda:l.motivoPerda||""
     })),
-    MetasMensais:(state.goals||[]).filter(g=>months.includes(g.periodo)).map(g=>({
+    MetasMensais:(sessionGoals()||[]).filter(g=>months.includes(g.periodo)).map(g=>({
       Mes:g.periodo,Tipo:g.tipo,Vendedor:g.tipo==="Global"?"Todos":userName(g.vendedorId),
       Produto:productName(g.produtoId),Implantacao:g.implantacao,Mensalidade:g.mensalidade
     })),
@@ -7474,6 +7570,74 @@ document.addEventListener("keydown", event => {
   if (event.key === "Enter" && $("authScreen").style.display !== "none") doLogin();
   if (event.key === "Escape") closeModal();
 });
+
+
+// =============== V30: RESGUARDOS E RENDERIZAÇÕES POR SESSÃO ===============
+// Somente a conta u_admin (Administrador) pode ver dados consolidados e editar metas.
+const v30OriginalLogin=doLogin;
+doLogin=async function(...args){await v30OriginalLogin(...args);if(currentUser){v30RestrictUI();renderAll();}};
+const v30OriginalLogout=doLogout;
+doLogout=function(...args){v30OriginalLogout(...args);document.body.classList.remove("v30-individual");};
+const v30OriginalRenderGoals=renderGoals;
+renderGoals=function(...args){v30OriginalRenderGoals(...args);renderProspectProgress();v30RestrictUI();};
+const v30OriginalDashboard=renderDashboard;
+renderDashboard=function(...args){v30OriginalDashboard(...args);renderV30DashboardKpis();};
+const v30OriginalRenderAll=renderAll;
+renderAll=function(...args){const r=v30OriginalRenderAll(...args);v30RestrictUI();return r;};
+const v30OriginalApplyRemoteState=applyRemoteState;
+applyRemoteState=function(...args){const r=v30OriginalApplyRemoteState(...args);if(currentUser)v30RestrictUI();return r;};
+const v30OriginalGoToPage=goToPage;
+goToPage=function(page,...args){if(!ownerAccess()&&["usuarios","produtos","relatorios","remarketing"].includes(page))return v30Deny();return v30OriginalGoToPage(page,...args);};
+const v30OriginalSalesOption=sellerOptions;
+sellerOptions=function(selected="",includeBlank=false){return ownerAccess()||!currentUser?v30OriginalSalesOption(selected,includeBlank):`<option value="${escapeHTML(currentUser.id)}" selected>${escapeHTML(currentUser.nome)}</option>`;};
+const v30OriginalGoalOptions=goalSellerOptions;
+goalSellerOptions=function(...args){return ownerAccess()?v30OriginalGoalOptions(...args):`<option value="${escapeHTML(currentUser?.id||"")}">${escapeHTML(currentUser?.nome||"")}</option>`;};
+const v30OriginalRenderCommissions=renderCommissions;
+renderCommissions=function(...args){
+  if(currentUser&&!ownerAccess()&&$("commissionSellerFilter"))$("commissionSellerFilter").value=currentUser.id;
+  const r=v30OriginalRenderCommissions(...args);v30RestrictUI();return r;
+};
+const v30OriginalCommissionRows=commissionRows;
+commissionRows=function(period=monthKey(),sellerFilter=""){
+  return v30OriginalCommissionRows(period,ownerAccess()?sellerFilter:(currentUser?.id||"__none__"));
+};
+const v30OriginalCommissionDetails=commissionDetailRows;
+commissionDetailRows=function(period=monthKey(),sellerFilter=""){
+  return v30OriginalCommissionDetails(period,ownerAccess()?sellerFilter:(currentUser?.id||"__none__"));
+};
+const v30OriginalCommissionHistory=commissionHistoryReviewRows;
+commissionHistoryReviewRows=function(period=monthKey(),sellerFilter=""){
+  return v30OriginalCommissionHistory(period,ownerAccess()?sellerFilter:(currentUser?.id||"__none__"));
+};
+const v30OriginalLedger=crmCommissionLedger;
+crmCommissionLedger=function(period=monthKey(),sellerFilter=""){
+  return v30OriginalLedger(period,ownerAccess()?sellerFilter:(currentUser?.id||"__none__"));
+};
+function v30GuardOwner(name){const original=globalThis[name];if(typeof original!=="function")return;globalThis[name]=function(...args){if(!ownerAccess())return v30Deny();return original(...args);};}
+["openGoalModal","saveGoal","deleteGoal","openUserModal","saveUser","deleteUser","openProductModal","saveProduct","deleteProduct","openHistoricalSalesAudit","openPendingHistoricalSalesAudit","openSaleDatesReview","openSaleDateCorrection","saveSaleDateCorrection","openLeadDateReview","openLeadDateCorrection","saveLeadDateCorrection"].forEach(v30GuardOwner);
+function v30GuardOwned(name,kind){const original=globalThis[name];if(typeof original!=="function")return;globalThis[name]=function(...args){
+  if(!ownerAccess()&&currentUser){
+    const id=typeof args[0]==="string"?args[0]:"";
+    const record=id?(state?.[kind]||[]).find(r=>r.id===id):null;
+    if(id&&(!record||!sellerOwns(record)))return v30Deny();
+    if(["saveLead","saveSale"].includes(name)){
+      const control=$(name==="saveSale"?"sVendedor":"lVendedor");
+      if(control)control.value=currentUser.id;
+    }
+    if(["openLeadModal","openSaleModal"].includes(name)){
+      const result=original(...args);
+      const control=$(name==="openSaleModal"?"sVendedor":"lVendedor");
+      if(control){control.value=currentUser.id;control.disabled=true;}
+      return result;
+    }
+  }
+  return original(...args);
+};}
+["openLeadModal","saveLead","deleteLead","moveLead","closeLeadAsSale","markLeadLost","openRemarketingModal","saveRemarketing","reopenLead"].forEach(n=>v30GuardOwned(n,"leads"));
+["openSaleModal","saveSale","deleteSale"].forEach(n=>v30GuardOwned(n,"sales"));
+// Bloqueia relatórios de equipe/exports globais chamados manualmente fora da interface.
+["exportAllReports","exportAllReportsV15","exportTable"].forEach(v30GuardOwner);
+// As tabelas de usuário permanecem no Firestore legadas: restrição de interface não configura sigilo real.
 
 initData().catch(error => {
   console.error(error);
