@@ -327,7 +327,7 @@ body.v30-individual #page-metas .card:first-child > .card-header > button {displ
           <div class="card" style="margin-bottom:12px;padding:15px 18px">
             <div class="card-title"><i class="fa-solid fa-map-location-dot"></i> MarketMap — Prospecção em Campo</div>
             <div class="card-subtitle" style="margin-top:5px">Mapa de empresas, visitas por GPS, concorrentes, inteligência, Market Share, Instagram, relatórios 360 e forecast em um único espaço. MarketMap e CRM continuam usando seus bancos Firebase independentes.</div>
-            <div id="marketmapConnectionNote" class="help" role="status" style="margin-top:9px">Selecione uma empresa no MarketMap, salve a visita e escolha “Salvar e criar lead no CRM”. O lead será aberto para conferência antes de salvar no Firestore do CRM.</div>
+            <div id="marketmapConnectionNote" class="help" role="status" style="margin-top:9px">O cadastro manual e o checkpoint salvo enviam automaticamente o lead à aba Leads, vinculado ao vendedor. Confirme “Firestore salvo” antes de sair. Para empresas localizadas no mapa, continua disponível “Salvar e criar lead no CRM”.</div>
           </div>
           <div style="background:#0b0d13;border:1px solid #d1e2ea;border-radius:16px;overflow:hidden;min-height:500px">
             <iframe id="crmMarketMapFrame" title="MarketMap completo integrado ao CRM" src="about:blank" data-src="marketmap/index.html" allow="geolocation; clipboard-read; clipboard-write" style="width:100%;height:max(650px,calc(100dvh - 220px));border:0;display:block" referrerpolicy="same-origin"></iframe>
@@ -7856,9 +7856,85 @@ window.addEventListener("message", function(event) {
   if(event.origin !== window.location.origin || !frame || event.source !== frame.contentWindow) return;
   if(!event.data || event.data.type !== "rensocrm:lead-from-marketmap" || event.data.version !== 1) return;
   try {if(JSON.stringify(event.data).length > 12000) return;} catch(_){return;}
-  crmMarketMapReceiveLead(event.data.company);
+  if(event.data.autoImport===true && ["manual","checkpoint"].includes(event.data.source))
+    crmMarketMapAutoImport(event.data.company,event.data.source);
+  else crmMarketMapReceiveLead(event.data.company);
 });
 // ================= FIM V32 =================
+
+// ================= V33: AUTOMAÇÃO SEGURA MARKETMAP -> LEADS =================
+function crmMarketMapLeadMatch(data) {
+  return sessionLeads().find(lead => {
+    const ref=lead.marketmapRef||{};
+    if(data.companyId && ref.empresaId && String(ref.empresaId)===data.companyId)return true;
+    if(data.placeId && ref.placeId && String(ref.placeId)===data.placeId)return true;
+    if(data.checkpointId && (ref.checkpointId===data.checkpointId || (lead.marketmapCheckpointIds||[]).includes(data.checkpointId)))return true;
+    const sameName=crmMarketMapNormalizeText(lead.empresa)===crmMarketMapNormalizeText(data.name);
+    const samePhone=!!data.phone && crmMarketMapNormalizeText(lead.telefone)===crmMarketMapNormalizeText(data.phone);
+    const sameAddress=!!data.address && crmMarketMapNormalizeText(ref.endereco)===crmMarketMapNormalizeText(data.address);
+    return sameName && (samePhone || sameAddress);
+  });
+}
+function crmMarketMapAutoImport(raw, source) {
+  if(!currentUser||!state||isRevendasWorkspace())return;
+  if(!firebaseReady||firebaseMode!=="firestore"||crmSyncBlocked||!crmServerBaseline||crmPendingLocal||crmSyncRunning){
+    showToast('Lead não importado: há sincronização pendente. Empresa/checkpoint preservados no MarketMap; reenvie quando o Firestore estiver salvo.', 'fa-triangle-exclamation');
+    return;
+  }
+  const sanitize=(key,n=180)=>crmMarketMapSanitize(raw?.[key],n);
+  const data={
+    companyId:sanitize('companyId',130),placeId:sanitize('placeId',130),checkpointId:sanitize('checkpointId',120),
+    name:sanitize('name'),phone:sanitize('phone',60),contactName:sanitize('contactName'),segment:sanitize('segment',100),
+    address:sanitize('address',300),city:sanitize('city',90),system:sanitize('system',130),
+    competitorName:sanitize('competitorName',130),counter:sanitize('counter',130),
+    instagramHandle:sanitize('instagramHandle',110),potential:sanitize('potential'),nextAction:sanitize('nextAction'),
+    nextActionDate:sanitize('nextActionDate',20),visitedAt:sanitize('visitedAt',40),notes:sanitize('notes',1500),
+    lat:crmMarketMapValidCoordinate(raw?.lat,90),lng:crmMarketMapValidCoordinate(raw?.lng,180)
+  };
+  if(!data.name || !["manual","checkpoint"].includes(source)) return;
+  const now=new Date().toISOString();
+  const location=data.lat!==null&&data.lng!==null?`https://www.google.com/maps?q=${data.lat},${data.lng}`:"";
+  const note=[source==="checkpoint"?"Visita de checkpoint MarketMap":"Cadastro manual MarketMap",
+    data.address&&`Endereço: ${data.address}`,location&&`Localização: ${location}`,
+    data.system&&`Sistema atual: ${data.system}`,data.competitorName&&`Concorrente: ${data.competitorName}`,
+    data.counter&&`Contador: ${data.counter}`,data.instagramHandle&&`Instagram: @${data.instagramHandle}`,
+    data.potential&&`Potencial: ${data.potential}`,data.nextAction&&`Próxima ação: ${data.nextAction}`,
+    data.nextActionDate&&`Data da próxima ação: ${data.nextActionDate}`,
+    data.checkpointId&&`Checkpoint: ${data.checkpointId}`,data.notes&&`Observações: ${data.notes}`
+  ].filter(Boolean).join('\n').slice(0,3000);
+  const prev=crmMarketMapLeadMatch(data);
+  if(prev){
+    // Não reescrever oportunidades existentes nem refazer vendas, metas ou datas.
+    const ids=Array.isArray(prev.marketmapCheckpointIds)?prev.marketmapCheckpointIds:[];
+    if(data.checkpointId && !ids.includes(data.checkpointId)){
+      prev.marketmapCheckpointIds=[...ids,data.checkpointId].slice(-100);
+      prev.activityHistory=[...(Array.isArray(prev.activityHistory)?prev.activityHistory:[]),
+        {date:now,descricao:note,origem:'MarketMap',checkpointId:data.checkpointId}].slice(-100);
+      prev.updatedAt=now;
+      persist();
+      showToast('Visita vinculada ao lead existente. Aguarde Firestore salvo.','fa-map-location-dot');
+    } else showToast('Lead já existente: nenhuma duplicação criada.','fa-circle-info');
+    goToPage('leads');renderAll();return;
+  }
+  const ufMatch=data.address.match(/(?:\b|[-, ])(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)(?:\b|$)/i);
+  const ref={projeto:'marketmap-8fa2c',empresaId:data.companyId,placeId:data.placeId,
+    endereco:data.address,latitude:data.lat,longitude:data.lng,visitadoEm:data.visitedAt,
+    checkpointId:data.checkpointId,origem:source,vendedorCRM:currentUser.id};
+  const lead={id:uid('l'),empresa:data.name,contato:data.contactName,email:'',telefone:data.phone,
+    cidade:data.city,uf:ufMatch?ufMatch[1].toUpperCase():'',segmento:data.segment,
+    origem:source==='checkpoint'?'MarketMap - Checkpoint':'MarketMap - Manual',
+    produtoId:activeProducts()[0]?.id||'',vendedorId:currentUser.id,campaignId:'',
+    implantacao:0,mensalidade:0,pipeline:'Captação',status:'Aberto',probabilidade:10,
+    previsaoFechamento:'',fechadoEm:'',motivoPerda:'',remarketingStatus:'',
+    contatosObs:note,createdAt:now,stageEnteredAt:now,updatedAt:now,
+    movementHistory:[],activityHistory:[],marketmapRef:ref,
+    marketmapCheckpointIds:data.checkpointId?[data.checkpointId]:[]};
+  state.leads.push(lead);
+  persist(); // V28 usa transação diferencial e preserva rascunho se houver conflito.
+  goToPage('leads');renderAll();
+  showToast('Lead criado na carteira. Aguarde a mensagem Firestore salvo.','fa-clock');
+}
+// ================= FIM V33 =================
 
 initData().catch(error => {
   console.error(error);

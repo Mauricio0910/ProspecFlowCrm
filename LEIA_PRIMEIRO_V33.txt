@@ -1,0 +1,40 @@
+CRM Rensoftware V33 — MarketMap: checkpoints, cadastro manual e login único seguro
+
+O QUE FOI IMPLEMENTADO
+- Salvar cadastro manual MarketMap: após Firestore MarketMap confirmar, envia automaticamente os dados como novo lead para o CRM.
+- Salvar checkpoint: após confirmar o checkpoint, envia automaticamente o lead ao CRM, inclusive coordenadas e informações da visita.
+- Quando a empresa já existe na carteira do vendedor, o CRM evita duplicar. Para novo checkpoint de lead existente, registra uma atividade sem reabrir a venda nem alterar valores e datas.
+- O CRM cria oportunidade em Captação, 0 de implantação e mensalidade, com origem e vínculo MarketMap, atribuindo ao usuário do CRM.
+- O CRM preserva sua transação diferencial V28 e rascunhos. IMPORTANTE: só considere salvo quando aparecer "Firestore salvo".
+- Os Firebases existentes continuam separados; nenhuma migração, exclusão ou substituição foi feita.
+- O MarketMap segue com TODOS os módulos na mesma aba.
+
+LOGIN ÚNICO (REQUER CONFIGURAÇÃO DE BACKEND ANTES DE REMOVER SEGUNDO LOGIN)
+A aplicação antiga usa login próprio do CRM (credenciais locais) e Firebase Authentication do MarketMap. Uma página HTML estática NÃO pode emitir tokens seguros do Firebase nem confiar no ID de usuário enviado pelo navegador. Simplesmente esconder o segundo login liberaria uma forma de acesso insegura. A V33 inclui o suporte a signInWithCustomToken do Firebase e um exemplo de Worker do Cloudflare Access, mas NÃO o ativa enquanto o endpoint não existir.
+
+Para ativar login único sem exigir outra senha MarketMap:
+1. O CRM precisa ser servido em domínio personalizado HTTPS protegido por Cloudflare Access, com identidade Cloudflare validada (não apenas o GitHub Pages público).
+2. Publique `marketmap-sso-worker.js` como Worker na rota do MESMO domínio: /api/marketmap-sso. Aplique política Access a essa rota; não deixe o endpoint acessível por endereço workers.dev público sem a mesma proteção.
+3. Configure as variáveis e SEGREDOS do Worker (nunca salve isso no GitHub):
+   CF_TEAM_DOMAIN = nome da equipe Cloudflare sem ".cloudflareaccess.com"
+   CF_APPLICATION_AUD = AUD da aplicação Access do CRM
+   PUBLIC_CRM_ORIGIN = https://crm.seudominio.com.br (exemplo; exato)
+   FIREBASE_SERVICE_ACCOUNT_EMAIL = e-mail da service account do projeto MarketMap
+   FIREBASE_SERVICE_ACCOUNT_PRIVATE_KEY = chave privada da service account MarketMap (SECRET)
+   ALLOWED_EMAIL_UIDS_JSON = mapa JSON de e-mail validado pelo Access -> UID EXISTENTE no Authentication MarketMap (SECRET)
+   exemplo: {"consultor@empresa.com":"UID_FIREBASE_MARKETMAP"}
+4. No index.html da pasta marketmap, altere exatamente esta linha:
+      const MARKETMAP_SSO_ENDPOINT = "";
+   para:
+      const MARKETMAP_SSO_ENDPOINT = "/api/marketmap-sso";
+   faça essa alteração APENAS quando o Worker estiver funcionando e protegido.
+5. Atualize o GitHub (index.html + pasta marketmap). Sem Worker, mantenha o login normal do MarketMap.
+6. Teste com um consultor, confira que UID e role persistem e que checkpoint, novo lead e dados de outros vendedores respeitam as regras reais do Firestore. A conta Google administrativa MarketMap pode ser diferente da conta CRM.
+
+IMPORTANTE: O CRM atualmente tem usuários e senhas em um documento coletivo; a interface individual V30 não é uma autorização criptográfica. O Worker confia SOMENTE no JWT Cloudflare Access validado e numa lista de emails->UIDs guardada em segredo, não no login/ID enviado pelo CRM. Para segurança definitiva, o CRM também deve migrar para uma autenticação verificável com regras Firestore por usuário. Não compartilhe o arquivo da chave privada nem o backup do banco no GitHub/ChatGPT.
+
+PUBLICAÇÃO
+- Faça cópia do index.html atual e os backups dos dois Firebases.
+- Publique index.html e a pasta marketmap INTEIRA juntos no repositório CRM (branch main); o workflow de GitHub Pages deve copiar a pasta marketmap para o artefato de publicação.
+- Teste: cadastro manual -> entrada em Leads; checkpoint -> entrada em Leads; repetir checkpoint -> nenhuma duplicata; marcar Firestore salvo; autenticação separada permanece funcionando enquanto SSO não está configurado.
+- Não copie o Worker para o site: o arquivo deve ser implantado como código de backend Cloudflare com segredos configurados apenas no painel Worker.

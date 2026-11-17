@@ -1,0 +1,16 @@
+CRM/MarketMap V33 — Testes realizados
+- Sintaxe JavaScript do CRM, MarketMap e Worker SSO: OK (node --check)
+- Ponte postMessage: frame same-origin com source conferido: OK (teste de payload simulado)
+- Cadastro manual para Leads: OK (estado simulado)
+- Checkpoint vinculado à empresa já existente: OK (estado simulado)
+- Reenvio do mesmo checkpoint sem duplicação: OK (estado simulado)
+- Escopo por vendedor: OK (estado simulado)
+- CRM offline/bloqueado não recebe lead automaticamente: OK (estado simulado)
+
+PENDÊNCIAS DE HOMOLOGAÇÃO:
+- Ainda não foi realizado teste de gravação ao vivo nos dois Firebases.
+- Login único dependerá da implantação da rota segura Cloudflare Access e mapeamento UIDs.
+- O login secundário permanece ATÉ o backend SSO estar ativo. Simplesmente ocultar a tela não autentica o Firebase.
+- Regras do Firestore e do CRM precisam ser auditadas separadamente: a interface individual não impede leitura direta do documento coletivo.
+- Nenhum código foi publicado automaticamente no GitHub e nenhum dado em banco foi alterado nesta entrega.
+- Worker SSO: assinatura Firebase RS256, validação de JWT Cloudflare Access, rejeição de assinatura inválida e origem/rota incorretas: OK em testes com chaves fictícias.

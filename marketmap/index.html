@@ -620,6 +620,29 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// V33: o SSO só funciona após implantação do endpoint autenticado.
+// Valor vazio mantém o login Firebase existente, sem expor a base MarketMap.
+const MARKETMAP_SSO_ENDPOINT = ""; // Exemplo seguro no MESMO domínio protegido: /api/marketmap-sso
+let marketmapSsoAttempted = false;
+async function marketmapTrySso() {
+  if (!MARKETMAP_SSO_ENDPOINT || marketmapSsoAttempted || window.parent === window) return false;
+  marketmapSsoAttempted = true;
+  const errDiv = document.getElementById('login-err');
+  try {
+    const response = await fetch(MARKETMAP_SSO_ENDPOINT, {
+      method:'GET', credentials:'include', headers:{'Accept':'application/json'}, cache:'no-store'
+    });
+    if(!response.ok) throw new Error('SSO HTTP '+response.status);
+    const result=await response.json();
+    if(!result || typeof result.token !== 'string' || result.token.length < 80) throw new Error('Token SSO inválido');
+    await auth.signInWithCustomToken(result.token);
+    return true;
+  } catch(error) {
+    console.error('MarketMap: autenticação única não disponível',error);
+    if(errDiv) {errDiv.textContent='A autenticação única não foi concluída. Contate a administração. Nenhum acesso foi liberado.';errDiv.style.display='block';}
+    return false;
+  }
+}
 
 // Cole sua chave fixa aqui para não solicitar em cada máquina.
 // Exemplo: const GOOGLE_MAPS_API_KEY = "AIza...";
@@ -801,19 +824,23 @@ async function bootAppAfterAuth(user) {
 }
 
 async function saveCompanyToFirestore(data) {
+  // Só retorna após confirmação do Firestore MarketMap.
+  let savedId;
   if (currentEditId) {
-    await db.collection('companies').doc(currentEditId).update(data);
+    savedId = String(currentEditId);
+    await db.collection('companies').doc(savedId).update(data);
     showNotif('✅ Atualizado!', 'success');
   } else {
-    const newId = Date.now().toString();
-    data.id = newId;
-    await db.collection('companies').doc(newId).set(data);
+    savedId = Date.now().toString();
+    data.id = savedId;
+    await db.collection('companies').doc(savedId).set(data);
     showNotif('✅ Salvo!', 'success');
   }
   await loadCompanies();
   renderApplicationData({ forceSavedList: true });
   closeModal();
   closeManualModal();
+  return {...data, id: savedId};
 }
 
 function loadGoogleMaps() {
@@ -1423,7 +1450,10 @@ async function saveManualCompany() {
     updatedAt: new Date().toISOString()
   };
   
-  await saveCompanyToFirestore(companyData);
+  const saved = await saveCompanyToFirestore(companyData);
+  // Integração V33: cadastro manual -> lead, sem alterar a ficha do MarketMap.
+  mmBridgeToCRM(saved, null, {autoImport: true, source: "manual"});
+  return saved;
 }
 
 
@@ -2244,7 +2274,20 @@ async function saveCheckpoint() {
       }
     }
 
-    showNotif('✅ Checkpoint salvo e base atualizada.', 'success');
+    // Integração V33: checkpoint confirmado no MarketMap -> lead no CRM.
+    const related = companiesList.find(c => companyId && String(c.id)===String(companyId));
+    mmBridgeToCRM(related || {
+      id: companyId || "", placeId: "", name: checkpointData.companyName,
+      address: checkpointData.address, city: checkpointData.city,
+      lat: checkpointData.lat, lng: checkpointData.lng,
+      contactName: checkpointData.contactName, phone: checkpointData.phone,
+      segment: checkpointData.segment, system: checkpointData.system,
+      instagramHandle: checkpointData.instagramHandle,
+      potential: checkpointData.potential,
+      nextAction: checkpointData.nextAction,
+      nextActionDate: checkpointData.nextActionDate, notes: checkpointData.notes
+    }, {...checkpointData,id:docId}, {autoImport: true, source: "checkpoint"});
+    showNotif('✅ Checkpoint salvo no MarketMap e enviado à aba Leads do CRM.', 'success');
     clearCheckpointForm();
     renderApplicationData({ forceSavedList: currentListMode === 'saved' });
   } catch (error) {
@@ -3318,7 +3361,7 @@ function setupEventListeners() {
 }
 
 // ================= V32: Ponte de prospecção ao CRM Rensoftware =================
-function mmBridgeToCRM(company, checkpoint) {
+function mmBridgeToCRM(company, checkpoint, opts = {}) {
   if(!auth.currentUser) {showNotif("Entre no MarketMap antes de enviar ao CRM.","error");return false;}
   if(window.parent === window) {
     showNotif("Para cadastrar o lead, abra este MarketMap pela aba Prospecção no Mapa do CRM.","info");
@@ -3345,8 +3388,11 @@ function mmBridgeToCRM(company, checkpoint) {
     lng: Number.isFinite(Number(cp?.lng)) && cp?.lng !== null ? Number(cp.lng) :
          (Number.isFinite(Number(company.lng)) && company.lng != null ? Number(company.lng) : null)
   };
-  window.parent.postMessage({type:"rensocrm:lead-from-marketmap",version:1,company:data},window.location.origin);
-  showNotif("Empresa enviada para revisão do lead no CRM. Finalize o cadastro na janela principal.","success");
+  window.parent.postMessage({type:"rensocrm:lead-from-marketmap",version:1,company:data,
+    autoImport:opts.autoImport===true,source:opts.source||"mapa"},window.location.origin);
+  showNotif(opts.autoImport===true ?
+    "Enviado ao CRM: confira a confirmação 'Firestore salvo' na aba Leads." :
+    "Empresa enviada para revisão do lead no CRM. Finalize o cadastro na janela principal.","success");
   return true;
 }
 async function mmSaveCompanyAndSendToCRM() {
@@ -3366,17 +3412,11 @@ async function mmSaveCompanyAndSendToCRM() {
   } catch(error) {console.error('Falha ao salvar empresa antes de enviar ao CRM:',error);showNotif('Falha no salvamento do MarketMap; nenhum lead foi enviado.','error');}
 }
 async function mmSaveManualAndSendToCRM() {
-  const oldIds=new Set(companiesList.map(c=>String(c.id)));
-  const name=document.getElementById('manual-name')?.value.trim()||"";
-  const address=document.getElementById('manual-address')?.value.trim()||"";
-  try {
-    await saveManualCompany();
-    if(document.getElementById('modal-manual-overlay')?.classList.contains('open'))return;
-    const c=companiesList.find(x=>!oldIds.has(String(x.id)) && x.name===name && x.address===address);
-    if(c) mmBridgeToCRM(c);
-    else showNotif('Salvo no MarketMap. Abra a empresa cadastrada no mapa para enviar ao CRM.','info');
-  } catch(error) {console.error('Falha no cadastro manual:',error);showNotif('Não foi possível salvar. Nenhum lead foi enviado.','error');}
+  // saveManualCompany() já realiza envio automático após o Firestore confirmar.
+  try { await saveManualCompany(); }
+  catch(error){console.error('Falha no cadastro manual:',error);showNotif('Cadastro manual não concluído; nenhum lead foi enviado.','error');}
 }
+
 function mmLeadFromLastCheckpoint(){
   const mine=(checkpointsList||[]).filter(c=>c.createdByUid && c.createdByUid===auth.currentUser?.uid)
     .sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
@@ -3417,6 +3457,10 @@ auth.onAuthStateChanged(user => {
     currentListFilter = 'all';
     document.getElementById('screen-app').classList.remove('active');
     document.getElementById('screen-login').classList.add('active');
+    if(MARKETMAP_SSO_ENDPOINT) {
+      document.querySelector('#screen-login .login-box').style.display='none';
+      marketmapTrySso();
+    }
   }
 });
 
